@@ -1,0 +1,154 @@
+
+
+
+
+software design, technical planning, and system architecture.
+
+
+{the capstone project is:}
+1. Transaction Processing & Reporting System (Python Backend)
+
+Concept: 
+A system to record, track, and report financial transactions (e.g., sales, purchases, payments) for a business. Users can add, update, delete, and query transactions. Reports summarize daily, weekly, or monthly activity for decision-making.
+
+
+How it covers everything:
+The project uses PostgreSQL to store transaction data, including details like amounts, dates, categories, and descriptions, as well as optional tables for users and transaction categories. Using FastAPI and data modeling, transactions, categories, and optionally users are defined as models with Pydantic schemas to validate incoming data and shape responses. PostgreSQL and SQL  serves to perform all database operations, such as creating, reading, updating, and deleting transactions, and to query aggregated data for reporting. The system exposes multiple RESTful API endpoints to handle transactions, categories, and report generation, following proper HTTP methods and response codes. As a full stack exercise, the FastAPI backend is fully functional, and endpoints can be tested through tools like Postman or a minimal HTML/JS frontend. For an extra challenge, the system can implement JWT-based authentication to manage user access, generate downloadable reports, and provide summary endpoints for analytics.
+
+
+
+Database:PostgreSQL 
+- Store all transaction data: amount, date, type (credit/debit), category, description.
+- Store related tables: users (if authentication is implemented), transaction categories, reports history.
+- Can include relational constraints: e.g., each transaction belongs to a category, optional user table.
+
+
+FastAPI & Data Modeling: 
+- Models for transactions, categories, and optionally users.
+- Define Pydantic schemas for request validation and response formatting.
+- Include relationships between models (e.g., transactions → categories).
+
+
+SQL scripts with PostgreSQL: 
+- layer to interact with PostgreSQL.
+- CRUD operations: Create, Read, Update, Delete transactions.
+- Query filtering for reports (e.g., sum totals per category or per time period).
+
+
+API / REST: 
+Endpoints for:
+/transactions → list, create, update, delete transactions.
+/categories → manage categories.
+/reports → generate reports (daily, monthly, etc.).
+- Use REST principles: proper HTTP methods (GET, POST, PUT, DELETE).
+
+
+Full Stack: FastAPI serves as backend.
+- Optional minimal frontend (e.g., HTML + JS or Postman testing) to call APIs.
+- Configured environment includes: FastAPI app, PostgreSQL, SQL, Pydantic models, API routes.
+- clean env.file, clean folder structures etc.
+
+
+Extra Challenge: (ranked top to bot best to least) numbering are sequence of doing it
+- Implement JWT-based authentication (login/register for users). 1 
+- Add role-based access (admin vs standard user). 2 
+- Include transaction summaries or charts via API endpoints. 3
+- Generate downloadable reports (CSV or PDF). 4
+
+
+Role	What They Can Do
+Admin	Full control: can CRUD (Create, Read, Update, Delete) transactions for any user, manage categories, generate reports, manage users (optional). Basically has master access to the system.
+Standard User	Limited control: can only CRUD their own transactions. Can view their own reports and summaries. Cannot see or edit other users’ data.
+
+
+Admin side bar:
+manage categories - add edit delete categories
+transactions - view add edit
+reports - of all standar users report combined.
+manage users roles - approve or decline admin requests
+all side bar dashboards view
+
+standard user side bar:
+dash board summary - only of their own transactions
+transactions their transactions
+reports / summary api - their own only
+
+
+
+
+
+Step-by-step:
+
+Setup database tables: users, categories, transactions, reports.
+Build models & Pydantic schemas for transactions, categories, users.
+Implement admin authentication + JWT.
+Implement admin CRUD for transactions, categories, users.
+Build admin dashboard & reports.
+Test thoroughly using admin account.
+Implement standard user role → restrict access (transactions only for allowed actions, limited dashboards).
+Test with standard users.
+✅ Bottom line: Build admin first, then users, because admin can see everything and test the system end-to-end.
+
+
+
+
+
+
+notes while doing it
+Use Postman or minimal HTML pages as your initial testing interface — they act as placeholders until you build a proper frontend.
+When adding frontend, you can reuse all endpoints without rewriting backend logic.
+
+
+take notes:
+For demo purposes, the system allows creation of an admin account, but in real-world applications, only trusted people would be approved as admins
+
+
+what if many log ins?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Back-End Developer last task/project interview
+
+Introduction to Databases for Back-End Development
+Database concepts and principles, how databases work. // MUST LEARN !!!
+SQL Language (SELECT / INSERT / UPDATE / DELETE, JOINS, PK, FK (INNER, LEFT)) MUST LEARN !!!
+Plan and execute a simple database development project. // MUST LEARN !!! //payroll
+
+FastApi Web Framework
+Data modeling / relationship ---- MUST LEARN !!!
+Implement web security best practices // baseline, expected
+CRUD // baseline, expected
+
+APIs
+API development // basic, baseline, expected
+Principles of REST architecture // MUST LEARN !!!
+Build a basic API // basic, baseline, expected
+JWT tokens // basic, baseline and expected
+Postman // basic, baseline and expected
+
+The Full Stack
+Build a FastApi app // basic, baseline, expected
+Data Pipelines (Baseline, Expected)
+Use the full stack
+Configure an environment // MUST LEARN !!! /folder struc. views folder names etc.
+
+
+Back-End Developer Capstone
+Create a FastApi web server with multiple API endpoints // basic, baseline, expected
+Connect FastApi to a PostgreSQL database // basic, baseline, expected
+Deploy it on website // 2 web, 1 static and 1 server 
+
+-> Portfolio
