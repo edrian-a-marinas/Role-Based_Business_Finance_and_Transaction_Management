@@ -1,0 +1,14 @@
+# Documentation files (specific files only)
+DocumentationsFiles.txt
+Step-by-step.txt
+
+# Python bytecode
+*.pyc
+__pycache__/
+
+
+
+git rm --cached Step-by-step.txt
+git rm --cached backend/.gitignore
+git rm --cached gitignore
+

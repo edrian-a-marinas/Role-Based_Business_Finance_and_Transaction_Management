@@ -1,7 +1,0 @@
-# Documentation files (specific files only)
-DocumentationsFiles.txt
-
-
-# Python bytecode
-*.pyc
-__pycache__/
