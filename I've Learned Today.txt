@@ -328,6 +328,7 @@ execute for update, create, delete
 
 SENSITIVE DATA DELETING practice
 
+\! clear
 
 
 
