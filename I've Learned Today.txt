@@ -64,7 +64,7 @@ you can inherit a class in module. like InheritThis(module.classExample) This is
 
 
 
-oct 7:
+oct 7: #haha
 Encapsulation:
 example is public. safe go ahead. ex. name
 _example is private. no python coded, just for devs to tell na mag double think kung gagamitin to.
@@ -124,6 +124,7 @@ dont modifiy data directly. Always create a copy then modify the copy.
 Hooks: // special react functionional component.
 React.useState = lets a component store changing data and automatically update the UI whenever that data changes.
 
+december 31: #haha
 
 
 jan 6 - 
@@ -326,6 +327,16 @@ execute for update, create, delete
 
 
 SENSITIVE DATA DELETING practice
+
+
+
+
+feb 3: #haha dream coding
+
+
+
+
+
 
 
 
