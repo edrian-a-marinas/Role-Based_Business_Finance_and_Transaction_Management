@@ -19,4 +19,6 @@ class CategoryUpdate(BaseModel):
 
 class CategoryRead(CategoryBase):
   id: int
+  name: str
+  description: Optional[str] = None
   created_at: datetime
