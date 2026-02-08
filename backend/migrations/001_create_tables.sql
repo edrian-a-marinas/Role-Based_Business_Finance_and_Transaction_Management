@@ -1,4 +1,6 @@
 /*
+\i /home/edrian/Projects/Transaction-Processing/backend/migrations/001_create_tables.sql
+
 CREATE USER transaction_user WITH PASSWORD 'edrian';
 CREATE DATABASE transaction_db;
 
@@ -14,7 +16,6 @@ Password:
 
 GRANT ALL PRIVILEGES ON DATABASE transaction_db TO transaction_user;
 
-\i /home/edrian/Projects/Transaction-Processing/backend/migrations/001_create_tables.sql
 */
 
 /* Core business tables:
@@ -89,6 +90,20 @@ CREATE TABLE reports_history (
     created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
+
+CREATE TABLE transactions_history (
+  id SERIAL PRIMARY KEY,
+  transaction_id INTEGER NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),  -- who made the edit
+  old_description TEXT,
+  old_transaction_date DATE,
+  edited_at TIMESTAMP(0) NOT NULL DEFAULT now()
+);
+
+
 COMMIT;
 
 */
+
+
+
