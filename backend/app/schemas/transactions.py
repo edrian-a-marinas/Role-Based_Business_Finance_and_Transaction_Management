@@ -1,9 +1,7 @@
 from pydantic import BaseModel, Field
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from decimal import Decimal
-
-
 class TransactionCreate(BaseModel):
   amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
   category_id: int
@@ -25,6 +23,18 @@ class TransactionRead(TransactionOut):
   category_name: str 
   user_id: int       
 
+
+class TransactionHistoryRead(BaseModel):
+  id: int
+  transaction_id: int
+  user_id: int
+  old_description: str
+  old_transaction_date: date
+  action: str
+  action_taken_at: str
+
+  class Config:
+    orm_mode = True  
 
 
 
