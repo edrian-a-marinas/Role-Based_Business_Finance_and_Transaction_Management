@@ -49,19 +49,36 @@ async def get_transaction_by_id(tx_id: int):
 async def create_transaction(tx, user_id: int):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    row = await conn.fetchrow(
+    # 1️⃣ Insert the row
+    inserted = await conn.fetchrow(
       """
-      INSERT INTO transactions (amount, category_id, description, date, user_id)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, amount, category_id, description, date, user_id
+      INSERT INTO transactions (amount, category_id, description, transaction_date, user_id, transaction_type)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
       """,
       tx.amount,
       tx.category_id,
       tx.description,
-      tx.date,
-      user_id
+      tx.transaction_date,
+      user_id,
+      tx.transaction_type
     )
-    return row
+
+      # 2️⃣ Select the row including category_name
+    row = await conn.fetchrow(
+      """
+      SELECT t.id, t.amount, t.category_id, t.description,
+        t.transaction_date, t.user_id, t.transaction_type,
+        c.name AS category_name
+      FROM transactions t
+      JOIN categories c ON c.id = t.category_id
+      WHERE t.id = $1
+      """,
+      inserted["id"]
+    )
+
+    # ✅ Convert Record to dict
+    return dict(row)
 
 
 # UPDATE (partial update supported)

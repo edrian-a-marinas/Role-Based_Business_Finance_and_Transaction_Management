@@ -8,7 +8,8 @@ class TransactionCreate(BaseModel):
   amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
   category_id: int
   description: str
-  date: date
+  transaction_date: date
+  transaction_type: str 
 
 class TransactionOut(TransactionCreate):
   id: int
