@@ -140,18 +140,62 @@ async def update_transaction(tx_id: int, tx, user_id: int):
     return dict(updated_row, category_name=category_name)
 
 
-# DELETE
-async def delete_transaction(tx_id: int):
+async def delete_transaction(tx_id: int, user_id: int, is_admin: bool):
+  """
+  Soft delete a transaction.
+
+  Rules:
+  - Standard users cannot delete any transaction.
+  - Admins can delete any transaction.
+  - The deletion is logged in transactions_history for transparency.
+  """
+  if not is_admin:
+    # Standard users are not allowed to delete
+    return None
+
   pool = await get_pool()
   async with pool.acquire() as conn:
-    result = await conn.execute(
+    # Fetch the transaction first
+    tx = await conn.fetchrow(
       """
-      DELETE FROM transactions
+      SELECT id, user_id, category_id, amount, transaction_type, description, transaction_date
+      FROM transactions
       WHERE id = $1
       """,
       tx_id
     )
-    return result
+    if not tx:
+      return None
+
+    # Update deleted_at (soft delete)
+    await conn.execute(
+      """
+      UPDATE transactions
+      SET deleted_at = now()
+      WHERE id = $1
+      """,
+      tx_id
+    )
+
+    # Log the deletion in transactions_history
+    await conn.execute(
+      """
+      INSERT INTO transactions_history (
+        transaction_id,
+        user_id,
+        old_description,
+        old_transaction_date,
+        action_taken_at,
+        action
+      ) VALUES ($1, $2, $3, $4, now(), 'deleted')
+      """,
+      tx_id,
+      user_id,  # admin who deleted
+      tx['description'],
+      tx['transaction_date']
+    )
+
+    return True
 
 
 # AGGREGATION: monthly summary

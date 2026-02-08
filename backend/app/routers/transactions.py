@@ -18,6 +18,11 @@ FAKE_USER_ID = 1  # Temporary placeholder; replace with authenticated user ID fr
 # to protect the endpoint and filter transactions by user/role permissions.
 # admins can see all transaction of literally all, 
 # Standard only see all their own transactions history
+def theFunctionCheckingIT(user_id: int):
+    if user_id == FAKE_USER_ID:
+        return True
+    else:
+        return False
 """
 example: @router.get("/", response_model=List[TransactionRead])
 async def list_transactions(
@@ -51,7 +56,6 @@ async def create_transaction(payload: TransactionCreate):
   return row
 
 
-
 @router.put("/{transaction_id}", response_model=TransactionRead)
 async def update_transaction(transaction_id: int, payload: TransactionUpdate):
   # Only update own transaction
@@ -65,13 +69,19 @@ async def update_transaction(transaction_id: int, payload: TransactionUpdate):
   return row
 
 
-
 @router.delete("/{transaction_id}")
 async def delete_transaction(transaction_id: int):
+  # FAKE_USER_ID is the admin performing the deletion
+  isadmin = theFunctionCheckingIT(FAKE_USER_ID)
+  
   deleted = await transactions_service.delete_transaction(
     transaction_id,
-    FAKE_USER_ID
+    FAKE_USER_ID,
+    is_admin=isadmin  # check actual role from auth in real system
   )
   if not deleted:
-    raise HTTPException(status_code=404, detail="Transaction not found")
+    raise HTTPException(status_code=404, detail="Transaction not found or not allowed to delete")
   return {"status": "deleted"}
+
+
+

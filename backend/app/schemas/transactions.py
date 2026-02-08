@@ -17,7 +17,6 @@ class TransactionOut(TransactionCreate):
 
 
 class TransactionUpdate(BaseModel):
-  
   description: Optional[str] = None
   transaction_date: Optional[date] = None
 
