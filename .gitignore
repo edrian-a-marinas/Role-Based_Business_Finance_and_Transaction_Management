@@ -1,9 +1,11 @@
 # Documentation files (specific files only)
 DocumentationsFiles.txt
 Step-by-step.txt
+I've Learned Today.txt
 roadmap.txt
 
-migrations/test_queries.sql
+backend/migrations/test_queries.sql
+backend/migrations/001_create_tables.sql
 
 # Python bytecode
 *.pyc
