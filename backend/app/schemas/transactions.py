@@ -11,14 +11,17 @@ class TransactionCreate(BaseModel):
   transaction_date: date
   transaction_type: str 
 
+
 class TransactionOut(TransactionCreate):
   id: int
+
 
 class TransactionUpdate(BaseModel):
   amount: Optional[Decimal] = None
   category_id: Optional[int] = None
   description: Optional[str] = None
   date: Optional[date] = None
+
 
 class TransactionRead(TransactionOut):
   category_name: str 
@@ -34,7 +37,7 @@ class TransactionRead(TransactionOut):
 
 #decimal used for money, gt=0 must be greater than zero, max digits, decimal places
 
-#Optional, allows partial updates, pdeng si description lng i update
+# transactionsRead inherits create and out 
 
 """
 Model	Used for

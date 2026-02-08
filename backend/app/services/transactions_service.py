@@ -10,24 +10,25 @@ async def get_transactions(user_id: int | None = None):
     if user_id:
       rows = await conn.fetch(
         """
-        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.date, t.user_id
+        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.transaction_date, t.user_id, transaction_type
         FROM transactions t
         JOIN categories c ON c.id = t.category_id
         WHERE t.user_id = $1
-        ORDER BY t.date DESC
+        ORDER BY t.transaction_date DESC
         """,
         user_id
       )
     else:
       rows = await conn.fetch(
         """
-        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.date, t.user_id
+        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.transaction_date, t.user_id, transaction_type
         FROM transactions t
         JOIN categories c ON c.id = t.category_id
-        ORDER BY t.date DESC
+        ORDER BY t.transaction_date DESC
         """
       )
-    return rows
+    return [dict(row) for row in rows]
+
 
 
 # READ: single transaction
@@ -49,7 +50,6 @@ async def get_transaction_by_id(tx_id: int):
 async def create_transaction(tx, user_id: int):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    # 1️⃣ Insert the row
     inserted = await conn.fetchrow(
       """
       INSERT INTO transactions (amount, category_id, description, transaction_date, user_id, transaction_type)
@@ -64,7 +64,6 @@ async def create_transaction(tx, user_id: int):
       tx.transaction_type
     )
 
-      # 2️⃣ Select the row including category_name
     row = await conn.fetchrow(
       """
       SELECT t.id, t.amount, t.category_id, t.description,
@@ -77,7 +76,6 @@ async def create_transaction(tx, user_id: int):
       inserted["id"]
     )
 
-    # ✅ Convert Record to dict
     return dict(row)
 
 
