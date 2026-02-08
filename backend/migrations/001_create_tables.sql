@@ -48,7 +48,7 @@ CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,   -- admin, standard
     description TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
 CREATE TABLE users (
@@ -57,14 +57,14 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     role_id INTEGER REFERENCES roles(id),
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,   -- Sales, Purchases, Expenses, Salary
     description TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
 
@@ -73,10 +73,10 @@ CREATE TABLE transactions (
     user_id INTEGER REFERENCES users(id),
     category_id INTEGER REFERENCES categories(id),
     amount NUMERIC(12, 2) NOT NULL,
-    transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('credit', 'debit')),
+    transaction_type VARCHAR(20) NOT NULL CHECK (transaction_type IN ('credit', 'debit')),  # for credit debit only
     description TEXT,
     transaction_date DATE NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
 
@@ -86,7 +86,7 @@ CREATE TABLE reports_history (
     report_type VARCHAR(50),         -- daily, weekly, monthly
     start_date DATE,
     end_date DATE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
 COMMIT;
