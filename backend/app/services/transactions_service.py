@@ -1,59 +1,119 @@
 # app/services/transactions_service.py
 
 from db.connection import get_pool
+from app.routers import transactions
+from datetime import datetime
+
+
+#Possible feature to add - admin can choose to view all or view only his or only view others
+
+# ---- helpers -----
+def format_action_taken_at(row: dict) -> dict:
+  if isinstance(row.get("action_taken_at"), datetime):
+    row["action_taken_at"] = row["action_taken_at"].strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+  return row
+
 
 
 # READ: all transactions (optionally by user)
-async def get_transactions(user_id: int | None = None):
+async def get_transactions(current_user_id: int, role):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    if user_id is not None:
+
+    if role == 'admin':
       rows = await conn.fetch(
         """
-        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.transaction_date, t.user_id, transaction_type
+        SELECT t.*, c.name AS category_name
         FROM transactions t
-        JOIN categories c ON c.id = t.category_id
-        WHERE t.user_id = $1
-        ORDER BY t.transaction_date DESC
-        """,
-        user_id
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.deleted_at IS NULL
+        ORDER BY t.created_at DESC
+        """
       )
+
+
     else:
       rows = await conn.fetch(
         """
-        SELECT t.id, t.amount, t.category_id, c.name AS category_name, t.description, t.transaction_date, t.user_id, transaction_type
+        SELECT t.*, c.name AS category_name
         FROM transactions t
-        JOIN categories c ON c.id = t.category_id
-        ORDER BY t.transaction_date DESC
-        """
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = $1
+          AND t.deleted_at IS NULL
+        ORDER BY t.created_at DESC
+        """,
+        current_user_id
       )
-    return [dict(row) for row in rows]
 
+    return [dict(row) for row in rows]
+  
+  
+async def get_transactions_history(current_user_id, role):
+  pool = await get_pool()
+  async with pool.acquire() as conn:
+    if role == "admin":
+      rows = await conn.fetch(
+        "SELECT * FROM transactions_history ORDER BY action_taken_at DESC"
+      )
+    else:
+      rows = await conn.fetch(
+        "SELECT * FROM transactions_history WHERE user_id = $1 ORDER BY action_taken_at DESC",
+        current_user_id
+      )
+
+    result = [
+      format_action_taken_at(dict(row))
+      for row in rows
+    ]
+  
+    return result
 
 
 # READ: single transaction
-async def get_transaction_by_id(tx_id: int):
+async def get_transaction_by_id(tx_id: int, current_user_id: int):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    row = await conn.fetchrow(
-      """
-      SELECT id, amount, category_id, description, date, user_id
-      FROM transactions
-      WHERE id = $1
-      """,
-      tx_id
-    )
+    role = await transactions.get_user_role(current_user_id)
+
+    if role == "admin":
+      row = await conn.fetchrow(
+        """
+        SELECT *
+        FROM transactions
+        WHERE id = $1
+          AND deleted_at IS NULL
+        """,
+        tx_id
+      )
+    else:
+      row = await conn.fetchrow(
+        """
+        SELECT *
+        FROM transactions
+        WHERE id = $1
+          AND user_id = $2
+          AND deleted_at IS NULL
+        """,
+        tx_id,
+        current_user_id
+      )
+
     return dict(row) if row else None
 
 
 
+
 # CREATE
-async def create_transaction(tx, user_id: int):
+async def create_transaction(tx, current_user_id: int, role):
   pool = await get_pool()
   async with pool.acquire() as conn:
     inserted = await conn.fetchrow(
       """
-      INSERT INTO transactions (amount, category_id, description, transaction_date, user_id, transaction_type)
+      INSERT INTO transactions (
+          amount, category_id, description, transaction_date, user_id, transaction_type
+      )
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id
       """,
@@ -61,15 +121,14 @@ async def create_transaction(tx, user_id: int):
       tx.category_id,
       tx.description,
       tx.transaction_date,
-      user_id,
+      current_user_id,
       tx.transaction_type
     )
 
     row = await conn.fetchrow(
       """
-      SELECT t.id, t.amount, t.category_id, t.description,
-        t.transaction_date, t.user_id, t.transaction_type,
-        c.name AS category_name
+      SELECT t.id, t.amount, t.category_id, t.description, t.transaction_date,
+             t.user_id, t.transaction_type, c.name AS category_name
       FROM transactions t
       JOIN categories c ON c.id = t.category_id
       WHERE t.id = $1
@@ -80,94 +139,90 @@ async def create_transaction(tx, user_id: int):
     return dict(row)
 
 
+
+
 # UPDATE (partial update supported)
-async def update_transaction(tx_id: int, tx, user_id: int):
+async def update_transaction(tx_id: int, tx, current_user_id: int, role):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    # Get existing transaction first
-    old_row = await conn.fetchrow(
+
+    # Ownership check
+    old = await conn.fetchrow(
       """
-      SELECT id, user_id, category_id, amount, transaction_type, description, transaction_date
+      SELECT *
       FROM transactions
       WHERE id = $1
+        AND deleted_at IS NULL
       """,
       tx_id
     )
-    if not old_row:
-      return None  # Transaction not found
+    if not old:
+      return None
 
-    # Update only allowed fields
-    updated_row = await conn.fetchrow(
+    if role != "admin" and old["user_id"] != current_user_id:
+      return None
+
+    updated = await conn.fetchrow(
       """
-      UPDATE transactions t
+      UPDATE transactions
       SET
-        description = COALESCE($1, t.description),
-        transaction_date = COALESCE($2, t.transaction_date)
-      WHERE t.id = $3
-      RETURNING t.id, t.user_id, t.category_id, t.amount, t.transaction_type, t.description, t.transaction_date
+        description = COALESCE($1, description),
+        transaction_date = COALESCE($2, transaction_date)
+      WHERE id = $3
+      RETURNING *
       """,
       tx.description,
       tx.transaction_date,
       tx_id
     )
 
-    if not updated_row:
-      return None
-
-    # Log the old values into transactions_history
     await conn.execute(
       """
       INSERT INTO transactions_history (
         transaction_id,
         user_id,
+        action,
         old_description,
-        old_transaction_date
-      ) VALUES ($1, $2, $3, $4)
+        old_transaction_date,
+        action_taken_at
+      )
+      VALUES ($1, $2, 'updated', $3, $4, now())
       """,
       tx_id,
-      user_id,
-      old_row['description'],
-      old_row['transaction_date']
+      current_user_id,
+      old["description"],
+      old["transaction_date"]
     )
 
-    # Fetch category_name for response
     category_name = await conn.fetchval(
       "SELECT name FROM categories WHERE id = $1",
-      updated_row['category_id']
+      updated['category_id']
     )
 
-    # Return the updated transaction as dict including category_name
-    return dict(updated_row, category_name=category_name)
+    return dict(updated, category_name=category_name)
 
 
-async def delete_transaction(tx_id: int, user_id: int, is_admin: bool):
-  """
-  Soft delete a transaction.
 
-  Rules:
-  - Standard users cannot delete any transaction.
-  - Admins can delete any transaction.
-  - The deletion is logged in transactions_history for transparency.
-  """
-  if not is_admin:
-    # Standard users are not allowed to delete
-    return None
 
+async def delete_transaction(tx_id: int, current_user_id: int, role):
   pool = await get_pool()
   async with pool.acquire() as conn:
-    # Fetch the transaction first
+    
+    if role != "admin":
+      return None
+
     tx = await conn.fetchrow(
       """
-      SELECT id, user_id, category_id, amount, transaction_type, description, transaction_date
+      SELECT *
       FROM transactions
       WHERE id = $1
+        AND deleted_at IS NULL
       """,
       tx_id
     )
     if not tx:
       return None
 
-    # Update deleted_at (soft delete)
     await conn.execute(
       """
       UPDATE transactions
@@ -177,25 +232,22 @@ async def delete_transaction(tx_id: int, user_id: int, is_admin: bool):
       tx_id
     )
 
-    # Log the deletion in transactions_history
     await conn.execute(
       """
       INSERT INTO transactions_history (
-        transaction_id,
-        user_id,
-        old_description,
-        old_transaction_date,
-        action_taken_at,
-        action
-      ) VALUES ($1, $2, $3, $4, now(), 'deleted')
+          transaction_id,
+          user_id,
+          action,
+          action_taken_at
+      )
+      VALUES ($1, $2, 'deleted', now())
       """,
       tx_id,
-      user_id,  # admin who deleted
-      tx['description'],
-      tx['transaction_date']
+      current_user_id
     )
 
     return True
+
 
 
 # AGGREGATION: monthly summary
