@@ -28,18 +28,46 @@ async def get_category_by_id(category_id: int):
     return row
 
 # CREATE: admin only
-async def create_category(name: str, description: str):
+async def create_category(ctg, current_user_id: int, role):
   pool = await get_pool()
   async with pool.acquire() as conn:
+
+    if role != "admin":
+      return None
+    
     row = await conn.fetchrow(
       """
       INSERT INTO categories (name, description)
       VALUES ($1, $2)
       RETURNING id, name, description, created_at
       """,
-      name,
-      description
+      ctg.name,
+      ctg.description
     )
+
+    await conn.execute(
+      """
+      INSERT INTO transactions_history (
+        transaction_id,
+        user_id,
+        action,
+        old_description,
+        old_transaction_date,
+        action_taken_at
+      )
+      VALUES ($1, $2, 'updated', $3, $4, now())
+      """,
+      tx_id,
+      current_user_id,
+      old["description"],
+      old["transaction_date"]
+    )
+
+    category_name = await conn.fetchval(
+      "SELECT name FROM categories WHERE id = $1",
+      updated['category_id']
+    )
+
     return row
 
 # UPDATE: admin only

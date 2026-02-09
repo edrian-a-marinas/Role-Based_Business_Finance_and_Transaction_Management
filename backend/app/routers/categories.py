@@ -1,22 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from app.schemas.categories import CategoryCreate, CategoryRead, CategoryUpdate
 from app.services import categories_service
+
+from app.schemas.categories import (
+  CategoryCreate, 
+  CategoryRead, 
+  CategoryUpdate
+)
+
+from routers import transactions
+
+
+# TEMPORARY
 
 router = APIRouter(
   prefix="/categories",
   tags=["categories"]
 )
 
-# TEMP: JWT/Auth logic will decide admin vs standard
-FAKE_USER_ID = 1  # Temporary placeholder
-FAKE_ADMIN = True  # Temporary placeholder for admin check
-
-def theFunctionCheckingIT(user_id: int):
-  if user_id == FAKE_USER_ID:
-    return True
-  else:
-    return False
 
 
 # GET all
@@ -29,12 +30,11 @@ async def list_categories():
 # POST (admin only)
 @router.post("/", response_model=CategoryRead)
 async def create_category(payload: CategoryCreate):
-  isadmin = theFunctionCheckingIT
 
-  if isadmin is False:
-    raise HTTPException(status_code=403, detail="Only admin can create categories")
+  current_user_id = await transactions.get_logged_in_user_id()
+  role = await transactions.get_user_role(current_user_id)
   
-  row = await categories_service.create_category(payload)
+  row = await categories_service.create_category(payload, role)
   if not row:
     raise HTTPException(status_code=400, detail="Category not created")
   return row
