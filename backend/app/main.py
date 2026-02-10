@@ -1,5 +1,12 @@
 from fastapi import FastAPI
-from app.routers import transactions, users, reports
+
+from app.routers import (
+  transactions, 
+  categories, 
+  reports,
+  users,
+  pages
+  )
 
 app = FastAPI()
 
@@ -9,11 +16,13 @@ app = FastAPI()
 
 # 2. Backend API Routings (Returns JSON)
 app.include_router(transactions.router)
-#app.include_router(users.router)
+app.include_router(categories.router)
 #app.include_router(reports.router)
+#app.include_router(users.router)
+
 
 # 3. Frontend Page Routings (Returns HTML)
-#app.include_router(what?.What? idk)
+# app.include_router(pages.router)
 
 
 
