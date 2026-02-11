@@ -1,7 +1,6 @@
 # app/services/transactions_service.py
 
 from db.connection import get_pool
-from app.routers import transactions
 from app.utils import helpers
 import json
 
@@ -43,7 +42,14 @@ async def get_transactions_history(current_user_id, role):
     if role == "admin":
       rows = await conn.fetch(
         """
-        SELECT *
+        SELECT
+          id,
+          entity_id,
+          user_id,
+          action,
+          action_taken_at,
+          old_data->>'description' AS old_description,
+          (old_data->>'transaction_date')::date AS old_transaction_date
         FROM log_history
         WHERE entity_type = 'transaction'
         ORDER BY action_taken_at DESC
@@ -52,7 +58,14 @@ async def get_transactions_history(current_user_id, role):
     else:
       rows = await conn.fetch(
         """
-        SELECT *
+        SELECT
+          id,
+          entity_id,
+          user_id,
+          action,
+          action_taken_at,
+          old_data->>'description' AS old_description,
+          (old_data->>'transaction_date')::date AS old_transaction_date
         FROM log_history
         WHERE entity_type = 'transaction'
           AND user_id = $1
@@ -260,29 +273,6 @@ async def delete_transaction(tx_id: int, current_user_id: int, role):
     return True
 
 
-
-# AGGREGATION: monthly summary
-async def get_monthly_summary(year: int, month: int, user_id: int):
-  pool = await get_pool()
-  async with pool.acquire() as conn:
-    rows = await conn.fetch(
-      """
-      SELECT c.name AS category,
-        SUM(t.amount) AS total
-      FROM transactions t
-      JOIN categories c ON c.id = t.category_id
-      WHERE EXTRACT(YEAR FROM t.date) = $1
-        AND EXTRACT(MONTH FROM t.date) = $2
-        AND t.user_id = $3
-      GROUP BY c.name
-      ORDER BY total DESC
-      """,
-      year,
-      month,
-      user_id
-    )
-
-    return [dict(row) for row in rows]
 
 
 

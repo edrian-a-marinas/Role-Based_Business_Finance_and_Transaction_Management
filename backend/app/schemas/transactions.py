@@ -3,6 +3,18 @@ from datetime import date, datetime
 from typing import Optional
 from decimal import Decimal
 
+from enum import Enum
+
+class ActionType(str, Enum):
+  updated = "updated"
+  deleted = "deleted"
+
+class TransactionType(str, Enum):
+  debit = "debit"
+  credit = "credit"
+
+
+
 class TransactionCreate(BaseModel):
   amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
   category_id: int
@@ -31,7 +43,7 @@ class TransactionHistoryRead(BaseModel):
   user_id: int
   old_description: Optional[str] = None
   old_transaction_date: Optional[date] = None
-  action: str
+  action: ActionType
   action_taken_at: datetime
 
   class Config:

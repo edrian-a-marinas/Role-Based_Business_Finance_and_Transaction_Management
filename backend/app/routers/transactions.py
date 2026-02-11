@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
-from db.connection import get_pool
 from app.auth import jwt
 from app.services import transactions_service
 
