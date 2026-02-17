@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from app.core import config
 
 from app.auth import router_auth as authentications
 from app.routers import (
@@ -7,13 +7,19 @@ from app.routers import (
   reports,
   users,
   )
+from tests import test_health
 
-app = FastAPI()
+app = config.create_app()
 
-# 1. Backend API Routings (Returns JSON)
+
+# Backend auth Routings 
 app.include_router(authentications.router)
 
+# Backend logic routings
 app.include_router(transactions.router)
 app.include_router(categories.router)
 app.include_router(reports.router)
 app.include_router(users.router)
+
+# Backend health routing
+app.include_router(test_health.router)
