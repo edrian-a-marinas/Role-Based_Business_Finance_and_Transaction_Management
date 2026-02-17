@@ -1,13 +1,21 @@
-import { useState } from "react"
+import { useState, useContext } from "react"
 import reactLogo from "../../assets/react.svg"
 import viteLogo from "../../assets/vite.svg"
+import { AuthContext } from "../../contexts/AuthContext"
 
 export default function Dashboard() {
   const [count, setCount] = useState(0)
+  const { logout } = useContext(AuthContext)
+
+  const handleLogout = () => {
+    logout()
+  }
 
   return (
     <>
       <div>
+        <title>Dashboard</title>
+     
         <a href="https://vite.dev" target="_blank" rel="noreferrer">
           <img src={viteLogo} className="logo" alt="Vite logo" />
         </a>
@@ -27,6 +35,11 @@ export default function Dashboard() {
       <p className="read-the-docs">
         Click on the Vite and React logos to learn more
       </p>
+
+      <button onClick={handleLogout}>
+        Logout
+      </button>
+
     </>
   )
 }

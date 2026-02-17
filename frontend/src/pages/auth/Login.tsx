@@ -1,16 +1,20 @@
 // src/pages/auth/Login.tsx
-import { useState } from "react"
+import { useState, useContext } from "react"
+//import { useNavigate } from "react-router-dom"
 import { validateLogin } from "../../schemas/login"
 import type { LoginForm } from "../../schemas/login"
 import axios from "axios"
+import { AuthContext } from "../../contexts/AuthContext"
 
 export default function Login() {
+  //const navigate = useNavigate()
+  const { setLoggedIn } = useContext(AuthContext)
+
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" })
   const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
 
-  // Update form fields
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
@@ -20,7 +24,6 @@ export default function Login() {
     setErrors([])
     setMessage("")
 
-    // Client-side validation
     const validationErrors = validateLogin(form)
     if (validationErrors.length > 0) {
       setErrors(validationErrors)
@@ -29,38 +32,48 @@ export default function Login() {
 
     setLoading(true)
     try {
-      const response = await axios.post("/auth/login", form)
-      // Backend returns: { access_token, token_type }
-      console.log("Login success:", response.data)
-      setMessage("Login successful!")
-      // You can store token in localStorage or context for later
-      // localStorage.setItem("access_token", response.data.access_token)
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/auth/login",
+        form
+      )
+
+      const { access_token, token_type } = response.data
+
+      // Store token
+      localStorage.setItem("access_token", access_token)
+      localStorage.setItem("token_type", token_type)
+
+      // Update global auth state
+      setLoggedIn(true)
+
     } catch (err: any) {
       if (err.response?.status === 401) {
         setErrors(["Invalid credentials or inactive account"])
       } else {
         setErrors(["Login failed. Try again later."])
       }
-      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="login-page">
+    <div className="">
+      <title>App - log in or sign up</title>
       <h1>Login</h1>
+
       {errors.length > 0 && (
-        <div className="errors">
+        <div className="">
           {errors.map((err, i) => (
-            <p key={i} style={{ color: "red" }}>{err}</p>
+            <p key={i}>{err}</p>
           ))}
         </div>
       )}
-      {message && <p style={{ color: "green" }}>{message}</p>}
+
+      {message && <p>{message}</p>}
 
       <form onSubmit={handleSubmit}>
-        <div>
+        <div className="">
           <label>Email:</label>
           <input
             type="email"
@@ -71,7 +84,7 @@ export default function Login() {
           />
         </div>
 
-        <div>
+        <div className="">
           <label>Password:</label>
           <input
             type="password"
