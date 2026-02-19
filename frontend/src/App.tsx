@@ -3,7 +3,7 @@ import { BrowserRouter } from "react-router-dom"
 
 import Router from "./router"
 
-import { AuthProvider } from "./contexts/AuthContext"
+import { AuthProvider } from "./features/auth/AuthContext"
 
 import './styles/dashboard.css'
 //import './styles/login.css'

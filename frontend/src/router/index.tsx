@@ -1,15 +1,14 @@
-import { AuthContext } from "../contexts/AuthContext"
+import { AuthContext } from "../features/auth/AuthContext"
 import { useContext } from "react"
 
 import { Routes, Route, Navigate } from "react-router-dom"
 
 // Pages
-import Dashboard from "../pages/dashboard/Dashboard"
-import Login from "../pages/auth/Login"
-import Register from "../pages/auth/Register"
-// import Transactions from "../pages/dashboard/Transactions"
-// import Categories from "../pages/dashboard/Categories"
-// import Reports from "../pages/dashboard/Reports"
+import Dashboard from "../features/dashboard/pages/DashboardPage"
+import Login from "../features/auth/pages/LoginPage"
+import Register from "../features/auth/pages/RegisterPage"
+
+
 
 function RootController() {
   const { isLoggedIn } = useContext(AuthContext)
@@ -28,10 +27,6 @@ export default function Router() {
       <Route path="/login" element={isLoggedIn ? <Navigate to="/" /> : <Login />} /> 
       <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />  
 
-      {/* === Dashboard sub-pages (commented for now) === */}
-      {/* <Route path="/transactions" element={<Transactions />} /> */}
-      {/* <Route path="/categories" element={<Categories />} /> */}
-      {/* <Route path="/reports" element={<Reports />} /> */}
     </Routes>
   )
 }
