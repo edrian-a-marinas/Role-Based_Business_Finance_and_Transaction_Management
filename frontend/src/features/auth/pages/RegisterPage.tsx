@@ -1,12 +1,15 @@
 // src/pages/auth/Register.tsx
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import axios from "axios"
 
 import { validateRegister } from "../schemas/register"
 import type { RegisterForm } from "../schemas/register"
 
 export default function Register() {
+  const navigate = useNavigate()
+
+  const [step, setStep] = useState<1 | 2>(1)
   const [form, setForm] = useState<RegisterForm>({
     email: "",
     password: "",
@@ -15,18 +18,35 @@ export default function Register() {
     lastName: "",
     phoneNumber: "",
   })
-
   const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
+  const [verificationCode, setVerificationCode] = useState("")
+  const [countdown, setCountdown] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (countdown === null) return
+
+    if (countdown === 0) {
+      navigate("/login")
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(prev => (prev !== null ? prev - 1 : null))
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [countdown, navigate])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleBackStep = () => setStep(1)
+
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
-    if (loading) return
     setErrors([])
     setMessage("")
 
@@ -36,7 +56,15 @@ export default function Register() {
       return
     }
 
+    setStep(2)
+  }
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrors([])
+    setMessage("")
     setLoading(true)
+
     try {
       await axios.post("http://127.0.0.1:8000/api/auth/register", {
         email: form.email,
@@ -44,33 +72,36 @@ export default function Register() {
         first_name: form.firstName,
         middle_name: form.middleName || null,
         last_name: form.lastName,
-        phone_number: form.phoneNumber,
+        phone_number: form.phoneNumber || null,
+        verification_code: verificationCode,
       })
 
-      setMessage("Account created successfully! You can now log in.")
-      setForm({
-        email: "",
-        password: "",
-        firstName: "",
-        middleName: "",
-        lastName: "",
-        phoneNumber: "",
-      })
+      setMessage("Account created successfully! Redirecting to login...")
+      setCountdown(3)
+
     } catch (err: any) {
       if (err.response?.data?.detail) {
         setErrors([err.response.data.detail])
       } else {
-        setErrors(["Registration failed. Try again later."])
+        setErrors(["Verification failed. Try again later."])
       }
     } finally {
       setLoading(false)
     }
   }
 
+  function RequiredStar() {
+    return <span>* </span>
+  }
+
   return (
     <div>
       <title>Create Account</title>
       <h1>Sign Up</h1>
+      <p>
+        Join and experience users tracking their business transactions.
+        Let's get started with a secure account.
+      </p>
 
       {errors.length > 0 && (
         <div>
@@ -82,100 +113,120 @@ export default function Register() {
 
       {message && <p>{message}</p>}
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label htmlFor="firstName">First Name</label>
-          <input
-            id="firstName"
-            type="text"
-            name="firstName"
-            value={form.firstName}
-            onChange={handleChange}
-            placeholder="Enter your first name"
-            maxLength={50} 
-            required
-            
-          />
-        </div>
+      {countdown !== null && countdown > 0 && (
+        <p>Redirecting in {countdown}...</p>
+      )}
 
-        <div>
-          <label htmlFor="middleName">Middle Name</label>
-          <input
-            id="middleName"
-            type="text"
-            name="middleName"
-            value={form.middleName}
-            onChange={handleChange}
-            placeholder=" Optional"
-            maxLength={50} 
-          />
-        </div>
+      {step === 1 && (
+        <form onSubmit={handleNextStep}>
+          <div>
+            <label>First Name <RequiredStar /></label>
+            <input
+              type="text"
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              placeholder="John"
+              maxLength={50}
+              required
+            />
+          </div>
 
-        <div>
-          <label htmlFor="lastName">Last Name</label>
-          <input
-            id="lastName"
-            type="text"
-            name="lastName"
-            value={form.lastName}
-            onChange={handleChange}
-            placeholder="Enter your last name"
-            maxLength={50} 
-            required
-          />
-        </div>
+          <div>
+            <label>Middle Name</label>
+            <input
+              type="text"
+              name="middleName"
+              value={form.middleName}
+              onChange={handleChange}
+              placeholder="Doe"
+              maxLength={50}
+            />
+          </div>
 
-        <div>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            name="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="Enter your email address"
-            maxLength={100} 
-            required
-          />
-        </div>
+          <div>
+            <label>Last Name <RequiredStar /></label>
+            <input
+              type="text"
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              placeholder="Miller"
+              maxLength={50}
+              required
+            />
+          </div>
 
-        <div>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Create a strong password"
-            maxLength={72} 
-            required
-          />
-        </div>
+          <div>
+            <label>Phone Number</label>
+            <input
+              type="text"
+              name="phoneNumber"
+              value={form.phoneNumber}
+              onChange={handleChange}
+              placeholder="09XXXXXXXXX"
+              maxLength={11}
+            />
+          </div>
 
-        <div>
-          <label htmlFor="phoneNumber">Phone Number</label>
-          <input
-            id="phoneNumber"
-            type="text"
-            name="phoneNumber"
-            value={form.phoneNumber}
-            onChange={handleChange}
-            placeholder="09XXXXXXXXX"
-            maxLength={11} 
-            required
-          />
-        </div>
+          <div>
+            <label>Email <RequiredStar /></label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="your@email.com"
+              required
+            />
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating account..." : "Sign Up"}
-        </button>
-      </form>
+          <div>
+            <label>Password <RequiredStar /></label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Create a strong password"
+              maxLength={72}
+              required
+            />
+          </div>
 
-      <p>
-        
-        <Link to="/login">Already have an account?{" "}</Link>
-      </p>
+          <button type="submit" disabled={loading}>
+            Next Step
+          </button>
+
+          <p>
+            <Link to="/login">Already have an account?</Link>
+          </p>
+        </form>
+      )}
+
+      {step === 2 && (
+        <form onSubmit={handleVerifyCode}>
+          <div>
+            <label>Enter Verification Code <RequiredStar /></label>
+            <input
+              type="text"
+              name="verificationCode"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="Enter code sent to your email"
+              required
+            />
+          </div>
+
+          <button type="button" onClick={handleBackStep} disabled={loading}>
+            Back
+          </button>
+
+          <button type="submit" disabled={loading}>
+            {loading ? "Verifying..." : "Verify & Create Account"}
+          </button>
+        </form>
+      )}
     </div>
   )
 }

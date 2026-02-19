@@ -30,8 +30,11 @@ export const registerSchema = z.object({
 
   phoneNumber: z
     .string()
-    .length(11)
-    .regex(phoneRegex, { message: "Invalid phone number" }),
+    .optional()
+    .refine(
+      val => !val || phoneRegex.test(val),
+      { message: "Invalid phone number, must be 11 digits and starts with 09" }
+    )
 })
 
 export type RegisterForm = z.infer<typeof registerSchema>
