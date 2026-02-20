@@ -269,7 +269,17 @@ export default function Register() {
         <form onSubmit={handleVerifyCode}>
           <div>
             <p>
-              Enter the OTP sent to <strong>{maskEmail(form.email)}</strong>
+              {sendCount === 0 ? (
+                <>
+                  Code will be sent to{" "}
+                  <strong>{maskEmail(form.email)}</strong>
+                </>
+              ) : (
+                <>
+                  Enter the 6-digit code sent to{" "}
+                  <strong>{maskEmail(form.email)}</strong>
+                </>
+              )}
             </p>
             <input
               type="text"
