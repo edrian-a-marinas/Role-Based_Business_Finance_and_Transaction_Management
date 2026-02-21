@@ -1,3 +1,4 @@
+// DashboardPagge.tsx starting, not finish yet
 import { useState, useContext } from "react"
 import { AuthContext } from "../../auth/AuthContext"
 
@@ -35,12 +36,19 @@ export default function DashboardPage() {
           justifyContent: "space-between",
         }}
       >
+        <img
+          src="../../../../../src/assets/vite.svg"
+          alt="TransacScope"
+            style={{
+              cursor: "pointer",
+              width: "75px",   // 👈 adjust this (80–140px usually good)
+              height: "auto",
+              marginBottom: "1rem",
+            }}
+          onClick={() => setSelectedMenu("dashboard")}
+        />
         <div>
-          <h2>TransacScope</h2>
           <ul style={{ listStyle: "none", padding: 0 }}>
-            <li>
-              <button onClick={() => handleMenuClick("dashboard")}>Dashboard Overview</button>
-            </li>
             <li>
               <button onClick={() => handleMenuClick("transactions")}>Transactions</button>
             </li>
