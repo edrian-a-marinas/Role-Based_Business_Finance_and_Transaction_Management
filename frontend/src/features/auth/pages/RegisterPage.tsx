@@ -1,8 +1,7 @@
 // src/pages/auth/Register.tsx
 import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import axios from "axios"
-
+import api from "../../../services/apiClient"
 import { validateRegister } from "../schemas/register"
 import type { RegisterForm } from "../schemas/register"
 
@@ -85,7 +84,7 @@ export default function Register() {
     setLoading(true)
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/auth/send-code", {
+      await api.post("api/auth/send-code", {
         email: form.email,
       })
 
@@ -109,7 +108,7 @@ export default function Register() {
     setLoading(true)
 
     try {
-      await axios.post("http://127.0.0.1:8000/api/auth/register", {
+      await api.post("api/auth/register", {
         email: form.email,
         password: form.password,
         first_name: form.firstName,

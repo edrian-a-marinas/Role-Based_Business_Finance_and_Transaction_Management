@@ -2,7 +2,7 @@
 import { useState, useContext } from "react"
 import { validateLogin } from "../schemas/login"
 import type { LoginForm } from "../schemas/login"
-import axios from "axios"
+import api from "../../../services/apiClient"
 import { AuthContext } from "../AuthContext"
 import { Link } from "react-router-dom"
 
@@ -32,8 +32,8 @@ export default function Login() {
 
     setLoading(true)
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/api/auth/login",
+      const response = await api.post(
+        "api/auth/login",
         form
       )
 
