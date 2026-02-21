@@ -1,6 +1,7 @@
 // DashboardPagge.tsx starting, not finish yet
 import { useState, useContext } from "react"
 import { AuthContext } from "../../auth/AuthContext"
+import Transactions from "./TransactionsPage"
 
 export default function DashboardPage() {
   const { logout, user } = useContext(AuthContext)
@@ -11,7 +12,7 @@ export default function DashboardPage() {
   const userRole = user!.role_id
 
   const [selectedMenu, setSelectedMenu] = useState<
-    "dashboard" | "transactions" | "categories" | "reports" | "users"
+    "dashboard" | "transactions" | "reports" | "users"
   >("dashboard"
   )
 
@@ -25,7 +26,9 @@ export default function DashboardPage() {
   }
 
   return (
+
     <div style={{ display: "flex", minHeight: "100vh" }}>
+      <title>TransacScope Overview</title>
       <nav
         style={{
           width: 200,
@@ -41,7 +44,7 @@ export default function DashboardPage() {
           alt="TransacScope"
             style={{
               cursor: "pointer",
-              width: "75px",   // 👈 adjust this (80–140px usually good)
+              width: "75px",  
               height: "auto",
               marginBottom: "1rem",
             }}
@@ -51,9 +54,6 @@ export default function DashboardPage() {
           <ul style={{ listStyle: "none", padding: 0 }}>
             <li>
               <button onClick={() => handleMenuClick("transactions")}>Transactions</button>
-            </li>
-            <li>
-              <button onClick={() => handleMenuClick("categories")}>Categories</button>
             </li>
             <li>
               <button onClick={() => handleMenuClick("reports")}>Reports</button>
@@ -74,13 +74,9 @@ export default function DashboardPage() {
           <>
             <h1>Dashboard Overview</h1>
             <p>Welcome, {userRole === 1 ? "Admin" : "Standard"}!</p>
-            <button onClick={() => console.log("Transaction button clicked")}>
-              New Transaction (prototype)
-            </button>
           </>
         )}
-        {selectedMenu === "transactions" && <p>Transactions page placeholder</p>}
-        {selectedMenu === "categories" && <p>Categories page placeholder</p>}
+        {selectedMenu === "transactions" && <Transactions> </Transactions>}
         {selectedMenu === "reports" && <p>Reports page placeholder</p>}
         {selectedMenu === "users" && userID === 1 && <p>Users management placeholder</p>}
       </main>
