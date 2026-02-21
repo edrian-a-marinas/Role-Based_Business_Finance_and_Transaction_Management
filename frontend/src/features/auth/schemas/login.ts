@@ -1,8 +1,8 @@
 // Email validation pattern (simple, matches general email format)
-export type EmailStr = string;
+type EmailStr = string;
 
 // Password constraints: 8-72 chars (same as backend)
-export type PasswordStr = string;
+type PasswordStr = string;
 
 export interface LoginForm {
   email: EmailStr;
@@ -16,6 +16,14 @@ export function validateLogin(data: LoginForm): string[] {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(data.email)) {
     errors.push("Invalid email format");
+  }
+
+  if (!data.password || data.password.length < 8) {
+    errors.push("Password must be at least 8 characters long.");
+  }
+
+  if (data.password.length > 72) {
+    errors.push("Password must not exceed 72 characters.");
   }
 
   return errors;
