@@ -23,7 +23,6 @@ export default function DashboardPage() {
 
   const handleMenuClick = (menu: typeof selectedMenu) => {
     setSelectedMenu(menu)
-    console.log("Selected menu:", menu)
   }
 
   return (

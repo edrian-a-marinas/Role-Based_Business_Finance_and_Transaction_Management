@@ -3,7 +3,7 @@ import { AuthContext } from "../../auth/AuthContext";
 
 import {
   CreateTransaction,
-  //ViewTransaction,
+  ViewTransaction,
   //UpdateTransaction,
   //DeleteTransaction
 } from "../components";
@@ -16,6 +16,7 @@ export default function Transactions() {
   const userRole = user!.role_id
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   return (
 
@@ -28,7 +29,7 @@ export default function Transactions() {
           <button onClick={() => setShowCreateModal(true)}> Create Transactions </button>
         </li>
         <li>
-          <button onClick={() => setShowCreateModal(true)}>View Transactions</button>
+          <button onClick={() => setShowViewModal(true)}>View Transactions</button>
         </li>
         <li>
           <button onClick={() => setShowCreateModal(true)}>Update Transactions</button>
@@ -42,7 +43,8 @@ export default function Transactions() {
       </ul>
 
       {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
-      {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
+      {showViewModal && ( <ViewTransaction onClose={() => setShowViewModal(false)} /> )}
+
       {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
       {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
 
