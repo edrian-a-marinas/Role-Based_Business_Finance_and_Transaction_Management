@@ -8,21 +8,6 @@ import type { RegisterForm } from "../schemas/register"
 
 export default function Register() {
 
-  const maskEmail = (email: string) => {
-    const [name, domain] = email.split("@")
-    if (!name || !domain) return email
-
-    if (name.length <= 2) {
-      return name[0] + "*@" + domain
-    }
-
-    const firstChar = name[0]
-    const lastChar = name[name.length - 1]
-    const maskedPart = "*".repeat(name.length - 2)
-
-    return `${firstChar}${maskedPart}${lastChar}@${domain}`
-  }
-
   const navigate = useNavigate()
 
   const [step, setStep] = useState<1 | 2>(1)
@@ -156,9 +141,22 @@ export default function Register() {
 
   const isCodeValid = verificationCode.length === 6
 
-  function RequiredStar() {
-    return <span>* </span>
-  }
+  const RequiredStar = () => <span>* </span>
+  
+  const maskEmail = (email: string) => {
+    const [name, domain] = email.split("@")
+    if (!name || !domain) return email
+
+    if (name.length <= 2) {
+      return name[0] + "*@" + domain
+    }
+
+    const firstChar = name[0]
+    const lastChar = name[name.length - 1]
+    const maskedPart = "*".repeat(name.length - 2)
+
+    return `${firstChar}${maskedPart}${lastChar}@${domain}`
+  } 
 
   return (
     <div>

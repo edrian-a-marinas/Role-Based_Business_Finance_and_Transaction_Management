@@ -6,7 +6,7 @@ const phoneRegex = /^09\d{9}$/
 
 const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/
 
-export const registerSchema = z.object({
+const registerSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
 
   password: z
