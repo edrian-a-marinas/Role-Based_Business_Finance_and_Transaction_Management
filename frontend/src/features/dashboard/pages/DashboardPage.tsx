@@ -3,6 +3,7 @@ import { useState, useContext } from "react"
 import { AuthContext } from "../../auth/AuthContext"
 import Transactions from "./TransactionsPage"
 
+
 export default function DashboardPage() {
   const { logout, user } = useContext(AuthContext)
 
@@ -58,11 +59,16 @@ export default function DashboardPage() {
             <li>
               <button onClick={() => handleMenuClick("reports")}>Reports</button>
             </li>
+            <li>
+              <button onClick={() => handleMenuClick("reports")}>Log History</button>
+            </li>
+
             {userRole === 1 && (
               <li>
                 <button onClick={() => handleMenuClick("users")}>Manage Users</button>
               </li>
             )}
+
           </ul>
         </div>
 
@@ -76,7 +82,7 @@ export default function DashboardPage() {
             <p>Welcome, {userRole === 1 ? "Admin" : "Standard"}!</p>
           </>
         )}
-        {selectedMenu === "transactions" && <Transactions> </Transactions>}
+        {selectedMenu === "transactions" && <Transactions /> }
         {selectedMenu === "reports" && <p>Reports page placeholder</p>}
         {selectedMenu === "users" && userID === 1 && <p>Users management placeholder</p>}
       </main>
