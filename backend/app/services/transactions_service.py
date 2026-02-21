@@ -135,37 +135,39 @@ async def get_transaction_by_id(tx_id: int, current_user_id: int, role):
 
 
 # CREATE
+# CREATE
 async def create_transaction(tx, current_user_id: int):
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       async with conn.transaction():
-
+        # Insert transaction without 'created_at'
         inserted = await conn.fetchrow(
-          """
-          INSERT INTO transactions (
-              amount, category_id, description, transaction_date, user_id, transaction_type
-          )
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING id
-          """,
-          tx.amount,
-          tx.category_id,
-          tx.description,
-          tx.transaction_date,
-          current_user_id,
-          tx.transaction_type
+            """
+            INSERT INTO transactions (
+                amount, category_id, description, transaction_date, user_id, transaction_type
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id
+            """,
+            tx.amount,
+            tx.category_id,
+            tx.description,
+            tx.transaction_date,
+            current_user_id,
+            tx.transaction_type
         )
 
+          # Fetch the inserted row, including 'created_at'
         row = await conn.fetchrow(
-          """
-          SELECT t.id, t.amount, t.category_id, t.description, t.transaction_date,
-                 t.user_id, t.transaction_type, c.name AS category_name
-          FROM transactions t
-          JOIN categories c ON c.id = t.category_id
-          WHERE t.id = $1
-          """,
-          inserted["id"]
+            """
+            SELECT t.id, t.amount, t.category_id, t.description, t.transaction_date,
+                    t.user_id, t.transaction_type, t.created_at, c.name AS category_name
+            FROM transactions t
+            JOIN categories c ON c.id = t.category_id
+            WHERE t.id = $1
+            """,
+            inserted["id"]
         )
 
         return dict(row)
@@ -173,7 +175,6 @@ async def create_transaction(tx, current_user_id: int):
   except Exception:
     logger.exception("Error creating transaction")
     raise
-
 
 # UPDATE (partial update supported)
 async def update_transaction(tx_id: int, tx, current_user_id: int, role):
