@@ -1,10 +1,10 @@
 import { useState, useContext } from "react";
-import type { ChangeEvent, KeyboardEvent } from "react";
+import type { KeyboardEvent } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 import type { OnCloseProps, Transaction } from "../schemas/transaction";
 
-export default function UpdateTransaction({ onClose }: OnCloseProps) {
+export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
 
@@ -13,11 +13,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
 
   const [transactionId, setTransactionId] = useState<string>("");
   const [transaction, setTransaction] = useState<Transaction | null>(null);
-
-  const [form, setForm] = useState({
-    description: "",
-    transaction_date: ""
-  });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -44,19 +39,10 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
 
       const fetched = res.data;
 
-      if (userRole !== 1 && fetched.user_id !== userRole) {
-        setError(" Invalid transaction ID or insufficient permissions. ");
-        return;
-      }
-
       setTransaction(fetched);
-      setForm({
-        description: fetched.description ?? "",
-        transaction_date: fetched.transaction_date
-      });
 
     } catch {
-      setError(" Invalid transaction ID or insufficient permissions. ");
+      setError("Transaction not found.");
     } finally {
       setLoading(false);
     }
@@ -69,26 +55,9 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     }
   };
 
-  // --- Form change ---
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
   // --- Proceed to confirmation ---
   const handleProceed = () => {
     if (!transaction) return;
-
-    if (
-      form.description === transaction.description &&
-      form.transaction_date === transaction.transaction_date
-    ) {
-      setError("Nothing to update.");
-      return;
-    }
 
     setError("");
     setShowConfirmation(true);
@@ -101,27 +70,18 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const handleConfirmUpdate = async () => {
     if (!transaction) return;
     if (!token || !tokenType) return alert("Not authorized");
-
-    const updatePayload: any = {};
-
-    if (form.description !== transaction.description) {
-      updatePayload.description = form.description;
-    }
-
-    if (form.transaction_date !== transaction.transaction_date) {
-      updatePayload.transaction_date = form.transaction_date;
-    }
+    
+    if (userRole !== 1) return;
 
     try {
-      await api.put(
+      await api.delete(
         `api/transactions/${transactionId}`,
-        updatePayload,
         {
           headers: { Authorization: `${tokenType} ${token}` }
         }
       );
 
-      alert("Update successfully!");
+      alert("TRANSACTION DELETED");
       setShowConfirmation(false);
       onClose();
 
@@ -175,7 +135,7 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
               ×
             </button>
 
-            <h2 style={{ textAlign: "center" }}>Update Transaction</h2>
+            <h2 style={{ textAlign: "center" }}>Delete Transaction</h2>
 
             {!transaction && (
               <>
@@ -199,35 +159,17 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
             {error && <p style={{ color: "red" }}>{error}</p>}
 
             {transaction && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ marginBottom: "1rem" }}>
                 <p><strong>ID:</strong> {transactionId}</p>
                 <p><strong>Amount:</strong> ₱{transaction.amount}</p>
                 <p><strong>Category:</strong> {transaction.category_id}</p>
                 <p><strong>Type:</strong> {transaction.transaction_type}</p>
-
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <label>Description</label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <label>Date</label>
-                  <input
-                    type="date"
-                    name="transaction_date"
-                    value={form.transaction_date}
-                    onChange={handleChange}
-                  />
-                </div>
+                <p><strong>Description:</strong> {transaction.description}</p>
+                <p><strong>Date: </strong> {transaction.transaction_date}</p>
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
                   <button onClick={() => setTransaction(null)}>Back</button>
-                  <button onClick={handleProceed}>Update</button>
+                  <button onClick={handleProceed}>Delete</button>
                 </div>
               </div>
             )}
@@ -277,23 +219,21 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
               ×
             </button>
 
-            <h2 style={{ textAlign: "center" }}>Confirm Update</h2>
+            <h2 style={{ textAlign: "center" }}>Confirm Delete</h2>
 
-            <p><strong>To ID:</strong> {transactionId}</p>
+            <p><strong>DELETE ID:</strong> {transactionId}</p>
 
             <div style={{ marginBottom: "1rem" }}>
-              <h3>Before:</h3>
+              <p><strong>Amount:</strong> ₱{transaction.amount}</p>
+              <p><strong>Category:</strong> {transaction.category_id}</p>
+              <p><strong>Type:</strong> {transaction.transaction_type}</p>
               <p><strong>Description:</strong> {transaction.description}</p>
-              <p><strong>Date:</strong> {transaction.transaction_date}</p>
-
-              <h3>After:</h3>
-              <p><strong>Description:</strong> {form.description}</p>
-              <p><strong>Date:</strong> {form.transaction_date}</p>
+              <p><strong>Date: </strong> {transaction.transaction_date}</p>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
               <button onClick={handleBackToEdit}>Go Back</button>
-              <button onClick={handleConfirmUpdate}>Confirm Update</button>
+              <button onClick={handleConfirmUpdate}>Confirm DELETION</button>
             </div>
           </div>
         </div>

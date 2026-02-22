@@ -5,7 +5,7 @@ import {
   CreateTransaction,
   ViewTransaction,
   UpdateTransaction,
-  //DeleteTransaction
+  DeleteTransaction
 } from "../components";
 
 
@@ -16,8 +16,8 @@ export default function Transactions() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [showUpdateModa, setShowUpdateModal] = useState(false);
-
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
 
@@ -36,18 +36,25 @@ export default function Transactions() {
           <button onClick={() => setShowUpdateModal(true)}>Update Transactions</button>
         </li>
 
+        {/*
+          {userRole === 2 && (
+            <li>
+              <button onClick={() => setShowDeleteModal(true)}>Request for Deletion</button>
+            </li>
+          )}
+        */}
+
         {userRole === 1 && (
           <li>
-            <button onClick={() => setShowCreateModal(true)}>Delete Transaction</button>
+            <button onClick={() => setShowDeleteModal(true)}>Delete Transaction</button>
           </li>
         )}
       </ul>
 
       {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
       {showViewModal && ( <ViewTransaction onClose={() => setShowViewModal(false)} /> )}
-      {showUpdateModa && ( <UpdateTransaction onClose={() => setShowUpdateModal(false)} /> )}
-
-      {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
+      {showUpdateModal && ( <UpdateTransaction onClose={() => setShowUpdateModal(false)} /> )}
+      {showDeleteModal && ( <DeleteTransaction onClose={() => setShowDeleteModal(false)} /> )}
 
     </div>
   );
