@@ -18,6 +18,9 @@ export type Category = {
 
 
 // Create Transaction
+const amountRegex = /^\d+(\.\d{1,2})?$/;
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;  
+
 export type Transaction = {
   amount: number;
   category_id: number;
@@ -30,9 +33,11 @@ export type Transaction = {
 export const transactionSchema = z.object({
   amount: z
     .number()
-    .refine(val => val > 0, { message: "Please enter an amount" }) // Covers empty or 0
-    .gt(1, { message: "Amount must be greater than 1" }) // Amount must be greater than 1
-    .max(999999999999, { message: "Amount exceeds the limit" }),
+    .refine(val => amountRegex.test(val.toString()), {
+      message: "Amount must be a number with at most 2 decimal places"
+    })
+    .refine(val => val > 0, { message: "Please enter a valid amount" })
+    .refine(val => val <= 999999999999, { message: "Amount exceeds the limit" }),
 
   category_id: z
     .number()
@@ -45,7 +50,7 @@ export const transactionSchema = z.object({
 
   transaction_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Invalid date format. Use YYYY-MM-DD" }),
+    .regex(dateRegex, { message: "Invalid date format. Use YYYY-MM-DD" }),
 
   transaction_type: z
     .enum(["credit", "debit"], { message: "Invalid transaction type" })

@@ -47,7 +47,13 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
   };
 
   const handleSubmit = async () => {
-    const result = transactionSchema.safeParse(form);
+    // Convert input string to number
+    const updatedForm = {
+      ...form,
+      amount: Number(amountInput)
+    };
+
+    const result = transactionSchema.safeParse(updatedForm);
 
     if (!result.success) {
       const messages = result.error.issues.map(issue => issue.message);
@@ -56,6 +62,7 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     }
 
     setErrors([]);
+    setForm(updatedForm); // update form
     setShowConfirmation(true);
   };
 
@@ -90,6 +97,24 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const [amountInput, setAmountInput] = useState<string>("");
+
+
+  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+
+    // Allow only numbers and dot
+    if (!/^\d*\.?\d*$/.test(value)) return;
+
+    // Limit to 2 decimal places
+    const parts = value.split(".");
+    if (parts[1]?.length > 2) {
+      parts[1] = parts[1].slice(0, 2);
+    }
+
+    setAmountInput(parts.join("."));
   };
 
   return (
@@ -193,8 +218,8 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
                 <input
                   type="text"
                   name="amount"
-                  value={form.amount || ""}
-                  onChange={handleChange}
+                  value={amountInput}
+                  onChange={handleAmountChange}
                   placeholder="₱ Enter amount"
                   style={{ width: "55%" }}
                 />
@@ -270,7 +295,13 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               <p><strong>Category:</strong> {categoryDescription}</p>
               <p><strong>Type:</strong> {form.transaction_type}</p>
               <p><strong>Date:</strong> {form.transaction_date}</p>
-              <p><strong>Amount:</strong> ₱{form.amount}</p>
+              <p>
+              <strong>Amount:</strong> ₱
+                {Number(form.amount).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </p>
               <p><strong>Description:</strong> {form.description}</p>
             </div>
 
