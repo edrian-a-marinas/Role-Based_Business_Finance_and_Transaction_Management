@@ -8,6 +8,11 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
 
+  if (userRole !== 1) {
+    console.log("NOT YET IMPLEMENTED FOR STANDARD!");
+    return 
+    // dont remove this, this is for future notification and request for delition if not admin
+  }
   const token = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
@@ -66,6 +71,8 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const handleBackToEdit = () => {
     setShowConfirmation(false);
   };
+
+  
 
   const handleConfirmUpdate = async () => {
     if (!transaction) return;

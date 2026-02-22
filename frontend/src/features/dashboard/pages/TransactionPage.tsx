@@ -13,7 +13,7 @@ import {
 export default function Transactions() {
   const { user } = useContext(AuthContext);
 
-  const userRole = user!.role_id
+  const userRole = user!.role_id;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -22,7 +22,6 @@ export default function Transactions() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   return (
-
     <div>
       <title>Transactions</title>
       <h1>Transactions</h1>
@@ -38,31 +37,27 @@ export default function Transactions() {
           <button onClick={() => setShowUpdateModal(true)}>Update Transactions</button>
         </li>
 
-        {/*
-          {userRole === 2 && (
-            <li>
-              <button onClick={() => setShowDeleteModal(true)}>Request for Deletion</button>
-            </li>
-          )}
-        */}
-
-        {userRole === 1 && (
+        {userRole === 1 ? (
           <li>
             <button onClick={() => setShowDeleteModal(true)}>Delete Transaction</button>
+          </li>
+        ) : (
+          <li>
+            <button onClick={() => setShowDeleteModal(true)}>Request for Deletion</button>
           </li>
         )}
       </ul>
 
-        <li>
-          <button onClick={() => setShowHistoryModal(true)}>Transaction History</button>
-        </li>
+      <li>
+        <button onClick={() => setShowHistoryModal(true)}>Transaction History</button>
+      </li>
 
-      {showCreateModal && ( <CreateTransaction onClose={() => setShowCreateModal(false)} /> )}
-      {showViewModal && ( <ViewTransaction onClose={() => setShowViewModal(false)} /> )}
-      {showUpdateModal && ( <UpdateTransaction onClose={() => setShowUpdateModal(false)} /> )}
-      {showDeleteModal && ( <DeleteTransaction onClose={() => setShowDeleteModal(false)} /> )}
-      {showHistoryModal && ( <HistoryTransaction onClose={() => setShowHistoryModal(false)} /> )}
-
+      {showCreateModal && <CreateTransaction onClose={() => setShowCreateModal(false)} />}
+      {showViewModal && <ViewTransaction onClose={() => setShowViewModal(false)} />}
+      {showUpdateModal && <UpdateTransaction onClose={() => setShowUpdateModal(false)} />}
+      {showDeleteModal && <DeleteTransaction onClose={() => setShowDeleteModal(false)} />}
+        
+      {showHistoryModal && <HistoryTransaction onClose={() => setShowHistoryModal(false)} />}
     </div>
   );
 }
