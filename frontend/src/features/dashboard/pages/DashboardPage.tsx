@@ -1,7 +1,7 @@
 // DashboardPagge.tsx starting, not finish yet
 import { useState, useContext } from "react"
 import { AuthContext } from "../../auth/AuthContext"
-import Transactions from "./TransactionsPage"
+import Transactions from "./TransactionPage"
 
 
 export default function DashboardPage() {

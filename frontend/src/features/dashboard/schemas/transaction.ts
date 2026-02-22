@@ -54,7 +54,6 @@ export const transactionSchema = z.object({
 export type TransactionCreate = z.infer<typeof transactionSchema>;
 
 
-
 // View Transactions
 export type ReadTransaction = {
   id: number;
@@ -70,4 +69,16 @@ export type ReadTransaction = {
 
 
 
-// Update Transactions
+// Transaction History
+export type ReadTransactionHistory = {
+  id: number; 
+  entity_id: number;
+  user_id: number;
+  old_description: string | null;
+  new_description: string | null;
+  old_transaction_date: string | null;
+  new_transaction_date: string | null;
+  action: string;
+  action_taken_at: string;
+};
+

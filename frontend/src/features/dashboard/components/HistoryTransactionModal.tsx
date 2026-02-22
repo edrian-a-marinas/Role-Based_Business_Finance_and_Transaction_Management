@@ -1,0 +1,180 @@
+import { useEffect, useState, useContext } from "react";
+import api from "../../../services/apiClient";
+import { AuthContext } from "../../auth/AuthContext";
+
+import type { OnCloseProps, ReadTransactionHistory } from "../schemas/transaction";
+
+export default function HistoryTransaction({ onClose }: OnCloseProps) {
+  const { user } = useContext(AuthContext);
+  const userRole = user!.role_id;
+
+  const [transactionHistory, setTransactionHistory] = useState<ReadTransactionHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"all" | "own">("all"); // New state for view mode
+
+  const token = localStorage.getItem("access_token");
+  const tokenType = localStorage.getItem("token_type");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!token || !tokenType) return;
+
+        // API call to fetch all transactions
+        const [transHistoryRes] = await Promise.all([
+          api.get("api/transactions/history", {
+            headers: { Authorization: `${tokenType} ${token}` },
+          }),
+
+        ]);
+
+        const filteredTransHistory: ReadTransactionHistory[] = transHistoryRes.data;
+
+        setTransactionHistory(filteredTransHistory);
+      } catch (err) {
+        // Handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [token, tokenType]);
+
+  // Ensure the created_at field is valid and formatted properly
+const formatDate = (date: string | null) => {
+  if (!date) return "No Date";
+  const parsedDate = new Date(date);
+
+  if (isNaN(parsedDate.getTime())) return "Invalid Date";
+
+  // Get the components of the date and time
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+  const day = String(parsedDate.getDate()).padStart(2, '0');
+  const hours = parsedDate.getHours();
+  const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+  const isAM = hours < 12;
+  const formattedHours = hours % 12 || 12; // Convert to 12-hour format
+  const amPm = isAM ? "AM" : "PM";
+
+  // Format the date as 'YYYY-MM-DD, HH:mm AM/PM'
+  return `${year}-${month}-${day}, ${formattedHours}:${minutes} ${amPm}`;
+};
+
+  // Filter transactions based on the selected view mode
+  const filteredTransHistory = viewMode === "all" ? transactionHistory : transactionHistory.filter(tx => tx.user_id === user?.id);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        backgroundColor: "rgba(0,0,0,0.3)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#1c1414",
+          padding: "1.5rem",
+          borderRadius: "8px",
+          minWidth: "900px",
+          maxHeight: "80vh",
+          overflow: "auto",
+          position: "relative",
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: "8px",
+            right: "12px",
+            background: "transparent",
+            border: "none",
+            color: "#aaa",
+            fontSize: "22px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+
+        <h2 style={{ textAlign: "center" }}>Transaction History</h2>
+
+        {/* Add role-based dropdown */}
+        {userRole === 1 && (
+          <select onChange={(e) => setViewMode(e.target.value as "all" | "own")}>
+            <option value="all">Show All</option>
+            <option value="own">Show Your Own View Only</option>
+          </select>
+        )}
+
+        {loading && <p>Loading...</p>}
+
+        {!loading && filteredTransHistory.length === 0 && <p>No transactions found.</p>}
+
+        {!loading && filteredTransHistory.length > 0 && (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              marginTop: "1rem",
+              textAlign: "left",
+            }}
+          >
+            <thead>
+              <tr>
+                <th style={thStyle}>transac_id</th>
+                {userRole === 1 && <th style={thStyle}>User ID</th>}
+                <th style={thStyle}>action</th>
+                <th style={thStyle}>action_taken_at</th>
+                <th style={thStyle}>old_description</th>
+                <th style={thStyle}>new_description Date</th>
+                <th style={thStyle}>old_transaction_date</th>
+                <th style={thStyle}>new_transaction_date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTransHistory.map((tx) => (
+                <tr key={tx.id}>
+                  <td style={tdStyle}>{tx.entity_id}</td>
+                  {userRole === 1 && <td style={tdStyle}>{tx.user_id}</td>}
+                  <td style={tdStyle}>{tx.action}</td>
+                  <td style={tdStyle}>{formatDate(tx.action_taken_at)}</td>
+                  <td style={tdStyle}>{tx.old_description}</td>
+                  <td style={tdStyle}>{tx.new_description}</td>
+                  <td style={tdStyle}>{tx.old_transaction_date}</td>
+                  <td style={tdStyle}>{tx.new_transaction_date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Table cell styles
+const thStyle: React.CSSProperties = {
+  border: "1px solid #999",
+  padding: "4px 8px",
+  backgroundColor: "#333",
+  color: "#fff",
+};
+
+const tdStyle: React.CSSProperties = {
+  border: "1px solid #999",
+  padding: "4px 8px",
+  color: "#eee",
+};
