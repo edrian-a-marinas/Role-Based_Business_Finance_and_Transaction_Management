@@ -50,11 +50,18 @@ export default function Login() {
      
 
     } catch (err: any) {
-      if (err.response?.status === 401) {
+      if (!err.response) {
+        setErrors(["Cannot connect to server."])
+
+      } else if (err.response.status === 401) {
         setErrors(["Invalid credentials or inactive account"])
+  
+      } else if (err.response.status === 500) {
+        setErrors(["Internal server error. Try again later."]);
+        
       } else {
-        setErrors(["Login failed. Try again later."])
-      }
+        setErrors(["Login failed. Try again later."])}
+
     } finally {
       setLoading(false)
     }
