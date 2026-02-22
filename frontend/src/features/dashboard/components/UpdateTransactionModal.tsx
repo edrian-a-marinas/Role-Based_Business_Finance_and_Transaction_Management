@@ -6,7 +6,7 @@ import type { OnCloseProps, Transaction } from "../schemas/transaction";
 
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
-  const userRole = user!.role_id;
+  const userId = user!.id; // Assuming the user ID is stored in the AuthContext
 
   const token = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
@@ -44,8 +44,9 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
 
       const fetched = res.data;
 
-      if (userRole !== 1 && fetched.user_id !== userRole) {
-        setError(" Invalid transaction ID or insufficient permissions. ");
+      // Only allow the transaction's owner (userId) to update the transaction
+      if (fetched.user_id !== userId) {
+        setError("You do not have permission to update this transaction.");
         return;
       }
 
@@ -56,7 +57,7 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
       });
 
     } catch {
-      setError(" Invalid transaction ID or insufficient permissions. ");
+      setError("Invalid transaction ID or insufficient permissions.");
     } finally {
       setLoading(false);
     }
