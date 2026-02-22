@@ -114,14 +114,14 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           >
             <thead>
               <tr>
-                <th style={thStyle}>transac_id</th>
+                <th style={thStyle}>transac ID</th>
                 {userRole === 1 && <th style={thStyle}>User ID</th>}
-                <th style={thStyle}>action</th>
-                <th style={thStyle}>action_taken_at</th>
-                <th style={thStyle}>old_description</th>
-                <th style={thStyle}>new_description Date</th>
-                <th style={thStyle}>old_transaction_date</th>
-                <th style={thStyle}>new_transaction_date</th>
+                <th style={thStyle}>Action</th>
+                <th style={thStyle}>Action Taken At</th>
+                <th style={thStyle}>Old Description</th>
+                <th style={thStyle}>New Description</th>
+                <th style={thStyle}>Old Transaction Date</th>
+                <th style={thStyle}>New Transaction Date</th>
               </tr>
             </thead>
             <tbody>
