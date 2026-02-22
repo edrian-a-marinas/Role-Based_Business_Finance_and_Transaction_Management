@@ -43,7 +43,9 @@ class TransactionHistoryRead(BaseModel):
   entity_id: int                # was transaction_id
   user_id: int
   old_description: Optional[str] = None
+  new_description: Optional[str] = None
   old_transaction_date: Optional[date] = None
+  new_transaction_date: Optional[date] = None
   action: ActionType
   action_taken_at: datetime
 
