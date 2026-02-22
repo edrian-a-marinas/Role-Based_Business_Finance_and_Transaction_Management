@@ -1,8 +1,14 @@
 import { z } from "zod"
 import type { ReactNode } from "react";
 
+
+// shared 
 export type TransactionsProps = {
   children: ReactNode;
+};
+
+export type OnCloseProps = {
+  onClose: () => void;
 };
 
 export type Category = {
@@ -10,6 +16,8 @@ export type Category = {
   name: string;
 };
 
+
+// Create Transaction
 export type Transaction = {
   amount: number;
   category_id: number;
@@ -44,3 +52,18 @@ export const transactionSchema = z.object({
 });
 
 export type TransactionCreate = z.infer<typeof transactionSchema>;
+
+
+
+// View Transactions
+export type ReadTransaction = {
+  id: number;
+  user_id: number;
+  category_id: number;
+  amount: number;
+  transaction_type: string;
+  description: string;
+  transaction_date: string;
+  created_at: string;
+  deleted_at: string | null;
+};

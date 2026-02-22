@@ -3,14 +3,10 @@ import type { ChangeEvent } from "react";
 
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { Transaction, Category } from "../schemas/transaction";
+import type { OnCloseProps, Transaction, Category } from "../schemas/transaction";
 import { transactionSchema } from "../schemas/transaction";
 
-type CreateTransactionProps = {
-  onClose: () => void;
-};
-
-export default function CreateTransaction({ onClose }: CreateTransactionProps) {
+export default function CreateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
 
   const token = localStorage.getItem("access_token");

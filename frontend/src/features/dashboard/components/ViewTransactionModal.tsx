@@ -2,32 +2,14 @@ import { useEffect, useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 
-type Transaction = {
-  id: number;
-  user_id: number;
-  category_id: number;
-  amount: number;
-  transaction_type: string;
-  description: string;
-  transaction_date: string;
-  created_at: string;
-  deleted_at: string | null;
-};
+import type { OnCloseProps, Category, ReadTransaction} from "../schemas/transaction";
 
-type Category = {
-  id: number;
-  name: string;
-};
 
-type ViewTransactionProps = {
-  onClose: () => void;
-};
-
-export default function ViewTransaction({ onClose }: ViewTransactionProps) {
+export default function ViewTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<ReadTransaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,8 +28,8 @@ export default function ViewTransaction({ onClose }: ViewTransactionProps) {
           api.get("api/categories/"),
         ]);
 
-        const filteredTrans: Transaction[] = transRes.data.filter(
-          (t: Transaction) => !t.deleted_at
+        const filteredTrans: ReadTransaction[] = transRes.data.filter(
+          (t: ReadTransaction) => !t.deleted_at
         );
 
         filteredTrans.sort(
