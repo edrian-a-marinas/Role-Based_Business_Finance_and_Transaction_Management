@@ -1,5 +1,6 @@
 // src/pages/auth/Register.tsx
 import { useState, useEffect } from "react"
+import type { ChangeEvent, FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import api from "../../../services/apiClient"
 import { validateRegister } from "../schemas/register"
@@ -49,8 +50,8 @@ export default function Register() {
     return () => clearTimeout(timer)
   }, [countdown, navigate])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [event.target.name]: event.target.value })
   }
 
   const handleBackStep = () => {
@@ -59,8 +60,8 @@ export default function Register() {
     setMessage("")
   }
 
-  const handleNextStep = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleNextStep = async (event: FormEvent) => {
+    event.preventDefault()
     setErrors([])
     setMessage("")
     setLoading(true)
@@ -101,7 +102,7 @@ export default function Register() {
 
 
   // Final verification
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  const handleVerifyCode = async (e: FormEvent) => {
     e.preventDefault()
     setErrors([])
     setMessage("")
@@ -133,7 +134,7 @@ export default function Register() {
   }
 
   // Only allow numeric 6-digit input
-  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCodeChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "")
     if (value.length <= 6) setVerificationCode(value)
   }
