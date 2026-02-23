@@ -17,7 +17,7 @@ export type Category = {
 };
 
 
-// Create Transaction
+// Create Transaction tsx
 const amountRegex = /^\d+(\.\d{1,2})?$/;
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;  
 
@@ -29,7 +29,7 @@ export type Transaction = {
   transaction_type: "credit" | "debit";
 };
 
-// Create a Zod schema for validation
+// schema for data validation
 export const transactionSchema = z.object({
   amount: z
     .number()
@@ -59,13 +59,13 @@ export const transactionSchema = z.object({
 export type TransactionCreate = z.infer<typeof transactionSchema>;
 
 
-// View Transactions
+// View Transactions tsx no need zod, because of pydantic schemas backend
 export type ReadTransaction = {
   id: number;
   user_id: number;
   category_id: number;
   amount: number;
-  transaction_type: string;
+  transaction_type: "credit" | "debit";
   description: string;
   transaction_date: string;
   created_at: string;
@@ -74,7 +74,7 @@ export type ReadTransaction = {
 
 
 
-// Transaction History
+// Transaction History tsx no need zod, because of pydantic schemas backend
 export type ReadTransactionHistory = {
   id: number; 
   entity_id: number;
@@ -83,7 +83,7 @@ export type ReadTransactionHistory = {
   new_description: string | null;
   old_transaction_date: string | null;
   new_transaction_date: string | null;
-  action: string;
+  action: "updated" | "deleted";
   action_taken_at: string;
 };
 
