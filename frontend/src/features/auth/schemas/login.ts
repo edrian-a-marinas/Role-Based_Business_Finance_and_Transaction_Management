@@ -1,30 +1,19 @@
-// Email validation pattern (simple, matches general email format)
-type EmailStr = string;
-
-// Password constraints: 8-72 chars (same as backend)
-type PasswordStr = string;
-
-export interface LoginForm {
-  email: EmailStr;
-  password: PasswordStr;
-}
+import { z } from "zod"
 
 // Conditional Data validations
+export const loginSchema = z.object({
+  email: z.string().email({ message: "Invalid email format" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters long." })
+    .max(72, { message: "Password must not exceed 72 characters." }),
+})
+
+export type LoginForm = z.infer<typeof loginSchema>
+
 export function validateLogin(data: LoginForm): string[] {
-  const errors: string[] = [];
+  const result = loginSchema.safeParse(data)
+  if (result.success) return []
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(data.email)) {
-    errors.push("Invalid email format");
-  }
-
-  if (!data.password || data.password.length < 8) {
-    errors.push("Password must be at least 8 characters long.");
-  }
-
-  if (data.password.length > 72) {
-    errors.push("Password must not exceed 72 characters.");
-  }
-
-  return errors;
+  return result.error.issues.map(issue => issue.message)
 }
