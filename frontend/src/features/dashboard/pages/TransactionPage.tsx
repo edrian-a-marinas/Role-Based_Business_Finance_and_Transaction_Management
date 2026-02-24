@@ -3,7 +3,7 @@ import { AuthContext } from "../../auth/AuthContext";
 
 import {
   CreateTransaction,
-  ViewTransaction,
+  ReadTransactions,
   UpdateTransaction,
   DeleteTransaction,
   HistoryTransaction
@@ -16,7 +16,7 @@ export default function Transactions() {
   const userRole = user!.role_id;
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
+  const [showReadModal, setShowReadModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -28,13 +28,13 @@ export default function Transactions() {
 
       <ul style={{ listStyle: "none", padding: 0 }}>
         <li>
-          <button onClick={() => setShowCreateModal(true)}> Create Transactions </button>
+          <button onClick={() => setShowCreateModal(true)}> Create Transaction </button>
         </li>
         <li>
-          <button onClick={() => setShowViewModal(true)}>View Transactions</button>
+          <button onClick={() => setShowReadModal(true)}>View Transactions</button>
         </li>
         <li>
-          <button onClick={() => setShowUpdateModal(true)}>Update Transactions</button>
+          <button onClick={() => setShowUpdateModal(true)}>Edit Transaction</button>
         </li>
 
         {userRole === 1 ? (
@@ -53,7 +53,7 @@ export default function Transactions() {
       </li>
 
       {showCreateModal && <CreateTransaction onClose={() => setShowCreateModal(false)} />}
-      {showViewModal && <ViewTransaction onClose={() => setShowViewModal(false)} />}
+      {showReadModal && <ReadTransactions onClose={() => setShowReadModal(false)} />}
       {showUpdateModal && <UpdateTransaction onClose={() => setShowUpdateModal(false)} />}
       {showDeleteModal && <DeleteTransaction onClose={() => setShowDeleteModal(false)} />}
         

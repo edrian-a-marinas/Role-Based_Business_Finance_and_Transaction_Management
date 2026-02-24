@@ -5,7 +5,7 @@ import { AuthContext } from "../../auth/AuthContext";
 import { formatDate } from "../../../../utility"
 import type { OnCloseProps, Category, ReadTransaction } from "../schemas/transaction";
 
-export default function ViewTransaction({ onClose }: OnCloseProps) {
+export default function ReadTransactions({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
 

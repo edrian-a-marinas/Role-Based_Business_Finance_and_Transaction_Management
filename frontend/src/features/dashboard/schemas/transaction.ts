@@ -16,11 +16,6 @@ export type Category = {
   name: string;
 };
 
-
-// Create Transaction tsx
-const amountRegex = /^\d+(\.\d{1,2})?$/;
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;  
-
 export type Transaction = {
   amount: number;
   category_id: number;
@@ -29,7 +24,14 @@ export type Transaction = {
   transaction_type: "credit" | "debit";
 };
 
+
+
+// Create Transaction tsx
+
 // schema for data validation
+const amountRegex = /^\d+(\.\d{1,2})?$/;
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/;  
+
 export const transactionSchema = z.object({
   amount: z
     .number()
