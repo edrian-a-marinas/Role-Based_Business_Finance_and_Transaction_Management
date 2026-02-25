@@ -4,8 +4,7 @@ import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 import type { Transaction, Category } from "../schemas/transaction";
 import type { OnCloseProps } from "../../../../utility"
-import { formatCurrency } from "../../../../utility";
-import type {  } from "../schemas/transaction";
+import { formatCurrency, fetchTransactionAndCategories } from "../../../../utility";
 
 export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -42,18 +41,10 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
     try {
       setLoading(true);
 
-      const [transRes, catRes] = await Promise.all([
-        api.get(`api/transactions/${idNum}`, {
-          headers: { Authorization: `${tokenType} ${token}` },
-        }),
-        api.get("api/categories/"),
-      ]);
+      const { transaction, categories } = await fetchTransactionAndCategories(idNum);
 
-      const fetchedTrans = transRes.data;
-      const fetchedCat = catRes.data;
-
-      setTransaction(fetchedTrans);
-      setCategories(fetchedCat);
+      setTransaction(transaction);
+      setCategories(categories);
 
     } catch {
       setError("Transaction not found.");

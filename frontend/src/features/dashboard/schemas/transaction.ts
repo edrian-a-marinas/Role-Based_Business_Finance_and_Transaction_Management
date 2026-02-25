@@ -18,6 +18,7 @@ export type Transaction = {
   description: string;
   transaction_date: string;
   transaction_type: string;
+  user_id?: number;
 };
 
 

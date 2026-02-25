@@ -1,3 +1,7 @@
+import api from "./src/services/apiClient";
+import type { Transaction, Category } from "./src/features/dashboard/schemas/transaction";
+
+
 export const formatDate = (date: string | null) => {
   if (!date) return "No Date";
   const parsedDate = new Date(date);
@@ -32,3 +36,18 @@ export type OnCloseProps = {
   onClose: () => void;
 };
 
+
+export async function fetchTransactionAndCategories(id: number): Promise<{
+  transaction: Transaction;
+  categories: Category[];
+}> {
+  const [transRes, catRes] = await Promise.all([
+    api.get(`api/transactions/${id}`),
+    api.get("api/categories/"),
+  ]);
+
+  return {
+    transaction: transRes.data,
+    categories: catRes.data,
+  };
+}

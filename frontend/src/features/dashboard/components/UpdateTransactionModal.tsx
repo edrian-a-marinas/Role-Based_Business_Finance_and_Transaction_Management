@@ -4,7 +4,7 @@ import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 import type { Transaction, Category } from "../schemas/transaction";
 import type { OnCloseProps } from "../../../../utility";
-import { formatCurrency } from "../../../../utility";
+import { formatCurrency, fetchTransactionAndCategories } from "../../../../utility";
 
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -41,27 +41,21 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     try {
       setLoading(true);
 
-      const [transRes, catRes] = await Promise.all([
-        api.get(`api/transactions/${idNum}`, {
-          headers: { Authorization: `${tokenType} ${token}` },
-        }),
-        api.get("api/categories/"),
-      ]);
+       const { transaction, categories } = await fetchTransactionAndCategories(idNum);
 
-      const fetchedTrans = transRes.data;
-      const fetchedCat = catRes.data;
+       console.log(transaction)
       
-      if (fetchedTrans.user_id !== userId) {
+      if (transaction.user_id !== userId) {
         setError("You do not have permission to update this transaction.");
         return;
       }
 
-      setTransaction(fetchedTrans);
-      setCategories(fetchedCat);
+      setTransaction(transaction);
+      setCategories(categories);
 
       setForm({
-        description: fetchedTrans.description ?? "",
-        transaction_date: fetchedTrans.transaction_date
+        description: transaction.description ?? "",
+        transaction_date: transaction.transaction_date
       });
 
     } catch {
