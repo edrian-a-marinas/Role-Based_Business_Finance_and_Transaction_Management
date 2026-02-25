@@ -7,10 +7,6 @@ export type TransactionsProps = {
   children: ReactNode;
 };
 
-export type OnCloseProps = {
-  onClose: () => void;
-};
-
 export type Category = {
   id: number;
   name: string;

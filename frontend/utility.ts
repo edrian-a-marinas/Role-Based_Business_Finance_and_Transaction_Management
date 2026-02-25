@@ -17,3 +17,18 @@ export const formatDate = (date: string | null) => {
   // Format the date as 'YYYY-MM-DD, HH:mm AM/PM'
   return `${year}-${month}-${day}, ${formattedHours}:${minutes} ${amPm}`;
 };
+
+
+export const formatCurrency = (value: number | string) => {
+  return new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  }).format(Number(value));
+};
+
+
+
+export type OnCloseProps = {
+  onClose: () => void;
+};
+
