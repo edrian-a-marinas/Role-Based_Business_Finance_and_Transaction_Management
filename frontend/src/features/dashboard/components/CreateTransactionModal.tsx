@@ -3,8 +3,9 @@ import type { ChangeEvent } from "react";
 
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { OnCloseProps, Transaction, Category } from "../schemas/transaction";
+import type { Transaction, Category } from "../schemas/transaction";
 import { transactionSchema } from "../schemas/transaction";
+import type { OnCloseProps } from "../../../../utility"
 
 export default function CreateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

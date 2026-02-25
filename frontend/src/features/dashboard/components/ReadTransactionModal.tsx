@@ -2,8 +2,9 @@ import { useEffect, useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 
-import { formatDate } from "../../../../utility"
-import type { OnCloseProps, Category, ReadTransaction } from "../schemas/transaction";
+import { formatDate, formatCurrency } from "../../../../utility"
+import type { OnCloseProps } from "../../../../utility"
+import type { Category, ReadTransaction } from "../schemas/transaction";
 
 export default function ReadTransactions({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -145,7 +146,7 @@ export default function ReadTransactions({ onClose }: OnCloseProps) {
                   <td style={tdStyle}>{tx.id}</td>
                   {userRole === 1 && <td style={tdStyle}>{tx.user_id}</td>}
                   <td style={tdStyle}>{getCategoryName(tx.category_id)}</td>
-                  <td style={tdStyle}>₱{tx.amount}</td>
+                  <td style={tdStyle}>{formatCurrency(tx.amount)}</td>
                   <td style={tdStyle}>{tx.transaction_type}</td>
                   <td style={tdStyle}>{tx.description}</td>
                   <td style={tdStyle}>{tx.transaction_date}</td>

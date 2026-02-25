@@ -2,7 +2,8 @@ import { useState, useContext } from "react";
 import type { KeyboardEvent } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { OnCloseProps, Transaction } from "../schemas/transaction";
+import type { Transaction } from "../schemas/transaction";
+import type { OnCloseProps } from "../../../../utility"
 
 export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

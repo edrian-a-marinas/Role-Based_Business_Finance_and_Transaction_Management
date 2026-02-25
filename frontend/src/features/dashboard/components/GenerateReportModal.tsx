@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { OnCloseProps } from "../schemas/transaction";
+import type { OnCloseProps } from "../../../../utility"
 import type { ReportType, ReportResult } from "../schemas/report";
 
 
