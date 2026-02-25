@@ -11,8 +11,8 @@ class ActionType(str, Enum):
 
 
 class TransactionType(str, Enum):
-  debit = "debit"
-  credit = "credit"
+  Expense = "Expense"
+  Income = "Income"
 
 
 class TransactionCreate(BaseModel):

@@ -10,7 +10,7 @@ description_validation_optional = Field(None, min_length=5)
 class CategoryBase(BaseModel):
   name: str = Field(..., min_length=2, max_length=100)
   description: Optional[str] = Field(None, min_length=5)
-  type: Literal["Income", "Expense"]
+  type: Literal["Expense", "Income"]
 
 
 class CategoryCreate(CategoryBase):
@@ -20,7 +20,7 @@ class CategoryCreate(CategoryBase):
 class CategoryUpdate(BaseModel):
   name: Optional[str] = name_validation_optional
   description: Optional[str] = description_validation_optional
-  type: Optional[Literal["Income", "Expense"]] = None
+  type: Optional[Literal["Expense", "Income"]] = None
 
 
 class CategoryRead(CategoryBase):
