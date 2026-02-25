@@ -1,6 +1,6 @@
 App name: TransacScope
 
-Title: Transaction Processing & Reporting System 
+Title: Role-Based_Business_Expense_Management_System
 
 Concept: 
 A system to record, track, and report business expenses for a company (eg, Purchases, Expenses, ). Users can add, update, request delete, and query expense transactions. Reports summarize daily, weekly, or monthly activity for decision-making.
