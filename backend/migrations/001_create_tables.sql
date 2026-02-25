@@ -65,11 +65,18 @@ CREATE TABLE users (
     created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
-CREATE TABLE categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,   -- Sales, Purchases, Expenses, Salary
-    description TEXT,
-    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
+CREATE TABLE public.categories (
+    id integer NOT NULL DEFAULT nextval('categories_id_seq'::regclass),
+    name character varying(100) NOT NULL,
+    description text,
+    created_at timestamp(0) without time zone NOT NULL DEFAULT now(),
+    type character varying(20) NOT NULL,
+    CONSTRAINT categories_pkey PRIMARY KEY (id),
+    CONSTRAINT categories_name_key UNIQUE (name),
+    CONSTRAINT categories_type_check
+        CHECK (type::text = ANY (
+            ARRAY['Income'::character varying, 'Expense'::character varying]::text[]
+        ))
 );
 
 
