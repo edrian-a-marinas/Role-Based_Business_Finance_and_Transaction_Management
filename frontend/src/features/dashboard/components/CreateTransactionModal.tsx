@@ -22,7 +22,7 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     amount: 0,
     description: "",
     category_id: 0,
-    transaction_type: "credit",
+    transaction_type: "debit",
     transaction_date: ""
   });
 
@@ -198,8 +198,8 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
                   onChange={handleChange}
                   style={{ width: "55%" }}
                 >
-                  <option value="credit">Credit</option>
                   <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
                 </select>
               </div>
 
