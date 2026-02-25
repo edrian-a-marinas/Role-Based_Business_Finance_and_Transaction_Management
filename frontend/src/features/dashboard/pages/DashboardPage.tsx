@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const userRole = user!.role_id
 
   const [selectedMenu, setSelectedMenu] = useState<
-    "dashboard" | "transactions" | "reports" | "users" | "logHistory"
+    "dashboard" | "transactions" | "reports" | "users" | "logHistory" | "manageCategories"
   >("dashboard"
   )
 
@@ -63,8 +63,11 @@ export default function DashboardPage() {
             </li>
 
             {userRole === 1 && (
+
               <li>
+                <button onClick={() => handleMenuClick("manageCategories")}>Manage Categories</button>
                 <button onClick={() => handleMenuClick("users")}>Manage Users</button>
+
               </li>
             )}
 
@@ -84,6 +87,8 @@ export default function DashboardPage() {
         {selectedMenu === "transactions" && <Transactions /> }
         {selectedMenu === "reports" && <Reports />}
         {selectedMenu === "logHistory" && <p>Log History placeholder</p>}
+
+        {selectedMenu === "manageCategories" && userID === 1 && <p>Categories management placeholder</p>}
         {selectedMenu === "users" && userID === 1 && <p>Users management placeholder</p>}
       </main>
     </div>
