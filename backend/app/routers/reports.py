@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/reports")
 @router.post("/", response_model=ReportResult)
 async def generate_report(
   payload: ReportCreate, 
-  transaction_type: str = Query("both", enum=["income","expense","both"]),
+  transaction_type: str = Query("combined", enum=["income","expense","combined"]),
   user_data: Tuple[int, str] = Depends(get_user_id_and_role
 )):
     

@@ -7,9 +7,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 # --------- CORE SUMMARY LOGIC ----------
-async def _generate_summary(conn, start_date, end_date, user_id=None, daily=False, weekly=False, transaction_filter: str = "both"):
+async def _generate_summary(conn, start_date, end_date, user_id=None, daily=False, weekly=False, transaction_filter: str = "combined"):
   """
-  transaction_filter: "income" | "expense" | "both"
+  transaction_filter: "income" | "expense" | "combined"
   """
   summaries = []
 
@@ -22,7 +22,7 @@ async def _generate_summary(conn, start_date, end_date, user_id=None, daily=Fals
       type_condition = "AND c.type = 'Income'"
     elif transaction_filter.lower() == "expense":
       type_condition = "AND c.type = 'Expense'"
-    # else both = no extra filter
+    # else combined = no extra filter
 
     # --------- DAILY ----------
     if daily:
@@ -161,9 +161,9 @@ async def _generate_summary(conn, start_date, end_date, user_id=None, daily=Fals
 
 
 # --------- PUBLIC API ----------
-async def generate_report(report, current_user_id: int, role: str, transaction_filter: str = "both"):
+async def generate_report(report, current_user_id: int, role: str, transaction_filter: str = "combined"):
   """
-  transaction_filter: "income" | "expense" | "both"
+  transaction_filter: "income" | "expense" | "combined"
   """
   try:
     pool = await get_pool()
