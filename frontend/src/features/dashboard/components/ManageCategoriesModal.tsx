@@ -334,7 +334,12 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
         {step === "deleteConfirm" && selectedCategory && (
           <>
             <h2 style={{ textAlign: "center" }}>Delete Category</h2>
-            <p>Are you sure you want to delete <strong>{selectedCategory.name}</strong>?</p>
+            <p>Are you sure you want to delete this category?</p>
+            <div style={{ marginBottom: "1rem" }}>
+              <p><strong>Category Name:</strong> {selectedCategory.name}</p>
+              <p><strong>Description:</strong> {selectedCategory.description || "No description available"}</p>
+              <p><strong>Type:</strong> {selectedCategory.type}</p>
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <button onClick={handleBack}>Cancel</button>
               <button onClick={handleDelete}>Delete</button>
