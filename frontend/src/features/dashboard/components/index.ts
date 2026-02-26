@@ -6,4 +6,4 @@ export { default as DeleteTransaction } from "./DeleteTransactionModal";
 export { default as HistoryTransaction } from "./HistoryTransactionModal";
 
 
-export { default as ExpenseReportModal } from "./ExpenseReportModal"
+export { default as GenerateReport } from "./GenerateReportModal"

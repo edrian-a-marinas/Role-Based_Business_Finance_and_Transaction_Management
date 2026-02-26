@@ -28,3 +28,10 @@ export type ReportResult = {
   };
   summary: ReportSummaryItem[];
 };
+
+export type ReportMode = "expense" | "income" | "combined";
+
+export type OnCloseProps = {
+  reportMode: ReportMode;
+  onClose: () => void;
+};

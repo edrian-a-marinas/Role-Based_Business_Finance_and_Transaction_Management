@@ -1,11 +1,12 @@
 import { useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { OnCloseProps } from "../../../../utility";
 import type { ReportType, ReportResult } from "../schemas/report";
 import { formatDate, formatCurrency } from "../../../../utility";
+import type { OnCloseProps } from "../schemas/report"
 
-export default function GenerateReportModal({ onClose }: OnCloseProps) {
+
+export default function GenerateReportModal({ reportMode, onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
 
@@ -48,12 +49,19 @@ export default function GenerateReportModal({ onClose }: OnCloseProps) {
         end_date: endDate,
         all_users: userRole === 1 ? viewMode === "all users" : false,
       };
-      const response = await api.post("api/reports/", payload);
+      // send the transaction_type to backend
+      const response = await api.post(
+        "api/reports/?transaction_type=" + reportMode,
+        payload
+      );
       setReportResult(response.data);
       setShowConfirmation(false);
       setShowSummary(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to generate report.");
+      setError(
+        err.response?.data?.detail ||
+          `Failed to generate ${reportMode.toUpperCase()} report.`
+      );
     } finally {
       setLoading(false);
     }
@@ -94,9 +102,19 @@ export default function GenerateReportModal({ onClose }: OnCloseProps) {
   // -------------------------
   // CALCULATE OVERALL TOTAL
   // -------------------------
-  const overallTotal = reportResult
+  const rawTotal = reportResult
     ? reportResult.summary.reduce((acc, item) => acc + item.total_amount, 0)
     : 0;
+
+  let overallTotal = rawTotal;
+
+  if (reportMode === "expense") {
+    overallTotal = -Math.abs(rawTotal);
+  } else if (reportMode === "income") {
+    overallTotal = Math.abs(rawTotal);
+  } else {
+    overallTotal = rawTotal; // combined
+  }
 
   return (
     <>
@@ -106,7 +124,9 @@ export default function GenerateReportModal({ onClose }: OnCloseProps) {
           <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
             <button onClick={onClose} style={closeBtnStyle}>×</button>
 
-            <h2 style={{ textAlign: "center" }}>Generate Report</h2>
+            <h2 style={{ textAlign: "center" }}>
+              Generate {reportMode.toUpperCase()} Report
+            </h2>
             {error && <p style={{ color: "red" }}>{error}</p>}
 
             {userRole === 1 && (
@@ -188,7 +208,7 @@ export default function GenerateReportModal({ onClose }: OnCloseProps) {
           <div onClick={(e) => e.stopPropagation()} style={summaryStyle}>
             <button onClick={handleCloseSummary} style={closeBtnStyle}>×</button>
 
-            <h2 style={{ textAlign: "center" }}>Report Summary</h2>
+            <h2 style={{ textAlign: "center" }}> {reportMode.toUpperCase()} Report Summary</h2>
             <p><strong>View Mode:</strong> {viewMode === "all users" ? "All Users" : "Own"}</p>
             <p><strong>Report Type:</strong> {reportResult.report.report_type}</p>
             <p><strong>Date Range:</strong> {formatDate(reportResult.report.start_date)} → {formatDate(reportResult.report.end_date)}</p>
@@ -221,8 +241,16 @@ export default function GenerateReportModal({ onClose }: OnCloseProps) {
             ))}
 
             {/* OVERALL TOTAL */}
-            <div style={{ marginTop: "1rem", fontWeight: "bold", borderTop: "1px solid #aaa", paddingTop: "0.5rem" }}>
-              TOTAL - {formatCurrency(overallTotal)} (Overall)
+            <div
+              style={{
+                marginTop: "1rem",
+                fontWeight: "bold",
+                borderTop: "1px solid #aaa",
+                paddingTop: "0.5rem"
+              }}
+            >
+              {overallTotal >= 0 ? "+" : "-"}{" "}
+              {formatCurrency(Math.abs(overallTotal))} (TOTAL Overall)
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
