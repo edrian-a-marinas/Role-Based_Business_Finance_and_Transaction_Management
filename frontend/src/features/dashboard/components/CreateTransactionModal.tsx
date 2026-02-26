@@ -193,8 +193,8 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
                   style={{ width: "57%" }}
                 >
                   <option value="">Select Type</option>
-                  <option value="Expense">Expense</option>
                   <option value="Income">Income</option>
+                  <option value="Expense">Expense</option>
                 </select>
               </div>
 

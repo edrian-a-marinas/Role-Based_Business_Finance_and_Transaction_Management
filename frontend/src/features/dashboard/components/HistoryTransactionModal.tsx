@@ -2,9 +2,10 @@ import { useEffect, useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 
-import type { ReadTransactionHistory } from "../schemas/transaction";
-import { formatDate } from "../../../../utility"
+import type { ReadTransactionHistory, Category } from "../schemas/transaction";
+import { formatDate } from "../../../../utility";
 import type { OnCloseProps } from "../../../../utility";
+
 
 export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -12,6 +13,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
 
   const [transactionHistory, setTransactionHistory] = useState<ReadTransactionHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [viewMode, setViewMode] = useState<"all" | "own">("all"); // New state for view mode
 
   const token = localStorage.getItem("access_token");
@@ -23,18 +25,25 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         if (!token || !tokenType) return;
 
         // API call to fetch all transactions
-        const [transHistoryRes] = await Promise.all([
+        const [transRes, catRes] = await Promise.all([
           api.get("api/transactions/history", {
             headers: { Authorization: `${tokenType} ${token}` },
           }),
-
+          api.get("api/categories/"),
         ]);
 
-        const filteredTransHistory: ReadTransactionHistory[] = transHistoryRes.data;
+        // Add category data into transaction history
+        const filteredTrans: ReadTransactionHistory[] = transRes.data;
 
-        setTransactionHistory(filteredTransHistory);
+        console.log("TRANSACTION FILTER: ",filteredTrans)
+        console.log("CATEGORY FILTER", catRes.data)
+
+
+        setTransactionHistory(filteredTrans);
+        setCategories(catRes.data);
+
       } catch (err) {
-        // Handle error
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
@@ -42,6 +51,13 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
 
     fetchData();
   }, [token, tokenType]);
+
+  const getCategoryName = (id: number) => {
+    const found = categories.find((c) => c.id === id);
+    return found ? found.name : "Unknown";
+  };
+
+
 
   // Filter transactions based on the selected view mode
   const filteredTransHistory = viewMode === "all" ? transactionHistory : transactionHistory.filter(tx => tx.user_id === user?.id);
@@ -115,8 +131,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           >
             <thead>
               <tr>
-                <th style={thStyle}>transac ID</th>
+                <th style={thStyle}>Transac ID</th>
                 {userRole === 1 && <th style={thStyle}>User ID</th>}
+                <th style={thStyle}>Category</th>
+                <th style={thStyle}>Type</th>
                 <th style={thStyle}>Action</th>
                 <th style={thStyle}>Action Taken At</th>
                 <th style={thStyle}>Old Description</th>
@@ -130,6 +148,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 <tr key={tx.id}>
                   <td style={tdStyle}>{tx.entity_id}</td>
                   {userRole === 1 && <td style={tdStyle}>{tx.user_id}</td>}
+                  <td style={tdStyle}>{getCategoryName(tx.category_id)}</td>
+                  <td style={tdStyle}>{tx.transaction_type}</td>
                   <td style={tdStyle}>{tx.action}</td>
                   <td style={tdStyle}>{formatDate(tx.action_taken_at)}</td>
                   <td style={tdStyle}>{tx.old_description}</td>
