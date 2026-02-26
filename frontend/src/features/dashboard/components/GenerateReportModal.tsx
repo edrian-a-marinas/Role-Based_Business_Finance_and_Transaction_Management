@@ -1,10 +1,8 @@
 import { useState, useContext } from "react";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
-import type { ReportType, ReportResult } from "../schemas/report";
 import { formatDate, formatCurrency } from "../../../../utility";
-import type { OnCloseProps } from "../schemas/report"
-
+import type { ReportType, ReportResult, OnCloseProps } from "../schemas/report";
 
 export default function GenerateReportModal({ reportMode, onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -26,11 +24,17 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   const handleSubmit = () => {
     if (!startDate || !endDate) {
       setError("Start and End date are required.");
+      setReportResult(null);
       return;
     }
 
-    if (new Date(startDate) > new Date(endDate)) {
+    // safer comparison (prevents timezone edge bugs)
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+
+    if (start.getTime() > end.getTime()) {
       setError("End date cannot be earlier than Start date.");
+      setReportResult(null);
       return;
     }
 
@@ -39,10 +43,11 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   };
 
   const handleBackToEdit = async () => {
+    if (loading) return; // prevent weird state while generating
     setError(null);
     setShowConfirmation(false);
     setReportResult(null);
-  }
+  };
 
   const handleConfirm = async () => {
     try {
@@ -61,18 +66,18 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
         payload
       );
 
-      // ✅ CHECK IF NO DATA
       if (!response.data.summary || response.data.summary.length === 0) {
+        setReportResult(null); // clear stale data
         setError("No transactions found for the selected period.");
-        return; // stay in confirmation modal
+        return;
       }
 
-      // ✅ Only continue if data exists
       setReportResult(response.data);
       setShowConfirmation(false);
       setShowSummary(true);
 
     } catch (err: any) {
+      setReportResult(null); // prevent stale summary
       setError(
         err.response?.data?.detail ||
         `Failed to generate ${reportMode.toUpperCase()} report.`
@@ -87,9 +92,6 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
     onClose();
   };
 
-  // -------------------------
-  // GROUPING LOGIC
-  // -------------------------
   const groupSummary = () => {
     if (!reportResult) return {};
 
@@ -114,26 +116,22 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
   const groupedData = groupSummary();
 
-  // -------------------------
-  // CALCULATE OVERALL TOTAL
-  // -------------------------
-const rawTotal = reportResult
-  ? reportResult.summary.reduce((acc, item) => {
-      if (item.transaction_type === "Income") {
-        return acc + item.total_amount;
-      }
-      if (item.transaction_type === "Expense") {
-        return acc - item.total_amount;
-      }
-      return acc;
-    }, 0)
-  : 0;
+  const rawTotal = reportResult
+    ? reportResult.summary.reduce((acc, item) => {
+        if (item.transaction_type === "Income") {
+          return acc + item.total_amount;
+        }
+        if (item.transaction_type === "Expense") {
+          return acc - item.total_amount;
+        }
+        return acc;
+      }, 0)
+    : 0;
 
-const overallTotal = rawTotal;
+  const overallTotal = rawTotal;
 
   return (
     <>
-      {/* FORM */}
       {!showConfirmation && !showSummary && (
         <div onClick={onClose} style={overlayStyle}>
           <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
@@ -199,7 +197,6 @@ const overallTotal = rawTotal;
         </div>
       )}
 
-      {/* CONFIRMATION */}
       {showConfirmation && (
         <div onClick={handleBackToEdit} style={overlayStyle}>
           <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
@@ -214,8 +211,11 @@ const overallTotal = rawTotal;
             <h2>Confirm Report Generation</h2>
             <p><strong>Report Type:</strong> {reportType}</p>
             <p><strong>Date Range:</strong> {startDate} → {endDate}</p>
+
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-              <button onClick={handleBackToEdit}>Go Back</button>
+              <button onClick={handleBackToEdit} disabled={loading}>
+                Go Back
+              </button>
 
               <button onClick={handleConfirm} disabled={loading}>
                 {loading ? "Generating..." : "Confirm"}
@@ -225,13 +225,14 @@ const overallTotal = rawTotal;
         </div>
       )}
 
-      {/* SUMMARY */}
       {showSummary && reportResult && (
         <div onClick={handleCloseSummary} style={overlayStyle}>
           <div onClick={(e) => e.stopPropagation()} style={summaryStyle}>
             <button onClick={handleCloseSummary} style={closeBtnStyle}>×</button>
 
-            <h2 style={{ textAlign: "center" }}> {reportMode.toUpperCase()} Report Summary</h2>
+            <h2 style={{ textAlign: "center" }}>
+              {reportMode.toUpperCase()} Report Summary
+            </h2>
             <p><strong>View Mode:</strong> {viewMode === "all users" ? "All Users" : "Own"}</p>
             <p><strong>Report Type:</strong> {reportResult.report.report_type}</p>
             <p><strong>Date Range:</strong> {formatDate(reportResult.report.start_date)} → {formatDate(reportResult.report.end_date)}</p>
@@ -265,7 +266,6 @@ const overallTotal = rawTotal;
               </div>
             ))}
 
-            {/* OVERALL TOTAL */}
             <div
               style={{
                 marginTop: "1rem",
@@ -280,7 +280,9 @@ const overallTotal = rawTotal;
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
               <button onClick={handleCloseSummary}>Close</button>
-               <button onClick={() => alert("DONT REMOVE THIS PLACEHOLDER ")}>Download PDF</button>
+              <button onClick={() => alert("DONT REMOVE THIS PLACEHOLDER ")}>
+                Download PDF
+              </button>
             </div>
           </div>
         </div>
