@@ -38,29 +38,44 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
     setShowConfirmation(true);
   };
 
-  const handleBackToEdit = () => setShowConfirmation(false);
+  const handleBackToEdit = async () => {
+    setError(null);
+    setShowConfirmation(false);
+    setReportResult(null);
+  }
 
   const handleConfirm = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const payload = {
         report_type: reportType,
         start_date: startDate,
         end_date: endDate,
         all_users: userRole === 1 ? viewMode === "all users" : false,
       };
-      // send the transaction_type to backend
+
       const response = await api.post(
         "api/reports/?transaction_type=" + reportMode,
         payload
       );
+
+      // ✅ CHECK IF NO DATA
+      if (!response.data.summary || response.data.summary.length === 0) {
+        setError("No transactions found for the selected period.");
+        return; // stay in confirmation modal
+      }
+
+      // ✅ Only continue if data exists
       setReportResult(response.data);
       setShowConfirmation(false);
       setShowSummary(true);
+
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          `Failed to generate ${reportMode.toUpperCase()} report.`
+        `Failed to generate ${reportMode.toUpperCase()} report.`
       );
     } finally {
       setLoading(false);
@@ -189,11 +204,19 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
         <div onClick={handleBackToEdit} style={overlayStyle}>
           <div onClick={(e) => e.stopPropagation()} style={modalStyle}>
             <button onClick={handleBackToEdit} style={closeBtnStyle}>×</button>
+
+            {error && (
+              <p style={{ color: "red", marginBottom: "0.75rem" }}>
+                {error}
+              </p>
+            )}
+
             <h2>Confirm Report Generation</h2>
             <p><strong>Report Type:</strong> {reportType}</p>
             <p><strong>Date Range:</strong> {startDate} → {endDate}</p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
               <button onClick={handleBackToEdit}>Go Back</button>
+
               <button onClick={handleConfirm} disabled={loading}>
                 {loading ? "Generating..." : "Confirm"}
               </button>
