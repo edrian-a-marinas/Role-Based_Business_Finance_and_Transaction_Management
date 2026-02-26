@@ -29,7 +29,6 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
       return;
     }
 
-    // safer comparison (prevents timezone edge bugs)
     const start = new Date(`${startDate}T00:00:00`);
     const end = new Date(`${endDate}T00:00:00`);
 
@@ -44,7 +43,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   };
 
   const handleBackToEdit = async () => {
-    if (loading) return; // prevent weird state while generating
+    if (loading) return;
     setError(null);
     setShowConfirmation(false);
     setReportResult(null);
@@ -68,7 +67,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
       );
 
       if (!response.data.summary || response.data.summary.length === 0) {
-        setReportResult(null); // clear stale data
+        setReportResult(null);
         setError("No transactions found for the selected period.");
         return;
       }
@@ -76,12 +75,11 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
       setReportResult(response.data);
       setShowConfirmation(false);
       setShowSummary(true);
-
     } catch (err: any) {
-      setReportResult(null); // prevent stale summary
+      setReportResult(null);
       setError(
         err.response?.data?.detail ||
-        `Failed to generate ${reportMode.toUpperCase()} report.`
+          `Failed to generate ${reportMode.toUpperCase()} report.`
       );
     } finally {
       setLoading(false);
@@ -117,19 +115,19 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
   const groupedData = groupSummary();
 
-  const rawTotal = reportResult
-    ? reportResult.summary.reduce((acc, item) => {
-        if (item.transaction_type === "Income") {
-          return acc + item.total_amount;
-        }
-        if (item.transaction_type === "Expense") {
-          return acc - item.total_amount;
-        }
-        return acc;
-      }, 0)
+  const totalIncome = reportResult
+    ? reportResult.summary
+        .filter((item) => item.transaction_type === "Income")
+        .reduce((acc, item) => acc + item.total_amount, 0)
     : 0;
 
-  const overallTotal = rawTotal;
+  const totalExpense = reportResult
+    ? reportResult.summary
+        .filter((item) => item.transaction_type === "Expense")
+        .reduce((acc, item) => acc + item.total_amount, 0)
+    : 0;
+
+  const overallTotal = totalIncome - totalExpense;
 
   return (
     <>
@@ -241,7 +239,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
             <div style={{ marginTop: "1rem", fontWeight: "bold", borderTop: "1px solid #aaa", paddingTop: "0.5rem" }}></div>
 
-            <hr style={{ opacity: 0.3 }} />
+            <hr style={{ opacity: 0.3, margin: "0.5rem 0" }} />
 
             {Object.entries(groupedData).map(([period, items], idx) => (
               <div key={idx} style={{ marginBottom: "1rem" }}>
@@ -255,13 +253,57 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
                   <h4>Month: {period} ({items.length} entries)</h4>
                 )}
 
-                {items.map((item, i) => (
-                  <div key={i}>
-                    {item.category_name}
-                    {item.entry_count && item.entry_count > 1 ? ` (${item.entry_count})` : ""}
-                    : {formatCurrency(item.total_amount)}
-                  </div>
-                ))}
+                {/* Transaction Summary */}
+                <div style={{ marginLeft: "0.5rem", marginTop: "0.5rem" }}>
+                  <p><strong>Total Transactions:</strong> {items.length}</p>
+
+                  {items.some(i => i.transaction_type === "Income") &&
+                  items.some(i => i.transaction_type === "Expense") && (
+                    <>
+                      <p>• Income Entries: {items.filter(i => i.transaction_type === "Income").length}</p>
+                      <p>• Expense Entries: {items.filter(i => i.transaction_type === "Expense").length}</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Category Breakdown */}
+                <div style={{ marginLeft: "1rem", marginTop: "0.5rem" }}>
+                  {items.some(i => i.transaction_type === "Income") && (
+                    <>
+                      <h4>INCOME</h4>
+                      {items
+                        .filter(i => i.transaction_type === "Income")
+                        .map((i, ii) => (
+                          <div key={ii}>
+                            {i.category_name}
+                            {i.entry_count && i.entry_count > 1 ? ` (${i.entry_count})` : ""}
+                            : ₱ {`+${formatCurrency(i.total_amount).replace("₱ ", "")}`}
+                          </div>
+                        ))}
+                      <p style={{ fontWeight: "bold" }}>
+                        Total Income: ₱ {`+${formatCurrency(totalIncome).replace("₱ ", "")}`}
+                      </p>
+                    </>
+                  )}
+
+                  {items.some(i => i.transaction_type === "Expense") && (
+                    <>
+                      <h4>EXPENSE</h4>
+                      {items
+                        .filter(i => i.transaction_type === "Expense")
+                        .map((i, ii) => (
+                          <div key={ii}>
+                            {i.category_name}
+                            {i.entry_count && i.entry_count > 1 ? ` (${i.entry_count})` : ""}
+                            : ₱ {`-${formatCurrency(i.total_amount).replace("₱ ", "")}`}
+                          </div>
+                        ))}
+                      <p style={{ fontWeight: "bold" }}>
+                        Total Expense: ₱ {`-${formatCurrency(totalExpense).replace("₱ ", "")}`}
+                      </p>
+                    </>
+                  )}
+                </div>
 
                 <hr style={{ margin: "0.5rem 0", opacity: 0.2 }} />
               </div>
@@ -275,8 +317,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
                 paddingTop: "0.5rem"
               }}
             >
-              {/* Just call the formatCurrency function and display it, no need to add ₱ symbol again */}
-              {formatCurrency(overallTotal)} {" "} (Total Overall)
+              NET RESULT: ₱ {overallTotal >= 0 ? `+${formatCurrency(overallTotal).replace("₱ ", "")}` : `-${formatCurrency(Math.abs(overallTotal)).replace("₱ ", "")}`}
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1rem" }}>
