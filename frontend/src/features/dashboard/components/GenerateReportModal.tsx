@@ -117,19 +117,19 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   // -------------------------
   // CALCULATE OVERALL TOTAL
   // -------------------------
-  const rawTotal = reportResult
-    ? reportResult.summary.reduce((acc, item) => acc + item.total_amount, 0)
-    : 0;
+const rawTotal = reportResult
+  ? reportResult.summary.reduce((acc, item) => {
+      if (item.transaction_type === "Income") {
+        return acc + item.total_amount;
+      }
+      if (item.transaction_type === "Expense") {
+        return acc - item.total_amount;
+      }
+      return acc;
+    }, 0)
+  : 0;
 
-  let overallTotal = rawTotal;
-
-  if (reportMode === "expense") {
-    overallTotal = -Math.abs(rawTotal);
-  } else if (reportMode === "income") {
-    overallTotal = Math.abs(rawTotal);
-  } else {
-    overallTotal = rawTotal; // combined
-  }
+const overallTotal = rawTotal;
 
   return (
     <>
@@ -255,7 +255,9 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
                 {items.map((item, i) => (
                   <div key={i}>
-                    {item.category_name}: {formatCurrency(item.total_amount)}
+                    {item.category_name}
+                    {item.entry_count && item.entry_count > 1 ? ` (${item.entry_count})` : ""}
+                    : {formatCurrency(item.total_amount)}
                   </div>
                 ))}
 

@@ -14,6 +14,8 @@ type ReportSummaryItem = {
   // monthly (future safe)
   month_start?: string;
   month_end?: string;
+
+  transaction_type: "Expense" | "Income";
 };
 
 
