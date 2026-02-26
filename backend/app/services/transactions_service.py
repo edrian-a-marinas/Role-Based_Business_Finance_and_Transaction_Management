@@ -83,52 +83,65 @@ async def get_transaction_by_id(tx_id: int, current_user_id: int, role):
     raise
 
 
-async def get_transactions_history(current_user_id, role):
+async def get_transaction_history(current_user_id, role):
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
-
+      
       if role == "admin" or role == 1:
+        # For admin or role 1, we fetch transactions for all users
         rows = await conn.fetch(
           """
           SELECT
-              id,
-              user_id,
-              entity_id,
-              entity_type,
-              action,
-              action_taken_at,  -- do NOT use to_char
-              old_data->>'description' AS old_description,
-              new_data->>'description' AS new_description,
-              (old_data->>'transaction_date')::date AS old_transaction_date,
-              (new_data->>'transaction_date')::date AS new_transaction_date
-          FROM log_history
-          WHERE entity_type = 'transaction'
-          ORDER BY action_taken_at DESC
+            lh.id,
+            lh.user_id,
+            lh.entity_id,
+            lh.entity_type,
+            lh.action,
+            lh.action_taken_at,
+            lh.old_data->>'description' AS old_description,
+            lh.new_data->>'description' AS new_description,
+            (lh.old_data->>'transaction_date')::date AS old_transaction_date,
+            (lh.new_data->>'transaction_date')::date AS new_transaction_date,
+            t.category_id,
+            t.transaction_type,
+            c.name AS category_name
+          FROM log_history lh
+          LEFT JOIN transactions t ON lh.entity_id = t.id  -- Join transactions to get category_id
+          LEFT JOIN categories c ON t.category_id = c.id  -- Join categories to get category_name
+          WHERE lh.entity_type = 'transaction'
+          ORDER BY lh.action_taken_at DESC
           """
         )
       else:
+        # For normal users, fetch only their own transactions
         rows = await conn.fetch(
           """
           SELECT
-              id,
-              user_id,
-              entity_id,
-              entity_type,
-              action,
-              action_taken_at,
-              old_data->>'description' AS old_description,
-              new_data->>'description' AS new_description,
-              (old_data->>'transaction_date')::date AS old_transaction_date,
-              (new_data->>'transaction_date')::date AS new_transaction_date
-          FROM log_history
-          WHERE entity_type = 'transaction'
-            AND user_id = $1
-          ORDER BY action_taken_at DESC
+            lh.id,
+            lh.user_id,
+            lh.entity_id,
+            lh.entity_type,
+            lh.action,
+            lh.action_taken_at,
+            lh.old_data->>'description' AS old_description,
+            lh.new_data->>'description' AS new_description,
+            (lh.old_data->>'transaction_date')::date AS old_transaction_date,
+            (lh.new_data->>'transaction_date')::date AS new_transaction_date,
+            t.category_id,
+            t.transaction_type,
+            c.name AS category_name
+          FROM log_history lh
+          LEFT JOIN transactions t ON lh.entity_id = t.id  -- Join transactions table to get category_id
+          LEFT JOIN categories c ON t.category_id = c.id  -- Join categories table to get category_name
+          WHERE lh.entity_type = 'transaction'
+            AND lh.user_id = $1
+          ORDER BY lh.action_taken_at DESC
           """,
           current_user_id
         )
 
+      # Format the result before returning
       result = [
         helpers.format_action_taken_at(dict(row))
         for row in rows

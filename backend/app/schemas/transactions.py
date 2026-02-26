@@ -40,8 +40,10 @@ class TransactionRead(TransactionOut):
 
 class TransactionHistoryRead(BaseModel):
   id: int
-  entity_id: int                # was transaction_id
+  entity_id: int
   user_id: int
+  category_id: Optional[int] = None
+  transaction_type: Optional[str] = None
   old_description: Optional[str] = None
   new_description: Optional[str] = None
   old_transaction_date: Optional[date] = None
@@ -49,9 +51,7 @@ class TransactionHistoryRead(BaseModel):
   action: ActionType
   action_taken_at: datetime
 
-  class Config:
-    model_config = ConfigDict(from_attributes=True)
-
+  model_config = ConfigDict(from_attributes=True)
 
 
 

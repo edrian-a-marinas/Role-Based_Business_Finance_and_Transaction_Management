@@ -21,7 +21,7 @@ router = APIRouter(
 async def get_transaction_history(user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
 
   CURRENT_USER_ID, role = user_data
-  rows = await transactions_service.get_transactions_history(CURRENT_USER_ID, role)
+  rows = await transactions_service.get_transaction_history(CURRENT_USER_ID, role)
 
   return rows
 
