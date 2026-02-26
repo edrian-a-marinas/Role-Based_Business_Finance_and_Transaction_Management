@@ -260,8 +260,8 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
               />
               <select name="type" value={formData.type} onChange={handleChange}>
                 <option value="">Select Type</option>
-                <option value="Expense">Expense</option>
                 <option value="Income">Income</option>
+                <option value="Expense">Expense</option>
               </select>
 
               <div style={{ display: "flex", justifyContent: "space-between" }}>

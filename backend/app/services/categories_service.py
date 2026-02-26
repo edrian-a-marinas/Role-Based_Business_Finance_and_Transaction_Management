@@ -30,6 +30,7 @@ async def expense_categories():
         SELECT * 
         FROM categories
         WHERE type = 'Expense'
+          AND deleted_at IS NULL
         """
       )
       return [dict(row) for row in rows]
@@ -47,6 +48,7 @@ async def income_categories():
         SELECT * 
         FROM categories
         WHERE type = 'Income'
+          AND deleted_at IS NULL
         """
       )
       return [dict(row) for row in rows]
@@ -65,6 +67,7 @@ async def get_category_by_id(ctg_id: int):
         SELECT id, name, description, created_at
         FROM categories
         WHERE id = $1
+          AND deleted_at IS NULL
         """,
         ctg_id
       )
@@ -181,7 +184,6 @@ async def update_category(ctg_id: int, ctg, current_user_id: int, role):
 
 # DELETE: admin only
 async def delete_category(ctg_id: int, current_user_id: int, role):
-
   if role != "admin":
     return None
 
@@ -190,11 +192,10 @@ async def delete_category(ctg_id: int, current_user_id: int, role):
     async with pool.acquire() as conn:
       async with conn.transaction():
 
+        # Check if the category exists
         old = await conn.fetchrow(
           """
-          SELECT *
-          FROM categories
-          WHERE id = $1
+          SELECT * FROM categories WHERE id = $1
           """,
           ctg_id
         )
@@ -202,25 +203,23 @@ async def delete_category(ctg_id: int, current_user_id: int, role):
         if not old:
           return None
 
+        # Soft delete the category by setting the deleted_at timestamp
         await conn.execute(
           """
-          DELETE FROM categories
+          UPDATE categories
+          SET deleted_at = now()
           WHERE id = $1
           """,
           ctg_id
         )
 
+        # Log the soft delete
         await conn.execute(
           """
           INSERT INTO log_history (
-            entity_type,
-            entity_id,
-            user_id,
-            action,
-            old_data,
-            action_taken_at
+            entity_type, entity_id, user_id, action, old_data, action_taken_at
           )
-          VALUES ('category', $1, $2, 'deleted', $3::jsonb, now())
+          VALUES ('category', $1, $2, 'soft-deleted', $3::jsonb, now())
           """,
           ctg_id,
           current_user_id,
@@ -233,5 +232,5 @@ async def delete_category(ctg_id: int, current_user_id: int, role):
         return True
 
   except Exception:
-    logger.exception(f"Error deleting category id: {ctg_id}")
+    logger.exception(f"Error soft deleting category id: {ctg_id}")
     raise
