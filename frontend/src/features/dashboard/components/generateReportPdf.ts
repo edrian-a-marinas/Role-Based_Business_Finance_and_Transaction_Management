@@ -94,32 +94,37 @@ export function generateReportPDF({ reportResult, reportMode, viewMode }: Genera
     startY: y + 10,
     head: [["Category", "Amount"]],
     body: tableData,
+
     styles: {
-      fontSize: 11,
-      cellPadding: 5,
+      fontSize: 10,
+      cellPadding: 4,
       overflow: "linebreak",
+      cellWidth: "wrap",
     },
+
     headStyles: {
       fillColor: [0, 0, 0],
       textColor: 255,
       fontStyle: "bold",
     },
     columnStyles: {
-      0: { cellWidth: 110 },
-      1: { halign: "right", cellWidth: 50 },
+      1: { halign: "right" },
     },
-    margin: { left: 20, right: 20 },
-
-    // 🔥 THIS IS THE IMPORTANT PART
     didParseCell: function (data) {
+      if (data.section === "head" && data.column.index === 1) {
+        data.cell.styles.halign = "right";
+      }
+
       if (data.column.index === 1 && data.cell.raw) {
-        // Force remove ANY ± if still present
         data.cell.text = [
           String(data.cell.raw).replace(/±/g, "")
         ];
       }
     },
+
+    margin: { left: 20, right: 20 },
   });
+
 
   // ---------------- TOTAL ----------------
   const rawTotal = reportResult.summary.reduce((acc, item) => {
