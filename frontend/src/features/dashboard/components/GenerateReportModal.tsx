@@ -207,7 +207,8 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
               </p>
             )}
 
-            <h2>Confirm Report Generation</h2>
+            <h2>Confirm {reportMode.toUpperCase()} Report</h2>
+            <p><strong>View Mode:</strong> {viewMode}</p>
             <p><strong>Report Type:</strong> {reportType}</p>
             <p><strong>Date Range:</strong> {startDate} → {endDate}</p>
 
@@ -241,36 +242,20 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
             <hr style={{ opacity: 0.3, margin: "0.5rem 0" }} />
 
-            {Object.entries(groupedData).map(([period, items], idx) => (
+            {Object.entries(groupedData).map(([_, items], idx) => (
               <div key={idx} style={{ marginBottom: "1rem" }}>
-                {reportResult.report.report_type === "weekly" && (
-                  <h4>Week: {period} ({items.length} entries)</h4>
-                )}
-                {reportResult.report.report_type === "daily" && (
-                  <h4>Day: {period} ({items.length} entries)</h4>
-                )}
-                {reportResult.report.report_type === "monthly" && (
-                  <h4>Month: {period} ({items.length} entries)</h4>
-                )}
-
                 {/* Transaction Summary */}
                 <div style={{ marginLeft: "0.5rem", marginTop: "0.5rem" }}>
-                  <p><strong>Total Transactions:</strong> {items.length}</p>
-
-                  {items.some(i => i.transaction_type === "Income") &&
-                  items.some(i => i.transaction_type === "Expense") && (
-                    <>
-                      <p>• Income Entries: {items.filter(i => i.transaction_type === "Income").length}</p>
-                      <p>• Expense Entries: {items.filter(i => i.transaction_type === "Expense").length}</p>
-                    </>
-                  )}
+                  <p><strong>Total Entries:</strong> {items.length}</p>
                 </div>
 
                 {/* Category Breakdown */}
                 <div style={{ marginLeft: "1rem", marginTop: "0.5rem" }}>
                   {items.some(i => i.transaction_type === "Income") && (
                     <>
-                      <h4>INCOME</h4>
+                      <h4>
+                        INCOME ({items.filter(i => i.transaction_type === "Income").length} Entries)
+                      </h4>
                       {items
                         .filter(i => i.transaction_type === "Income")
                         .map((i, ii) => (
@@ -288,7 +273,9 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
 
                   {items.some(i => i.transaction_type === "Expense") && (
                     <>
-                      <h4>EXPENSE</h4>
+                      <h4>
+                        EXPENSE ({items.filter(i => i.transaction_type === "Expense").length} Entries)
+                      </h4>
                       {items
                         .filter(i => i.transaction_type === "Expense")
                         .map((i, ii) => (
