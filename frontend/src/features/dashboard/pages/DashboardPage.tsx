@@ -3,6 +3,7 @@ import { useState, useContext } from "react"
 import { AuthContext } from "../../auth/AuthContext"
 import Transactions from "./TransactionPage"
 import Reports from "./ReportPage"
+import ManageCategories from "../components/ManageCategoriesModal"
 
 export default function DashboardPage() {
   const { logout, user } = useContext(AuthContext)
@@ -13,7 +14,7 @@ export default function DashboardPage() {
   const userRole = user!.role_id
 
   const [selectedMenu, setSelectedMenu] = useState<
-    "dashboard" | "transactions" | "reports" | "users" | "logHistory" | "manageCategories"
+    "dashboard" | "transactions" | "reports" | "users" | "manageCategories"
   >("dashboard"
   )
 
@@ -58,10 +59,6 @@ export default function DashboardPage() {
             <li>
               <button onClick={() => handleMenuClick("reports")}>Reports</button>
             </li>
-            <li>
-              <button onClick={() => handleMenuClick("logHistory")}>Log History</button>
-            </li>
-
             {userRole === 1 && (
 
               <li>
@@ -86,9 +83,8 @@ export default function DashboardPage() {
         )}
         {selectedMenu === "transactions" && <Transactions /> }
         {selectedMenu === "reports" && <Reports />}
-        {selectedMenu === "logHistory" && <p>Log History placeholder</p>}
 
-        {selectedMenu === "manageCategories" && userID === 1 && <p>Categories management placeholder</p>}
+        {selectedMenu === "manageCategories" && userID === 1 && <ManageCategories onClose={() => setSelectedMenu("dashboard")} />}
         {selectedMenu === "users" && userID === 1 && <p>Users management placeholder</p>}
       </main>
     </div>
