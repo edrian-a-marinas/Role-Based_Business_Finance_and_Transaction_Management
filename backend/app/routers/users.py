@@ -23,8 +23,6 @@ async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role))
   return rows
 
 
-
-
 @router.put("/{target_user_id}/role", response_model=UserRead)
 async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
@@ -53,7 +51,6 @@ async def soft_delete(target_user_id: int, user_data: Tuple[int, str] = Depends(
     raise HTTPException(status_code=404, detail="User not found")
 
   return {"detail": "User soft-deleted"}
-
 
 
 @router.delete("/me")

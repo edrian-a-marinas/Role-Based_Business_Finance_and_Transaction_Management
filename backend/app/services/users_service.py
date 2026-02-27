@@ -35,51 +35,43 @@ async def update_user_role(user_id: int, new_role_id: int, current_user_id: int,
     async with pool.acquire() as conn:
       async with conn.transaction():
 
-        target_user = await conn.fetchrow("SELECT * FROM users WHERE id=$1", user_id)
+        # Target must exist
+        target_user = await conn.fetchrow(
+          "SELECT id, role_id FROM users WHERE id=$1", user_id
+        )
         if not target_user:
           return None
 
-        # Super admin can promote/demote anyone
-        if current_user_id == SUPER_ADMIN_ID:
-          row = await conn.fetchrow(
-            """
-            UPDATE users
-            SET role_id=$1
-            WHERE id=$2
-            RETURNING id, email, first_name, middle_name, last_name, phone_number,
-                      role_id, is_active, created_at
-            """,
-            new_role_id, user_id
-          )
-          return dict(row) if row else None
-
-        # Only admins can continue
-        if current_user_role != "admin":
+        # Super Admin account is immutable
+        if user_id == SUPER_ADMIN_ID:
           return None
 
-        # Admins can only act on standard users
-        if target_user["role_id"] != 2:
-          return None  # can't change other admins or super admin
+        # Only Super Admin can update roles
+        if current_user_id != SUPER_ADMIN_ID:
+          return None
 
-        # Admins can promote standard user to admin (role_id=1) or keep as standard (role_id=2)
+        # Only valid roles allowed
         if new_role_id not in [1, 2]:
-          return None  # invalid role
+          return None
 
         row = await conn.fetchrow(
           """
           UPDATE users
           SET role_id=$1
           WHERE id=$2
-          RETURNING id, email, first_name, middle_name, last_name, phone_number,
-                    role_id, is_active, created_at
+          RETURNING id, email, first_name, middle_name, last_name,
+                    phone_number, role_id, is_active, created_at
           """,
-          new_role_id, user_id
+          new_role_id,
+          user_id,
         )
+
         return dict(row) if row else None
 
   except Exception:
     logger.exception(f"Error updating user role for user_id: {user_id}")
     raise
+
 
 async def update_user_active(user_id: int, is_active: bool, current_user_id: int, current_user_role: str):
   try:
@@ -87,28 +79,47 @@ async def update_user_active(user_id: int, is_active: bool, current_user_id: int
     async with pool.acquire() as conn:
       async with conn.transaction():
 
-        target_user = await conn.fetchrow("SELECT id, role_id FROM users WHERE id=$1", user_id)
+        target_user = await conn.fetchrow(
+          "SELECT id, role_id FROM users WHERE id=$1", user_id
+        )
         if not target_user:
           return None
 
-        # Super admin can change any user's is_active
+        # Super Admin account cannot be modified
+        if user_id == SUPER_ADMIN_ID:
+          return None
+
+        # Super Admin can modify anyone except itself
         if current_user_id == SUPER_ADMIN_ID:
           row = await conn.fetchrow(
-            "UPDATE users SET is_active=$1 WHERE id=$2 RETURNING id, email, is_active",
-            is_active, user_id
+            """
+            UPDATE users
+            SET is_active=$1
+            WHERE id=$2
+            RETURNING id, email, is_active
+            """,
+            is_active,
+            user_id,
           )
           return dict(row) if row else None
 
-        # Admin rules
+        # Admin logic
         if current_user_role != "admin":
           return None
-        # Admin cannot change other admins or super admin
+
+        # Admin cannot modify other admins
         if target_user["role_id"] != 2:
           return None
 
         row = await conn.fetchrow(
-          "UPDATE users SET is_active=$1 WHERE id=$2 RETURNING id, email, is_active",
-          is_active, user_id
+          """
+          UPDATE users
+          SET is_active=$1
+          WHERE id=$2
+          RETURNING id, email, is_active
+          """,
+          is_active,
+          user_id,
         )
         return dict(row) if row else None
 
@@ -119,24 +130,40 @@ async def update_user_active(user_id: int, is_active: bool, current_user_id: int
 
 async def soft_delete_user(user_id: int, current_user_id: int, current_user_role: str):
   if user_id == SUPER_ADMIN_ID:
-    return None  # Can't soft-delete super admin
+    return None
 
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       async with conn.transaction():
 
-        target_user = await conn.fetchrow("SELECT id, role_id FROM users WHERE id=$1", user_id)
+        target_user = await conn.fetchrow(
+          "SELECT id, role_id FROM users WHERE id=$1",
+          user_id,
+        )
         if not target_user:
           return None
 
-        # Admins cannot soft-delete other admins
+        # Super Admin can delete anyone except itself
+        if current_user_id == SUPER_ADMIN_ID:
+          await conn.execute(
+            "UPDATE users SET is_active=false WHERE id=$1",
+            user_id,
+          )
+          return True
+
+        # Admin rules
         if current_user_role != "admin":
           return None
+
+        # Admin cannot delete admins
         if target_user["role_id"] != 2:
           return None
 
-        await conn.execute("UPDATE users SET is_active=false WHERE id=$1", user_id)
+        await conn.execute(
+          "UPDATE users SET is_active=false WHERE id=$1",
+          user_id,
+        )
         return True
 
   except Exception:
@@ -145,15 +172,23 @@ async def soft_delete_user(user_id: int, current_user_id: int, current_user_role
 
 
 async def hard_delete_user(user_id: int, current_user_id: int):
-  # Only super admin or the user themselves can delete
-  if user_id == SUPER_ADMIN_ID or user_id != current_user_id:
+
+  # Cannot delete Super Admin
+  if user_id == SUPER_ADMIN_ID:
+    return None
+
+  # Only self-delete allowed
+  if user_id != current_user_id:
     return None
 
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       async with conn.transaction():
-        await conn.execute("DELETE FROM users WHERE id=$1", user_id)
+        await conn.execute(
+          "DELETE FROM users WHERE id=$1",
+          user_id,
+        )
         return True
 
   except Exception:
@@ -162,27 +197,26 @@ async def hard_delete_user(user_id: int, current_user_id: int):
 
 
 async def get_all_users():
-
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       rows = await conn.fetch(
         """
         SELECT 
-            u.id,
-            u.email,
-            u.role_id,
-            u.first_name,
-            u.middle_name,
-            u.last_name,
-            u.phone_number,
-            u.is_active,
-            u.created_at,
-            COUNT(t.id) AS transaction_count
+          u.id,
+          u.email,
+          u.role_id,
+          u.first_name,
+          u.middle_name,
+          u.last_name,
+          u.phone_number,
+          u.is_active,
+          u.created_at,
+          COUNT(t.id) AS transaction_count
         FROM users u
         LEFT JOIN transactions t 
-            ON t.user_id = u.id 
-            AND t.deleted_at IS NULL
+          ON t.user_id = u.id 
+          AND t.deleted_at IS NULL
         GROUP BY u.id
         ORDER BY transaction_count DESC
         """
@@ -219,4 +253,3 @@ async def update_self_info(user_id: int, payload: UserBase):
   except Exception:
     logger.exception(f"Error updating self info for user_id: {user_id}")
     raise
-
