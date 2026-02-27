@@ -26,7 +26,7 @@ class UserRead(UserBase):
   role_id: Literal[1, 2]
   is_active: bool
   created_at: datetime
-  transaction_count: int
+  transaction_count: Optional[int] = None 
 
 class UserRoleUpdate(BaseModel):
   role_id: int  # 1 = admin, 2 = standard
