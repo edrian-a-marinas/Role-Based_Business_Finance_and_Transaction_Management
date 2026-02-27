@@ -146,11 +146,17 @@ export default function ReadTransactions({ onClose }: OnCloseProps) {
                   <td style={tdStyle}>{tx.id}</td>
                   {userRole === 1 && <td style={tdStyle}>{tx.user_id}</td>}
                   <td style={tdStyle}>{getCategoryName(tx.category_id)}</td>
-                  <td style={tdStyle}>{formatCurrency(tx.amount)}</td>
+                  <td style={tdStyle}>
+                    {tx.transaction_type === "Expense"
+                      ? `₱ -${formatCurrency(tx.amount).replace("₱ ", "")}`
+                      : `₱ +${formatCurrency(tx.amount).replace("₱ ", "")}`}
+                  </td>
                   <td style={tdStyle}>{tx.transaction_type}</td>
                   <td style={tdStyle}>{tx.description}</td>
                   <td style={tdStyle}>{tx.transaction_date}</td>
                   <td style={tdStyle}>{formatDate(tx.created_at)}</td>
+
+                  
                 </tr>
               ))}
             </tbody>
