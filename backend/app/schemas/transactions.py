@@ -54,6 +54,20 @@ class TransactionHistoryRead(BaseModel):
   model_config = ConfigDict(from_attributes=True)
 
 
+class TransactionDeletionRequestCreate(BaseModel):
+  transaction_id: int
+
+
+class TransactionDeletionRequestRead(BaseModel):
+  id: int
+  transaction_id: int
+  requested_by: int
+  status: str
+  requested_at: datetime
+  reviewed_by: Optional[int] = None
+  reviewed_at: Optional[datetime] = None
+
+  model_config = ConfigDict(from_attributes=True)
 
 
 

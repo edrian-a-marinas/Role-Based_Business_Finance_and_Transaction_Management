@@ -132,6 +132,17 @@ CREATE TABLE email_verifications (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+
+CREATE TABLE transaction_deletion_requests (
+    id SERIAL PRIMARY KEY,
+    transaction_id INTEGER NOT NULL REFERENCES transactions(id),
+    requested_by INTEGER NOT NULL REFERENCES users(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending / approved / rejected
+    requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    reviewed_by INTEGER REFERENCES users(id), -- admin who approved/rejected
+    reviewed_at TIMESTAMP
+);
+
 COMMIT;
 
 */

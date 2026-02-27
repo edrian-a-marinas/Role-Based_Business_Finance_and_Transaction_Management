@@ -4,6 +4,7 @@ from db.connection import get_pool
 from app.utils import helpers
 import json
 import logging
+from datetime import datetime 
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +152,106 @@ async def get_transaction_history(current_user_id, role):
 
   except Exception:
     logger.exception("Error fetching transaction history")
+    raise
+
+# CREATE deletion request
+async def create_transaction_deletion_request(tx_id: int, requested_by: int):
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      # Check if request already exists
+      existing = await conn.fetchrow(
+        """
+        SELECT *
+        FROM transaction_deletion_requests
+        WHERE transaction_id = $1
+          AND status = 'pending'
+        """,
+        tx_id
+      )
+      if existing:
+        return None
+
+      inserted = await conn.fetchrow(
+        """
+        INSERT INTO transaction_deletion_requests (
+          transaction_id, requested_by
+        )
+        VALUES ($1, $2)
+        RETURNING *
+        """,
+        tx_id,
+        requested_by
+      )
+      return dict(inserted)
+
+  except Exception:
+    logger.exception(f"Error creating deletion request for tx {tx_id}")
+    raise
+
+
+# LIST all pending deletion requests (for admin)
+async def get_deletion_requests():
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      rows = await conn.fetch(
+        """
+        SELECT *
+        FROM transaction_deletion_requests
+        WHERE status = 'pending'
+        ORDER BY requested_at DESC
+        """
+      )
+      return [dict(row) for row in rows]
+  except Exception:
+    logger.exception("Error fetching deletion requests")
+    raise
+
+
+# PATCH: approve/reject deletion request (admin only)
+async def review_deletion_request(request_id: int, admin_id: int, approve: bool):
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      async with conn.transaction():
+        req = await conn.fetchrow(
+          """
+          SELECT *
+          FROM transaction_deletion_requests
+          WHERE id = $1
+          """,
+          request_id
+        )
+        if not req or req["status"] != "pending":
+          return None
+
+        status = "approved" if approve else "rejected"
+        await conn.execute(
+          """
+          UPDATE transaction_deletion_requests
+          SET status = $1, reviewed_by = $2, reviewed_at = now()
+          WHERE id = $3
+          """,
+          status,
+          admin_id,
+          request_id
+        )
+
+        # If approved, soft-delete the transaction
+        if approve:
+          await conn.execute(
+            """
+            UPDATE transactions
+            SET deleted_at = now()
+            WHERE id = $1
+            """,
+            req["transaction_id"]
+          )
+
+        return dict(req, status=status, reviewed_by=admin_id, reviewed_at=str(datetime.now()))
+  except Exception:
+    logger.exception(f"Error reviewing deletion request {request_id}")
     raise
 
 
