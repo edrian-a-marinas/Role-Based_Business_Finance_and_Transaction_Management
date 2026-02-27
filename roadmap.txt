@@ -3,7 +3,7 @@ App name: TransacScope
 Title: Role-Based Business Finance and Transaction Management
 
 Concept:  
-A system to record, track, and report business transactions for a company (eg, Purchases, Expenses, Income). Users can add, update, request delete, and query expense and income transactions. Reports summarize daily, weekly, or monthly activity for decision-making.
+A system to record, track, and report business transactions for a company (e.g., Purchases, Expenses, Income). Users can add, update, request deletion, and query expense and income transactions. Reports summarize daily, weekly, or monthly activity for decision-making. The system also includes email verification during user registration to ensure secure and legitimate access.
 
 
 How it covers everything:
@@ -63,7 +63,7 @@ Reports / Summary: Generate and view reports for their own transactions only
 STACKS: 
 Database:PostgreSQL 
 - Store all transaction data: amount, date, type (Expense/Income), category, description.
-- Store related tables: users (if authentication is implemented), transaction categories, reports history.
+- Store related tables: users (if authentication is implemented), transaction categories, reports history, log history, emai_verification
 - Can include relational constraints: e.g., each transaction belongs to a category, optional user table.
 
 
@@ -71,11 +71,13 @@ FastAPI & Data Modeling:
 - Models for transactions, categories, and optionally users.
 - Define Pydantic schemas for request validation and response formatting.
 - Include relationships between models (e.g., transactions → categories).
+- Email verifications
 
 
 SQL scripts with PostgreSQL: 
 - layer to interact with PostgreSQL.
 - CRUD operations: Create, Read, Update, Delete transactions.
+- CRUD Categories and manage users for admins
 - Query filtering for reports (e.g., sum totals per category or per time period, total income vs total expense, net profit per period).
 
 
@@ -83,7 +85,7 @@ API / REST:
 Endpoints for:
 /transactions → list, create, update, delete transactions. ((expense or income).)
 /categories → manage categories.
-/reports → generate reports (daily, monthly, etc., including income vs expense summaries).
+/reports → generate reports (daily, monthly, etc., including income vs expense summaries), have downloadable for PDF.
 - Use REST principles: proper HTTP methods (GET, POST, PUT, DELETE).
 
 Front-End:
@@ -100,12 +102,10 @@ Full Stack: FastAPI serves as backend.
 
 
 Extra Future Features (If clients needs/wants it ):
-- Include transaction summaries or charts via API endpoints in dashboard
-- Generate downloadable reports (CSV or PDF). 4
 - etc.., depends on client.
 
 
-
+NOTE: Deployment is implemented for learning and technical exposure. However, the intended production environment for TransacScope is a secured local business network (LAN-based deployment), ensuring financial data remains internal and protected.
 
 
 
