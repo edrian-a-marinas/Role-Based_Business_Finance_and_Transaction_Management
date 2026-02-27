@@ -4,8 +4,7 @@ import api from "../../../services/apiClient";
 import { AuthContext } from "../../auth/AuthContext";
 import type { Transaction, Category } from "../schemas/transaction";
 import type { OnCloseProps } from "../../../../utility";
-import { formatCurrency, fetchTransactionAndCategories } from "../../../../utility";
-
+import { diffHighlight, formatCurrency, fetchTransactionAndCategories } from "../../../../utility";
 import { useOutsideClickStrict } from "../../../../utilityHooks";
 
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
@@ -30,7 +29,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const [error, setError] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // --- Fetch transaction by ID ---
   const handleFetch = async () => {
     setError("");
     setTransaction(null);
@@ -45,10 +43,8 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     try {
       setLoading(true);
 
-       const { transaction, categories } = await fetchTransactionAndCategories(idNum);
+      const { transaction, categories } = await fetchTransactionAndCategories(idNum);
 
-       console.log(transaction)
-      
       if (transaction.user_id !== userId) {
         setError("You do not have permission to update this transaction.");
         return;
@@ -61,7 +57,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
         description: transaction.description ?? "",
         transaction_date: transaction.transaction_date
       });
-
     } catch {
       setError("Invalid transaction ID or insufficient permissions.");
     } finally {
@@ -69,24 +64,18 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     }
   };
 
-
   const getCategoryName = (id: number) => {
     const found = categories.find((c) => c.id === id);
     return found ? found.name : "Unknown";
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleFetch();
-    }
+    if (e.key === "Enter") handleFetch();
   };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleProceed = () => {
@@ -104,37 +93,24 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     setShowConfirmation(true);
   };
 
-  const handleBackToEdit = () => {
-    setShowConfirmation(false);
-  };
+  const handleBackToEdit = () => setShowConfirmation(false);
 
   const handleConfirmUpdate = async () => {
     if (!transaction) return;
     if (!token || !tokenType) return alert("Not authorized");
 
     const updatePayload: any = {};
-
-    if (form.description !== transaction.description) {
-      updatePayload.description = form.description;
-    }
-
-    if (form.transaction_date !== transaction.transaction_date) {
-      updatePayload.transaction_date = form.transaction_date;
-    }
+    if (form.description !== transaction.description) updatePayload.description = form.description;
+    if (form.transaction_date !== transaction.transaction_date) updatePayload.transaction_date = form.transaction_date;
 
     try {
-      await api.put(
-        `api/transactions/${transactionId}`,
-        updatePayload,
-        {
-          headers: { Authorization: `${tokenType} ${token}` }
-        }
-      );
+      await api.put(`api/transactions/${transactionId}`, updatePayload, {
+        headers: { Authorization: `${tokenType} ${token}` }
+      });
 
       alert("Update successfully!");
       setShowConfirmation(false);
       onClose();
-
     } catch (err) {
       console.error(err);
       setError("Failed to update transaction.");
@@ -201,7 +177,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
                   onKeyDown={handleKeyPress}
                   style={{ width: "100%", marginBottom: "1rem" }}
                 />
-
                 <button onClick={handleFetch}>Load Transaction</button>
               </>
             )}
@@ -294,12 +269,24 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
 
             <div style={{ marginBottom: "1rem" }}>
               <h3>Before:</h3>
-              <p><strong>Description:</strong> {transaction.description}</p>
-              <p><strong>Date:</strong> {transaction.transaction_date}</p>
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: diffHighlight(transaction.description, form.description).before
+                }} />
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: diffHighlight(transaction.transaction_date, form.transaction_date).before
+                }} />
 
               <h3>After:</h3>
-              <p><strong>Description:</strong> {form.description}</p>
-              <p><strong>Date:</strong> {form.transaction_date}</p>
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: diffHighlight(transaction.description, form.description).after
+                }} />
+              <p
+                dangerouslySetInnerHTML={{
+                  __html: diffHighlight(transaction.transaction_date, form.transaction_date).after
+                }} />
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>

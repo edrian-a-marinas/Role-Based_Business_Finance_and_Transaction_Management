@@ -59,3 +59,44 @@ export async function fetchTransactionAndCategories(id: number): Promise<{
     categories: catRes.data,
   };
 }
+
+export const diffHighlight = (before: string, after: string) => {
+  const beforeWords = before.split(/(\s+)/); // keep spaces
+  const afterWords = after.split(/(\s+)/);
+
+  let resultBefore = "";
+  let resultAfter = "";
+
+  const maxLen = Math.max(beforeWords.length, afterWords.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const b = beforeWords[i] || "";
+    const a = afterWords[i] || "";
+
+    if (b === a) {
+      // No changes, just append the word as is
+      resultBefore += b;
+      resultAfter += a;
+    } else {
+      // For "Before" (removed characters, in red)
+      for (let j = 0; j < b.length; j++) {
+        if (a[j] !== b[j]) {
+          resultBefore += `<span style="color: red;">${b[j]}</span>`;
+        } else {
+          resultBefore += b[j];
+        }
+      }
+
+      // For "After" (added characters, in green/bold)
+      for (let j = 0; j < a.length; j++) {
+        if (b[j] !== a[j]) {
+          resultAfter += `<span style="color: green; font-weight: bold;">${a[j]}</span>`;
+        } else {
+          resultAfter += a[j];
+        }
+      }
+    }
+  }
+
+  return { before: resultBefore, after: resultAfter };
+};

@@ -5,6 +5,7 @@ import { AuthContext } from "../../auth/AuthContext";
 import type { CategoryCreate, CategoryRead, ModalStep } from "../schemas/category";
 import { categorySchema } from "../schemas/category";
 import type { OnCloseProps } from "../../../../utility";
+import { diffHighlight } from "../../../../utility";
 import { useOutsideClickStrict } from "../../../../utilityHooks";
 
 export default function ManageCategories({ onClose }: OnCloseProps) {
@@ -368,14 +369,80 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
               <h2 style={{ textAlign: "center" }}>Confirm Edit Category</h2>
               <div>
                 <h3>Before:</h3>
-                <p><strong>Name:</strong> {selectedCategory.name}</p>
-                <p><strong>Description:</strong> {selectedCategory.description}</p>
-                <p><strong>Type:</strong> {selectedCategory.type}</p>
+
+                <p>
+                  <strong>Name:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.name,
+                        formData.name
+                      ).before
+                    }}
+                  />
+                </p>
+
+                <p>
+                  <strong>Description:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.description || "",
+                        formData.description
+                      ).before
+                    }}
+                  />
+                </p>
+
+                <p>
+                  <strong>Type:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.type,
+                        formData.type
+                      ).before
+                    }}
+                  />
+                </p>
 
                 <h3>After:</h3>
-                <p><strong>Name:</strong> {formData.name}</p>
-                <p><strong>Description:</strong> {formData.description}</p>
-                <p><strong>Type:</strong> {formData.type}</p>
+
+                <p>
+                  <strong>Name:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.name,
+                        formData.name
+                      ).after
+                    }}
+                  />
+                </p>
+
+                <p>
+                  <strong>Description:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.description || "",
+                        formData.description
+                      ).after
+                    }}
+                  />
+                </p>
+
+                <p>
+                  <strong>Type:</strong>{" "}
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: diffHighlight(
+                        selectedCategory.type,
+                        formData.type
+                      ).after
+                    }}
+                  />
+                </p>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}>
