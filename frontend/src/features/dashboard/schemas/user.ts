@@ -11,6 +11,7 @@ type ReadUser = {
   is_active: boolean;
   created_at: string;
   request_admin: boolean;
+  requested_by: number;
 };
 
 export type ReadUserWithCount = ReadUser & {
@@ -29,3 +30,28 @@ export type PromoteUserResponse = {
 
 export type PromoteViewMode = "all" | "admin" | "standard";
 
+
+export type DeletionRequest = {
+  id: number;
+  transaction_id: number;
+  requested_by: number;
+  status: "pending" | "approved" | "rejected";
+  requested_at: string;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+
+  requester?: ReadUser | null;
+
+  transaction?: TransactionInfo | null;
+};
+
+
+export type TransactionInfo = {
+  id: number;
+  amount: number;
+  category_id: number;
+  category_name: string;
+  description: string;
+  transaction_type: string;
+  transaction_date: string;
+};
