@@ -12,10 +12,17 @@ router = APIRouter(prefix="/api/users")
 
 @router.get("/", response_model=List[UserRead])
 async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
-  user_id, role = user_data
-  if role != "admin" and user_id != SUPER_ADMIN_ID:
+ 
+  CURRENT_USER_ID, role = user_data
+
+  if role != "admin":
     raise HTTPException(status_code=403, detail="Admin only")
-  return await users_service.get_all_users("admin")
+  
+  rows = await users_service.get_all_users()
+
+  return rows
+
+
 
 
 @router.put("/{target_user_id}/role", response_model=UserRead)

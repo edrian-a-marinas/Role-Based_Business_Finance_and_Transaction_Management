@@ -26,7 +26,7 @@ class UserRead(UserBase):
   role_id: Literal[1, 2]
   is_active: bool
   created_at: datetime
-  request_admin: bool
+  transaction_count: int
 
 class UserRoleUpdate(BaseModel):
   role_id: int  # 1 = admin, 2 = standard
@@ -34,6 +34,3 @@ class UserRoleUpdate(BaseModel):
 class UserLogin(BaseModel):
   email: EmailStr
   password: PasswordStr
-
-class UserAdminRequest(BaseModel):
-  request_admin: bool

@@ -161,19 +161,30 @@ async def hard_delete_user(user_id: int, current_user_id: int):
     raise
 
 
-async def get_all_users(current_user_role: str):
-  if current_user_role not in ["admin", "superadmin"]:
-    return []
+async def get_all_users():
 
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       rows = await conn.fetch(
         """
-        SELECT id, email, role_id, first_name, middle_name, last_name,
-               phone_number, is_active, created_at
-        FROM users
-        ORDER BY created_at DESC
+        SELECT 
+            u.id,
+            u.email,
+            u.role_id,
+            u.first_name,
+            u.middle_name,
+            u.last_name,
+            u.phone_number,
+            u.is_active,
+            u.created_at,
+            COUNT(t.id) AS transaction_count
+        FROM users u
+        LEFT JOIN transactions t 
+            ON t.user_id = u.id 
+            AND t.deleted_at IS NULL
+        GROUP BY u.id
+        ORDER BY u.created_at DESC
         """
       )
       return [dict(row) for row in rows]
