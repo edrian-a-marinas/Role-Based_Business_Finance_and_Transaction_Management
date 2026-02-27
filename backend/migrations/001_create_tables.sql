@@ -52,18 +52,25 @@ CREATE TABLE roles (
     created_at TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
-CREATE TABLE users (
+
+CREATE TABLE public.users (
     id SERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    middle_name VARCHAR(50), 
-    last_name VARCHAR(50) NOT NULL,
-    phone_number VARCHAR(20) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role_id INTEGER REFERENCES roles(id),
+    role_id INTEGER,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
+    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    first_name VARCHAR(50) NOT NULL,
+    middle_name VARCHAR(50),
+    last_name VARCHAR(50) NOT NULL,
+    phone_number VARCHAR(20),
+    CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id)
 );
+
+CREATE INDEX users_email_key ON public.users (email);
+
+ALTER TABLE public.users
+    ADD CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id);
 
 CREATE TABLE public.categories (
     id SERIAL PRIMARY KEY,

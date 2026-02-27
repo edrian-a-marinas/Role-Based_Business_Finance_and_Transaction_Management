@@ -44,10 +44,10 @@ async def update_user_role(user_id: int, new_role_id: int, current_user_id: int,
           row = await conn.fetchrow(
             """
             UPDATE users
-            SET role_id=$1, request_admin=false
+            SET role_id=$1
             WHERE id=$2
             RETURNING id, email, first_name, middle_name, last_name, phone_number,
-                      role_id, is_active, created_at, request_admin
+                      role_id, is_active, created_at
             """,
             new_role_id, user_id
           )
@@ -68,10 +68,10 @@ async def update_user_role(user_id: int, new_role_id: int, current_user_id: int,
         row = await conn.fetchrow(
           """
           UPDATE users
-          SET role_id=$1, request_admin=false
+          SET role_id=$1
           WHERE id=$2
           RETURNING id, email, first_name, middle_name, last_name, phone_number,
-                    role_id, is_active, created_at, request_admin
+                    role_id, is_active, created_at
           """,
           new_role_id, user_id
         )
@@ -80,7 +80,6 @@ async def update_user_role(user_id: int, new_role_id: int, current_user_id: int,
   except Exception:
     logger.exception(f"Error updating user role for user_id: {user_id}")
     raise
-
 
 async def update_user_active(user_id: int, is_active: bool, current_user_id: int, current_user_role: str):
   try:
@@ -172,7 +171,7 @@ async def get_all_users(current_user_role: str):
       rows = await conn.fetch(
         """
         SELECT id, email, role_id, first_name, middle_name, last_name,
-               phone_number, is_active, created_at, request_admin
+               phone_number, is_active, created_at
         FROM users
         ORDER BY created_at DESC
         """
@@ -196,7 +195,7 @@ async def update_self_info(user_id: int, payload: UserBase):
           SET first_name=$1, middle_name=$2, last_name=$3, phone_number=$4
           WHERE id=$5
           RETURNING id, email, role_id, first_name, middle_name, last_name,
-                    phone_number, is_active, created_at, request_admin
+                    phone_number, is_active, created_at
           """,
           payload.first_name,
           payload.middle_name,
@@ -210,15 +209,3 @@ async def update_self_info(user_id: int, payload: UserBase):
     logger.exception(f"Error updating self info for user_id: {user_id}")
     raise
 
-
-async def request_admin(user_id: int):
-  try:
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-      async with conn.transaction():
-        await conn.execute("UPDATE users SET request_admin=true WHERE id=$1", user_id)
-        return True
-
-  except Exception:
-    logger.exception(f"Error requesting admin for user_id: {user_id}")
-    raise

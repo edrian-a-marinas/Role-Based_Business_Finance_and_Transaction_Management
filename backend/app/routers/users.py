@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from app.auth.format_role import get_user_id_and_role
 from app.services import users_service
-from app.schemas.users import UserBase, UserRead, UserRoleUpdate, UserAdminRequest
+from app.schemas.users import UserBase, UserRead, UserRoleUpdate
 
 SUPER_ADMIN_ID = 1
 
@@ -16,17 +16,6 @@ async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role))
   if role != "admin" and user_id != SUPER_ADMIN_ID:
     raise HTTPException(status_code=403, detail="Admin only")
   return await users_service.get_all_users("admin")
-
-
-@router.post("/request-admin")
-async def request_admin_promotion(payload: UserAdminRequest, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
-  user_id, role = user_data
-  if role != "standard":
-    raise HTTPException(status_code=400, detail="Only standard users can request admin")
-  if not payload.request_admin:
-    raise HTTPException(status_code=400, detail="Must request admin to proceed")
-  await users_service.request_admin(user_id)
-  return {"detail": "Request sent to admin"}
 
 
 @router.put("/{target_user_id}/role", response_model=UserRead)
