@@ -128,6 +128,49 @@ async def update_user_active(user_id: int, is_active: bool, current_user_id: int
     raise
 
 
+async def restore_user(user_id: int, current_user_id: int, current_user_role: str):
+  if user_id == SUPER_ADMIN_ID:
+    return None
+
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      async with conn.transaction():
+
+        target_user = await conn.fetchrow(
+          "SELECT id, role_id FROM users WHERE id=$1",
+          user_id,
+        )
+        if not target_user:
+          return None
+
+        # Super Admin can restore anyone except itself
+        if current_user_id == SUPER_ADMIN_ID:
+          await conn.execute(
+            "UPDATE users SET is_active=true WHERE id=$1",
+            user_id,
+          )
+          return True
+
+        # Admin rules
+        if current_user_role != "admin":
+          return None
+
+        # Admin cannot restore admins
+        if target_user["role_id"] != 2:
+          return None
+
+        await conn.execute(
+          "UPDATE users SET is_active=true WHERE id=$1",
+          user_id,
+        )
+        return True
+
+  except Exception:
+    logger.exception(f"Error restoring user_id: {user_id}")
+    raise
+
+
 async def soft_delete_user(user_id: int, current_user_id: int, current_user_role: str):
   if user_id == SUPER_ADMIN_ID:
     return None

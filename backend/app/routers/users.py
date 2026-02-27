@@ -35,6 +35,23 @@ async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: T
   return updated_user
 
 
+@router.put("/{target_user_id}/restore")
+async def restore_user(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+  user_id, role = user_data
+  if role != "admin" and user_id != SUPER_ADMIN_ID:
+    raise HTTPException(status_code=403, detail="Admin only")
+
+  success = await users_service.restore_user(
+    target_user_id,
+    user_id,
+    role
+  )
+
+  if not success:
+    raise HTTPException(status_code=404, detail="User not found or cannot be restored")
+
+  return {"detail": "User restored successfully"}
+
 @router.delete("/{target_user_id}/soft")
 async def soft_delete(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
