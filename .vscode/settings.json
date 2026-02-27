@@ -1,0 +1,3 @@
+{
+  "fastapi.entryPoint": "backend.app.main:app"
+}

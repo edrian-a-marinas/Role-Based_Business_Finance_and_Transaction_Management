@@ -1,27 +1,25 @@
-from app.core import config
-from app.auth import router_email_verification as email_verification
+from fastapi import FastAPI
+from app.core.config import configure_middlewares, debug_mode
 
 from app.auth import router_auth as authentications
-from app.routers import (
-  transactions, 
-  categories, 
-  reports,
-  users,
-  )
+from app.auth import router_email_verification as email_verification
+from app.routers import transactions, categories, reports, users
 from tests import test_health
 
-app = config.create_app()
+app = FastAPI(**debug_mode())
 
+# Apply middlewares
+configure_middlewares(app)
 
-# Backend auth Routings 
+# Auth
 app.include_router(authentications.router)
 app.include_router(email_verification.router)
 
-# Backend logic routings
+# App logic
 app.include_router(transactions.router)
 app.include_router(categories.router)
 app.include_router(reports.router)
 app.include_router(users.router)
 
-# Backend health routing
+# Health check
 app.include_router(test_health.router)
