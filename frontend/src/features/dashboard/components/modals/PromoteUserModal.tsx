@@ -1,29 +1,35 @@
-// ReadUserModal.tsx
+// PromoteUserModal.tsx
 import { useEffect, useState, useContext } from "react";
-import api from "../../../services/apiClient";
-import { AuthContext } from "../../auth/AuthContext";
+import api from "../../../../services/apiClient";
+import { AuthContext } from "../../../auth/AuthContext";
+import type { OnCloseProps } from "../../../../../utility";
+import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { ReadUserWithCount, PromoteUserPayload, PromoteViewMode } from "../../schemas/user";
 
-import type { OnCloseProps } from "../../../../utility";
-import { useOutsideClickStrict } from "../../../../utilityHooks";
-import type { ReadUserWithCount, ViewMode } from "../schemas/user";
-
-export default function ReadUserModal({ onClose }: OnCloseProps) {
+export default function PromoteUserModal({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
 
-  const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
+  // STRICT SUPER ADMIN CHECK
+  if (!user || !(user.id === 1 && user.role_id === 1)) {
+    return null;
+  }
+
+  const { handleMouseDown, handleMouseUp } =
+    useOutsideClickStrict(onClose);
 
   const token = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
   const [users, setUsers] = useState<ReadUserWithCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>("all");
+  const [viewMode, setViewMode] =
+    useState<PromoteViewMode>("all");
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         if (!token || !tokenType) return;
-        if (!user) return;
 
         const res = await api.get("api/users/", {
           headers: { Authorization: `${tokenType} ${token}` },
@@ -40,8 +46,9 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
     fetchUsers();
   }, [token, tokenType]);
 
-  const getRoleName = (roleId: number) => {
-    return roleId === 1 ? "Admin" : "Standard";
+  const getRoleName = (u: ReadUserWithCount) => {
+    if (u.id === 1) return "SUPER Admin";
+    return u.role_id === 1 ? "Admin" : "Standard";
   };
 
   const filteredUsers = users.filter((u) => {
@@ -50,6 +57,38 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
     if (viewMode === "standard") return u.role_id === 2;
     return true;
   });
+
+  const handleRoleChange = async (targetUserId: number, newRole: 1 | 2) => {
+    if (targetUserId === 1) return;
+
+    try {
+      if (!token || !tokenType) return;
+
+      setUpdatingId(targetUserId);
+
+      const payload: PromoteUserPayload = {
+        role_id: newRole,
+      };
+
+      await api.put(
+        `api/users/${targetUserId}/role`,
+        payload,
+        {
+          headers: { Authorization: `${tokenType} ${token}` },
+        }
+      );
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUserId ? { ...u, role_id: newRole } : u
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update role");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <div
@@ -62,13 +101,17 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
           ×
         </button>
 
-        <h2 style={{ textAlign: "center" }}>View Users</h2>
+        <h2 style={{ textAlign: "center" }}>
+          Promote / Demote User
+        </h2>
 
         <div style={{ margin: "0.5rem 0" }}>
           <label style={{ marginRight: "0.5rem" }}>Filter:</label>
           <select
             value={viewMode}
-            onChange={(e) => setViewMode(e.target.value as ViewMode)}
+            onChange={(e) =>
+              setViewMode(e.target.value as PromoteViewMode)
+            }
           >
             <option value="all">All Users</option>
             <option value="admin">Admins Only</option>
@@ -78,7 +121,9 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
 
         {loading && <p>Loading...</p>}
 
-        {!loading && filteredUsers.length === 0 && <p>No users found.</p>}
+        {!loading && filteredUsers.length === 0 && (
+          <p>No users found.</p>
+        )}
 
         {!loading && filteredUsers.length > 0 && (
           <table style={tableStyle}>
@@ -87,11 +132,8 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                 <th style={thStyle}>ID</th>
                 <th style={thStyle}>Email</th>
                 <th style={thStyle}>Full Name</th>
-                <th style={thStyle}>Phone</th>
-                <th style={thStyle}>Role</th>
-                <th style={thStyle}>Active</th>
-                <th style={thStyle}>Transaction Count</th>
-                <th style={thStyle}>Created At</th>
+                <th style={thStyle}>Current Role</th>
+                <th style={thStyle}>Change Role</th>
               </tr>
             </thead>
 
@@ -101,15 +143,37 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                   <td style={tdStyle}>{u.id}</td>
                   <td style={tdStyle}>{u.email}</td>
                   <td style={tdStyle}>
-                    {u.first_name} {u.middle_name ? u.middle_name + " " : ""}
+                    {u.first_name}{" "}
+                    {u.middle_name ? u.middle_name + " " : ""}
                     {u.last_name}
                   </td>
-                  <td style={tdStyle}>{u.phone_number || "-"}</td>
-                  <td style={tdStyle}>{getRoleName(u.role_id)}</td>
-                  <td style={tdStyle}>{u.is_active ? "Yes" : "No"}</td>
-                  <td style={tdStyle}>{u.transaction_count ?? 0}</td>
+
+                  {/* CURRENT ROLE */}
                   <td style={tdStyle}>
-                    {new Date(u.created_at).toLocaleString()}
+                    {getRoleName(u)}
+                  </td>
+
+                  {/* CHANGE ROLE */}
+                  <td style={tdStyle}>
+                    {u.id === 1 ? (
+                      <span style={{ fontWeight: "bold", color: "#ffcc00" }}>
+                        SUPER Admin
+                      </span>
+                    ) : (
+                      <select
+                        value={u.role_id}
+                        disabled={updatingId === u.id}
+                        onChange={(e) =>
+                          handleRoleChange(
+                            u.id,
+                            Number(e.target.value) as 1 | 2
+                          )
+                        }
+                      >
+                        <option value={1}>Admin</option>
+                        <option value={2}>Standard</option>
+                      </select>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -139,7 +203,7 @@ const modalStyle: React.CSSProperties = {
   background: "#1c1414",
   padding: "1.5rem",
   borderRadius: "8px",
-  minWidth: "900px",
+  minWidth: "700px",
   maxHeight: "80vh",
   overflow: "auto",
   position: "relative",

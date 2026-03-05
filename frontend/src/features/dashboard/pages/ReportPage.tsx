@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { AuthContext } from "../../auth/AuthContext";
-import { GenerateReport } from "../components";
+import { GenerateReport } from "../components/modals";
 import type { ReportMode } from "../schemas/report"
 
 export default function ReportsPage() {

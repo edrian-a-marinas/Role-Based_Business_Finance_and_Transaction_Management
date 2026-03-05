@@ -1,9 +1,9 @@
 import { useState, useContext } from "react";
-import api from "../../../services/apiClient";
-import { AuthContext } from "../../auth/AuthContext";
-import { formatDate, formatCurrency } from "../../../../utility";
-import type { ReportType, ReportResult, OnCloseProps } from "../schemas/report";
-import { generateReportPDF } from "./generateReportPdf";
+import api from "../../../../services/apiClient";
+import { AuthContext } from "../../../auth/AuthContext";
+import { formatDate, formatCurrency } from "../../../../../utility";
+import type { ReportType, ReportResult, OnCloseProps } from "../../schemas/report";
+import { generateReportPDF } from "../../lib/generateReportPdf";
 
 export default function GenerateReportModal({ reportMode, onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

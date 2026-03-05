@@ -1,9 +1,9 @@
 import { useState, useEffect, useContext } from "react";
-import api from "../../../services/apiClient";
-import { AuthContext } from "../../auth/AuthContext";
-import type { ReadUserWithCount, ViewMode } from "../schemas/user";
-import { useOutsideClickStrict } from "../../../../utilityHooks";
-import type { OnCloseProps } from "../../../../utility";
+import api from "../../../../services/apiClient";
+import { AuthContext } from "../../../auth/AuthContext";
+import type { ReadUserWithCount, ViewMode } from "../../schemas/user";
+import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { OnCloseProps } from "../../../../../utility";
 
 export default function UserDetailsModal({ onClose }: OnCloseProps) {
   const { user: currentUser } = useContext(AuthContext);

@@ -7,7 +7,7 @@ import {
   UpdateTransaction,
   DeleteTransaction,
   HistoryTransaction
-} from "../components";
+} from "../components/modals";
 
 
 export default function Transactions() {

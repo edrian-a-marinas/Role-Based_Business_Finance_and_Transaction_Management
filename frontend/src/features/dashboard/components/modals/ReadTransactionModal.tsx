@@ -1,11 +1,11 @@
 import { useEffect, useState, useContext } from "react";
-import api from "../../../services/apiClient";
-import { AuthContext } from "../../auth/AuthContext";
+import api from "../../../../services/apiClient";
+import { AuthContext } from "../../../auth/AuthContext";
 
-import { formatDate, formatCurrency } from "../../../../utility"
-import type { OnCloseProps } from "../../../../utility"
-import type { Category, ReadTransaction } from "../schemas/transaction";
-import { useOutsideClickStrict } from "../../../../utilityHooks";
+import { formatDate, formatCurrency } from "../../../../../utility"
+import type { OnCloseProps } from "../../../../../utility"
+import type { Category, ReadTransaction } from "../../schemas/transaction";
+import { useOutsideClickStrict } from "../../../../../utilityHooks";
 
 export default function ReadTransactions({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

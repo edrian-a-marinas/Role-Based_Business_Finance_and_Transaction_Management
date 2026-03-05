@@ -15,8 +15,8 @@ import { AuthContext } from "../../auth/AuthContext";
 import Transactions from "./TransactionPage";
 import Reports from "./ReportPage";
 import ManageUsers from "./ManageUserPage";
-import ManageCategories from "../components/ManageCategoriesModal";
-import DashboardOverview from "@/features/dashboard/components/dashboard/DashBoardOverview";
+import ManageCategories from "../components/modals/ManageCategoriesModal";
+import DashboardOverview from "@/features/dashboard/components/overview/DashBoardOverview";
 
 // Sidebar colors from index.css — Tailwind v4 doesn't resolve CSS var-based utilities
 const S = {

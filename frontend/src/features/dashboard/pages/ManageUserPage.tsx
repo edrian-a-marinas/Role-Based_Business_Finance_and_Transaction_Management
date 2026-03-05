@@ -6,7 +6,7 @@ import {
   PromoteUser,
   UserDetails,
   HandleDeletionRequest
-} from "../components";
+} from "../components/modals";
 
 export default function ManageUsersPage() {
   const { user } = useContext(AuthContext);
