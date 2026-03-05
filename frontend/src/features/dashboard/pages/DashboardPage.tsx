@@ -90,9 +90,11 @@ export default function DashboardPage() {
             onClick={() => setSelectedMenu("dashboard")}
           />
           {!collapsed && (
-            <span className="text-sm font-bold tracking-tight" style={{ color: S.foreground }}>
+            <span className="text-sm font-bold tracking-tight cursor-pointer" style={{ color: S.foreground }}
+            onClick={() => setSelectedMenu("dashboard")}>
               TransacScope
             </span>
+            
           )}
         </div>
 
