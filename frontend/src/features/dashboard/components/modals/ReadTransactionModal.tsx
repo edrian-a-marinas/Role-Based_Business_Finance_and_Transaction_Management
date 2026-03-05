@@ -1,187 +1,505 @@
 import { useEffect, useState, useContext } from "react";
-import api from "../../../../services/apiClient";
-import { AuthContext } from "../../../auth/AuthContext";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
-import { formatDate, formatCurrency } from "../../lib/utility"
-import type { OnCloseProps } from "../../lib/utility"
-import type { Category, ReadTransaction } from "../../schemas/transaction";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import api from "@/services/apiClient";
+import { AuthContext } from "@/features/auth/AuthContext";
+import { formatDate, formatCurrency } from "@/features/dashboard/lib/utility";
+import type { OnCloseProps } from "@/features/dashboard/lib/utility";
+import type { Category, ReadTransaction } from "@/features/dashboard/schemas/transaction";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
 
+// ── Same tokens as CreateTransactionModal ────────────────────────────────────
+const C = {
+  primary:   "hsl(199,89%,38%)",
+  income:    "hsl(160,60%,45%)",
+  expense:   "hsl(0,72%,51%)",
+  surface:   "hsl(220,20%,12%)",
+  surfaceEl: "hsl(220,18%,16%)",
+  surfaceHov:"hsl(220,16%,20%)",
+  border:    "hsl(220,16%,22%)",
+  fg:        "hsl(220,14%,90%)",
+  fgMuted:   "hsl(220,10%,55%)",
+  overlay:   "rgba(0,0,0,0.55)",
+};
+
+// ── Types ────────────────────────────────────────────────────────────────────
+type SortField = "id" | "user_id" | "category" | "amount" | "transaction_date" | "created_at";
+type SortDir   = "asc" | "desc";
+type TypeFilter = "all" | "Income" | "Expense";
+
+// ── Small dropdown for Type filter ──────────────────────────────────────────
+interface DropdownProps {
+  value: TypeFilter;
+  onChange: (v: TypeFilter) => void;
+}
+function TypeDropdown({ value, onChange }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const options: { value: TypeFilter; label: string }[] = [
+    { value: "all",     label: "All Types" },
+    { value: "Income",  label: "Income Only" },
+    { value: "Expense", label: "Expense Only" },
+  ];
+  const current = options.find(o => o.value === value)!;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(p => !p)}
+        style={{
+          display:        "flex",
+          alignItems:     "center",
+          gap:            "0.3rem",
+          background:     C.surfaceEl,
+          border:         `1px solid ${C.border}`,
+          borderRadius:   "0.4rem",
+          color:          value === "Income"  ? C.income
+                        : value === "Expense" ? C.expense
+                        : C.fgMuted,
+          fontSize:       "0.72rem",
+          fontWeight:     600,
+          padding:        "0.25rem 0.5rem",
+          cursor:         "pointer",
+          whiteSpace:     "nowrap",
+        }}
+      >
+        {current.label}
+        <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
+      </button>
+      {open && (
+        <div
+          style={{
+            position:        "absolute",
+            top:             "calc(100% + 4px)",
+            left:            0,
+            background:      C.surfaceEl,
+            border:          `1px solid ${C.border}`,
+            borderRadius:    "0.4rem",
+            zIndex:          200,
+            minWidth:        "120px",
+            boxShadow:       "0 8px 24px rgba(0,0,0,0.4)",
+            overflow:        "hidden",
+          }}
+        >
+          {options.map(o => (
+            <button
+              key={o.value}
+              onClick={() => { onChange(o.value); setOpen(false); }}
+              style={{
+                display:    "block",
+                width:      "100%",
+                textAlign:  "left",
+                padding:    "0.4rem 0.75rem",
+                background: o.value === value ? C.surfaceHov : "transparent",
+                border:     "none",
+                color:      o.value === "Income"  ? C.income
+                          : o.value === "Expense" ? C.expense
+                          : C.fg,
+                fontSize:   "0.75rem",
+                cursor:     "pointer",
+              }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sort icon helper ─────────────────────────────────────────────────────────
+function SortIcon({ field, active, dir }: { field: SortField; active: SortField; dir: SortDir }) {
+  const size = { width: "0.7rem", height: "0.7rem" };
+  if (active !== field) return <ArrowUpDown style={{ ...size, opacity: 0.35 }} />;
+  return dir === "asc"
+    ? <ArrowUp   style={{ ...size, color: C.primary }} />
+    : <ArrowDown style={{ ...size, color: C.primary }} />;
+}
+
+// ── Shell ────────────────────────────────────────────────────────────────────
+interface ShellProps {
+  children:        React.ReactNode;
+  onBackdropDown?: React.MouseEventHandler;
+  onBackdropUp?:   React.MouseEventHandler;
+}
+function Shell({ children, onBackdropDown, onBackdropUp }: ShellProps) {
+  return (
+    <div
+      onMouseDown={onBackdropDown}
+      onMouseUp={onBackdropUp}
+      style={{
+        position:        "fixed",
+        inset:           0,
+        backgroundColor: C.overlay,
+        display:         "flex",
+        alignItems:      "center",
+        justifyContent:  "center",
+        zIndex:          50,
+        padding:         "1rem",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
+        onMouseUp={e => e.stopPropagation()}
+        style={{
+          background:   C.surface,
+          border:       `1px solid ${C.border}`,
+          borderRadius: "1rem",
+          width:        "100%",
+          maxWidth:     "1100px",
+          display:      "flex",
+          flexDirection:"column",
+          maxHeight:    "90vh",
+          boxShadow:    "0 24px 48px rgba(0,0,0,0.5)",
+          overflow:     "hidden",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function ReadTransactions({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
+  const isAdmin  = userRole === 1;
 
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
 
-  const token = localStorage.getItem("access_token");
+  const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
   const [transactions, setTransactions] = useState<ReadTransaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"all" | "own">("all"); // New state for view mode
+  const [categories,   setCategories]   = useState<Category[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [viewMode,     setViewMode]     = useState<"all" | "own">("all");
 
+  // Sort & filter state
+  const [sortField,  setSortField]  = useState<SortField>("id");
+  const [sortDir,    setSortDir]    = useState<SortDir>("desc");   // newest ID first by default
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (!token || !tokenType) return;
-
-        // API call to fetch all transactions
         const [transRes, catRes] = await Promise.all([
           api.get("api/transactions/", {
             headers: { Authorization: `${tokenType} ${token}` },
           }),
           api.get("api/categories/"),
         ]);
-
-        const filteredTrans: ReadTransaction[] = transRes.data.filter(
-          (t: ReadTransaction) => !t.deleted_at
-        );
-
-        filteredTrans.sort(
-          (a, b) =>
+        const filtered: ReadTransaction[] = transRes.data
+          .filter((t: ReadTransaction) => !t.deleted_at)
+          .sort((a: ReadTransaction, b: ReadTransaction) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-
-        setTransactions(filteredTrans);
+          );
+        setTransactions(filtered);
         setCategories(catRes.data);
-      } catch (err) {
-        // Handle error
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* silently */ }
+      finally { setLoading(false); }
     };
-
     fetchData();
   }, [token, tokenType]);
 
-  
-  const getCategoryName = (id: number) => {
-    const found = categories.find((c) => c.id === id);
-    return found ? found.name : "Unknown";
+  const getCategoryName = (id: number) =>
+    categories.find(c => c.id === id)?.name ?? "Unknown";
+
+  // ── Handle column header click ─────────────────────────────────────────────
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDir(field === "id" ? "desc" : "asc");
+    }
   };
 
-  // Filter transactions based on the selected view mode
-  const filteredTransactions = viewMode === "all" ? transactions : transactions.filter(tx => tx.user_id === user?.id);
+  // ── Apply view mode + type filter + sort ──────────────────────────────────
+  const processed = (() => {
+    let txs = [...transactions];
 
-  return (
-    <div
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        backgroundColor: "rgba(0,0,0,0.3)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
+    // View mode
+    if (viewMode === "own") txs = txs.filter(t => t.user_id === user?.id);
+
+    // Type filter
+    if (typeFilter !== "all") txs = txs.filter(t => t.transaction_type === typeFilter);
+
+    // Sort
+    txs.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case "id":               cmp = a.id - b.id;                                           break;
+        case "user_id":          cmp = a.user_id - b.user_id;                                  break;
+        case "category":         cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id)); break;
+        case "amount":           cmp = parseFloat(String(a.amount)) - parseFloat(String(b.amount));                                    break;
+        case "transaction_date": cmp = a.transaction_date.localeCompare(b.transaction_date);   break;
+        case "created_at":       cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return txs;
+  })();
+
+  // ── Sortable TH ───────────────────────────────────────────────────────────
+  const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
+    const active = sortField === field;
+    return (
+      <th
         style={{
-          background: "#1c1414",
-          padding: "1.5rem",
-          borderRadius: "8px",
-          minWidth: "900px",
-          maxHeight: "80vh",
-          overflow: "auto",
-          position: "relative",
+          padding:         "0.6rem 0.75rem",
+          fontSize:        "0.7rem",
+          fontWeight:      600,
+          color:           active ? C.primary : C.fgMuted,
+          textTransform:   "uppercase",
+          letterSpacing:   "0.05em",
+          whiteSpace:      "nowrap",
+          borderBottom:    `1px solid ${C.border}`,
+          background:      C.surfaceEl,
+          userSelect:      "none",
         }}
       >
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "8px",
-            right: "12px",
-            background: "transparent",
-            border: "none",
-            color: "#aaa",
-            fontSize: "22px",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
-          ×
-        </button>
-
-        <h2 style={{ textAlign: "center" }}>View Transactions</h2>
-
-        {/* Add role-based dropdown */}
-        {userRole === 1 && (
-          <select onChange={(e) => setViewMode(e.target.value as "all" | "own")}>
-            <option value="all">Show All</option>
-            <option value="own">Show Your Own View Only</option>
-          </select>
-        )}
-
-        {loading && <p>Loading...</p>}
-
-        {!loading && filteredTransactions.length === 0 && <p>No transactions found.</p>}
-
-        {!loading && filteredTransactions.length > 0 && (
-          <table
+        <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
+          <button
+            onClick={() => handleSort(field)}
             style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              marginTop: "1rem",
-              textAlign: "left",
+              display:    "flex",
+              alignItems: "center",
+              gap:        "0.25rem",
+              background: "none",
+              border:     "none",
+              color:      "inherit",
+              fontSize:   "inherit",
+              fontWeight: "inherit",
+              cursor:     "pointer",
+              padding:    0,
             }}
           >
-            <thead>
-              <tr >
-                <th style={thStyle}>ID</th>
-                {userRole === 1 && <th style={thStyle}>User ID</th>}
-                <th style={thStyle}>Category</th>
-                <th style={thStyle}>Amount</th>
-                <th style={thStyle}>Type</th>
-                <th style={thStyle}>Description</th>
-                <th style={thStyle}>Transaction Date</th>
-                <th style={thStyle}>Created At</th>
+            {children}
+            <SortIcon field={field} active={sortField} dir={sortDir} />
+          </button>
+        </div>
+      </th>
+    );
+  };
+
+  const totalIncome  = processed.filter(t => t.transaction_type === "Income") .reduce((s, t) => s + parseFloat(String(t.amount)), 0);
+  const totalExpense = processed.filter(t => t.transaction_type === "Expense").reduce((s, t) => s + parseFloat(String(t.amount)), 0);
+
+  return (
+    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+
+      {/* ── Header (sticky) ───────────────────────────────────────────────── */}
+      <div style={{
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "space-between",
+        padding:        "1.25rem 1.5rem",
+        borderBottom:   `1px solid ${C.border}`,
+        flexShrink:     0,
+      }}>
+        <div>
+          <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
+            View Transactions
+          </h2>
+          <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>
+            {processed.length} record{processed.length !== 1 ? "s" : ""}
+            {typeFilter !== "all" ? ` · ${typeFilter} only` : ""}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {/* Admin: view toggle */}
+          {isAdmin && (
+            <select
+              value={viewMode}
+              onChange={e => setViewMode(e.target.value as "all" | "own")}
+              style={{
+                background:   C.surfaceEl,
+                border:       `1px solid ${C.border}`,
+                borderRadius: "0.4rem",
+                color:        C.fg,
+                fontSize:     "0.75rem",
+                padding:      "0.3rem 0.5rem",
+                cursor:       "pointer",
+                outline:      "none",
+              }}
+            >
+              <option value="all">All Users</option>
+              <option value="own">My Transactions</option>
+            </select>
+          )}
+
+          {/* Close */}
+          <button
+            onClick={onClose}
+            style={{
+              background:   "transparent",
+              border:       `1px solid ${C.border}`,
+              borderRadius: "0.5rem",
+              color:        C.fgMuted,
+              cursor:       "pointer",
+              padding:      "0.3rem",
+              display:      "flex",
+              alignItems:   "center",
+            }}
+          >
+            <X style={{ width: "1rem", height: "1rem" }} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Summary pills ────────────────────────────────────────────────────── */}
+      {!loading && processed.length > 0 && (
+        <div style={{
+          display:      "flex",
+          gap:          "0.75rem",
+          padding:      "0.75rem 1.5rem",
+          borderBottom: `1px solid ${C.border}`,
+          flexShrink:   0,
+        }}>
+          {[
+            { label: "Income",  value: `+₱${totalIncome.toLocaleString()}`,   color: C.income,  bg: "hsl(160 60% 45% / 0.1)"  },
+            { label: "Expense", value: `-₱${totalExpense.toLocaleString()}`,   color: C.expense, bg: "hsl(0 72% 51% / 0.1)"    },
+            { label: "Net",     value: `₱${(totalIncome - totalExpense).toLocaleString()}`,
+              color: (totalIncome - totalExpense) >= 0 ? C.income : C.expense,
+              bg:    (totalIncome - totalExpense) >= 0 ? "hsl(160 60% 45% / 0.1)" : "hsl(0 72% 51% / 0.1)" },
+          ].map(p => (
+            <div key={p.label} style={{
+              background:   p.bg,
+              border:       `1px solid ${p.color}40`,
+              borderRadius: "0.4rem",
+              padding:      "0.3rem 0.75rem",
+              fontSize:     "0.75rem",
+            }}>
+              <span style={{ color: C.fgMuted, marginRight: "0.4rem" }}>{p.label}</span>
+              <span style={{ color: p.color, fontWeight: 700 }}>{p.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Table area (scrollable) ──────────────────────────────────────────── */}
+      <div style={{ overflowY: "auto", flex: 1 }}>
+        {loading && (
+          <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>Loading…</p>
+        )}
+        {!loading && processed.length === 0 && (
+          <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>No transactions found.</p>
+        )}
+
+        {!loading && processed.length > 0 && (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
+              <tr>
+                <Th field="id">ID</Th>
+                {isAdmin && <Th field="user_id">User ID</Th>}
+                <Th field="category">Category</Th>
+                <Th field="amount">Amount</Th>
+                <th style={{
+                  padding:       "0.6rem 0.75rem",
+                  fontSize:      "0.7rem",
+                  fontWeight:    600,
+                  color:         C.fgMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  borderBottom:  `1px solid ${C.border}`,
+                  background:    C.surfaceEl,
+                }}>
+                  <TypeDropdown value={typeFilter} onChange={setTypeFilter} />
+                </th>
+                <th style={{
+                  padding:       "0.6rem 0.75rem",
+                  fontSize:      "0.7rem",
+                  fontWeight:    600,
+                  color:         C.fgMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  borderBottom:  `1px solid ${C.border}`,
+                  background:    C.surfaceEl,
+                }}>
+                  Description
+                </th>
+                <Th field="transaction_date">Tx Date</Th>
+                <Th field="created_at">Created At</Th>
               </tr>
             </thead>
-            <tbody>
-              {filteredTransactions.map((tx) => (
-                <tr key={tx.id}>
-                  <td style={tdStyle}>{tx.id}</td>
-                  {userRole === 1 && <td style={tdStyle}>{tx.user_id}</td>}
-                  <td style={tdStyle}>{getCategoryName(tx.category_id)}</td>
-                  <td style={tdStyle}>
-                    {tx.transaction_type === "Expense"
-                      ? `₱ -${formatCurrency(tx.amount).replace("₱ ", "")}`
-                      : `₱ +${formatCurrency(tx.amount).replace("₱ ", "")}`}
-                  </td>
-                  <td style={tdStyle}>{tx.transaction_type}</td>
-                  <td style={tdStyle}>{tx.description}</td>
-                  <td style={tdStyle}>{tx.transaction_date}</td>
-                  <td style={tdStyle}>{formatDate(tx.created_at)}</td>
 
-                  
-                </tr>
-              ))}
+            <tbody>
+              {processed.map((tx, idx) => {
+                const isIncome  = tx.transaction_type === "Income";
+                const isEven    = idx % 2 === 0;
+                return (
+                  <tr
+                    key={tx.id}
+                    style={{
+                      backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)",
+                      transition:      "background-color 0.1s",
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surfaceHov)}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}
+                  >
+                    <td style={td}>{tx.id}</td>
+                    {isAdmin && <td style={td}>{tx.user_id}</td>}
+                    <td style={td}>{getCategoryName(tx.category_id)}</td>
+                    <td style={{ ...td, fontWeight: 600, color: isIncome ? C.income : C.expense }}>
+                      {isIncome
+                        ? `+₱${formatCurrency(tx.amount).replace("₱ ", "")}`
+                        : `-₱${formatCurrency(tx.amount).replace("₱ ", "")}`}
+                    </td>
+                    <td style={td}>
+                      <span style={{
+                        display:         "inline-block",
+                        padding:         "0.15rem 0.5rem",
+                        borderRadius:    "999px",
+                        fontSize:        "0.68rem",
+                        fontWeight:      600,
+                        backgroundColor: isIncome ? "hsl(160 60% 45% / 0.12)" : "hsl(0 72% 51% / 0.12)",
+                        color:           isIncome ? C.income : C.expense,
+                        border:          `1px solid ${isIncome ? C.income : C.expense}40`,
+                      }}>
+                        {tx.transaction_type}
+                      </span>
+                    </td>
+                    <td style={{ ...td, color: C.fgMuted, maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {tx.description || "—"}
+                    </td>
+                    <td style={td}>{tx.transaction_date}</td>
+                    <td style={{ ...td, color: C.fgMuted }}>{formatDate(tx.created_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
       </div>
-    </div>
+
+      {/* ── Footer row count ─────────────────────────────────────────────────── */}
+      {!loading && processed.length > 0 && (
+        <div style={{
+          padding:      "0.6rem 1.5rem",
+          borderTop:    `1px solid ${C.border}`,
+          fontSize:     "0.72rem",
+          color:        C.fgMuted,
+          flexShrink:   0,
+        }}>
+          Showing {processed.length} transaction{processed.length !== 1 ? "s" : ""}
+          {processed.length > 15 ? " · scroll to see more" : ""}
+        </div>
+      )}
+
+    </Shell>
   );
 }
 
-// Table cell styles
-const thStyle: React.CSSProperties = {
-  border: "1px solid #999",
-  padding: "4px 8px",
-  backgroundColor: "#333",
-  color: "#fff",
-};
-
-const tdStyle: React.CSSProperties = {
-  border: "1px solid #999",
-  padding: "4px 8px",
-  color: "#eee",
+// ── Base TD style ─────────────────────────────────────────────────────────────
+const td: React.CSSProperties = {
+  padding:     "0.55rem 0.75rem",
+  color:       "hsl(220,14%,85%)",
+  borderBottom:"1px solid hsl(220,16%,18%)",
+  whiteSpace:  "nowrap",
 };
