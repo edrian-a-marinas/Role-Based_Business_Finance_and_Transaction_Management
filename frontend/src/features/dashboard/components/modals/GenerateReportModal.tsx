@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
-import { formatDate, formatCurrency } from "../../../../../utility";
+import { formatDate, formatCurrency } from "../../lib/utility";
 import type { ReportType, ReportResult, OnCloseProps } from "../../schemas/report";
 import { generateReportPDF } from "../../lib/generateReportPdf";
 

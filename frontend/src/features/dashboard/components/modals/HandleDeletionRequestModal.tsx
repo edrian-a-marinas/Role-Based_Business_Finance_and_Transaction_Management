@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import api from "../../../../services/apiClient";
-import type { OnCloseProps } from "../../../../../utility";
+import type { OnCloseProps } from "../../lib/utility";
 import type { TransactionInfo, DeletionRequest } from "../../schemas/user";
-import { formatCurrency } from "../../../../../utility";
-import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import { formatCurrency } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
 
 export default function HandleDeletionRequestModal({ onClose }: OnCloseProps) {
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);

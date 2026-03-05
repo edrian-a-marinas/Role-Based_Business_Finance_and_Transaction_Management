@@ -4,9 +4,9 @@ import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { CategoryCreate, CategoryRead, ModalStep } from "../../schemas/category";
 import { categorySchema } from "../../schemas/category";
-import type { OnCloseProps } from "../../../../../utility";
-import { diffHighlight } from "../../../../../utility";
-import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { OnCloseProps } from "../../lib/utility";
+import { diffHighlight } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
 
 export default function ManageCategories({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

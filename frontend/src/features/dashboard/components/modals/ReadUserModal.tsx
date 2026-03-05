@@ -3,8 +3,8 @@ import { useEffect, useState, useContext } from "react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 
-import type { OnCloseProps } from "../../../../../utility";
-import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { OnCloseProps } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
 import type { ReadUserWithCount, ViewMode } from "../../schemas/user";
 
 export default function ReadUserModal({ onClose }: OnCloseProps) {

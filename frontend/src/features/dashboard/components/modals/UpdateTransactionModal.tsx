@@ -3,9 +3,9 @@ import type { ChangeEvent, KeyboardEvent } from "react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { Transaction, Category } from "../../schemas/transaction";
-import type { OnCloseProps } from "../../../../../utility";
-import { diffHighlight, formatCurrency, fetchTransactionAndCategories } from "../../../../../utility";
-import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { OnCloseProps } from "../../lib/utility";
+import { diffHighlight, formatCurrency, fetchTransactionAndCategories } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
 
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);

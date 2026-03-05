@@ -3,9 +3,9 @@ import type { KeyboardEvent } from "react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { Transaction, Category } from "../../schemas/transaction";
-import type { OnCloseProps } from "../../../../../utility";
-import { formatCurrency, fetchTransactionAndCategories } from "../../../../../utility";
-import { useOutsideClickStrict } from "../../../../../utilityHooks";
+import type { OnCloseProps } from "../../lib/utility";
+import { formatCurrency, fetchTransactionAndCategories } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
 
 export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
