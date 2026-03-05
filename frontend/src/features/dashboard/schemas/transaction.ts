@@ -44,8 +44,7 @@ export const transactionSchema = z.object({
     .refine(val => val !== 0, { message: "Category is required" }),
 
   description: z
-    .string()
-    .min(1, { message: "Description is required" }),
+    .string(),
 
   transaction_date: z
     .string()
