@@ -9,9 +9,10 @@ const EXPENSE_COLOR = "hsl(0,72%,51%)";
 interface RecentTransactionsProps {
   transactions: ReadTransaction[];
   getCategoryName: (id: number | null) => string;
+  openViewTransactions: () => void; 
 }
 
-export default function RecentTransactions({ transactions, getCategoryName }: RecentTransactionsProps) {
+export default function RecentTransactions({ transactions, getCategoryName, openViewTransactions }: RecentTransactionsProps) {
   const recent = transactions
     .filter((t) => !t.deleted_at)
     .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
@@ -77,6 +78,16 @@ export default function RecentTransactions({ transactions, getCategoryName }: Re
             );
           })}
         </div>
+
+        <div className="mt-3 px-3 pb-2">
+          <button
+            onClick={openViewTransactions}
+            className="relative z-10 w-full text-xs font-medium py-2 rounded-md border border-border hover:bg-muted transition-colors cursor-pointer"
+          >
+            View All Transactions
+          </button>
+        </div>
+
       </CardContent>
     </Card>
   );
