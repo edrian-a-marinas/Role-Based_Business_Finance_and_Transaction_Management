@@ -1,7 +1,6 @@
 import { useState, useContext } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
-import { X, ChevronLeft, ChevronRight, Search } from "lucide-react";
-
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction, Category } from "@/features/dashboard/schemas/transaction";
@@ -9,17 +8,17 @@ import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import { diffHighlight, formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utility";
 import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
 import Shell from "./shared/Shell";
+import ModalHeader from "./shared/ModalHeader";
+import ErrorBox from "./shared/ErrorBox";
+import InfoRow from "./shared/InfoRow";
 import { C, inputStyle, labelStyle } from "./shared";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type Step = "lookup" | "edit" | "confirm";
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userId   = user!.id;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
@@ -35,31 +34,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const getCategoryName = (id: number) =>
     categories.find(c => c.id === id)?.name ?? "Unknown";
 
-  // ── Shared close button ────────────────────────────────────────────────────
-  const CloseBtn = ({ onClick }: { onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      style={{
-        background: "transparent", border: `1px solid ${C.border}`,
-        borderRadius: "0.5rem", color: C.fgMuted, cursor: "pointer",
-        padding: "0.3rem", display: "flex", alignItems: "center",
-      }}
-    >
-      <X style={{ width: "1rem", height: "1rem" }} />
-    </button>
-  );
-
-  // ── Shared error box ───────────────────────────────────────────────────────
-  const ErrorBox = () => !error ? null : (
-    <div style={{
-      backgroundColor: "hsl(0 72% 51% / 0.1)", border: `1px solid ${C.error}`,
-      borderRadius: "0.5rem", padding: "0.6rem 0.75rem", marginBottom: "1rem",
-    }}>
-      <p style={{ color: C.error, fontSize: "0.8rem", margin: 0 }}>• {error}</p>
-    </div>
-  );
-
-  // ── Shared nav button ──────────────────────────────────────────────────────
   const backBtnStyle: React.CSSProperties = {
     flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
     border: `1px solid ${C.border}`, background: "transparent",
@@ -73,7 +47,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
   };
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleFetch = async () => {
     setError("");
     setTransaction(null);
@@ -127,11 +100,9 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
 
   const handleConfirmUpdate = async () => {
     if (!transaction || !token || !tokenType) return;
-
     const payload: Record<string, string> = {};
     if (form.description      !== (transaction.description ?? ""))  payload.description      = form.description;
     if (form.transaction_date !== transaction.transaction_date)      payload.transaction_date = form.transaction_date;
-
     try {
       await api.put(`api/transactions/${transactionId}`, payload, {
         headers: { Authorization: `${tokenType} ${token}` },
@@ -146,113 +117,100 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   // ── Step 1 — ID lookup ────────────────────────────────────────────────────
   if (step === "lookup") return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <div>
-          <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Edit Transaction</h2>
-          <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>Enter the transaction ID to load</p>
+      <div style={{ padding: "1.75rem" }}>
+        <ModalHeader
+          title="Edit Transaction"
+          subtitle="Enter the transaction ID to load"
+          onClose={onClose}
+        />
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={labelStyle}>Transaction ID</label>
+          <div style={{ position: "relative" }}>
+            <input
+              value={transactionId}
+              placeholder="e.g. 42"
+              onChange={e => { if (/^\d{0,3}$/.test(e.target.value)) setTransactionId(e.target.value); }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setFocusedField("id")}
+              onBlur={() => setFocusedField(null)}
+              style={{ ...inputStyle, paddingRight: "2.5rem", borderColor: focusedField === "id" ? C.borderFoc : C.border }}
+            />
+            <Search style={{
+              position: "absolute", right: "0.75rem", top: "50%",
+              transform: "translateY(-50%)", width: "0.9rem", height: "0.9rem",
+              color: C.fgMuted, pointerEvents: "none",
+            }} />
+          </div>
         </div>
-        <CloseBtn onClick={onClose} />
-      </div>
-
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={labelStyle}>Transaction ID</label>
-        <div style={{ position: "relative" }}>
-          <input
-            type="number"
-            value={transactionId}
-            placeholder="e.g. 42"
-            onChange={e => { if (/^\d{0,3}$/.test(e.target.value)) setTransactionId(e.target.value); }}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setFocusedField("id")}
-            onBlur={() => setFocusedField(null)}
-            style={{ ...inputStyle, paddingRight: "2.5rem", borderColor: focusedField === "id" ? C.borderFoc : C.border }}
-          />
-          <Search style={{ position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)", width: "0.9rem", height: "0.9rem", color: C.fgMuted, pointerEvents: "none" }} />
+        <ErrorBox message={error} />
+        {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Loading…</p>}
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button onClick={onClose} style={backBtnStyle}>Cancel</button>
+          <button
+            onClick={handleFetch}
+            disabled={loading || !transactionId}
+            style={{
+              ...primaryBtnStyle,
+              background: !transactionId ? C.surfaceEl : C.primary,
+              color:      !transactionId ? C.fgMuted   : "hsl(0,0%,100%)",
+              cursor:     !transactionId ? "not-allowed" : "pointer",
+            }}
+          >
+            Load Transaction <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
+          </button>
         </div>
       </div>
-
-      <ErrorBox />
-      {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Loading…</p>}
-
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button onClick={onClose} style={backBtnStyle}>Cancel</button>
-        <button
-          onClick={handleFetch}
-          disabled={loading || !transactionId}
-          style={{
-            ...primaryBtnStyle,
-            background: !transactionId ? C.surfaceEl : C.primary,
-            color:      !transactionId ? C.fgMuted : "hsl(0,0%,100%)",
-            cursor:     !transactionId ? "not-allowed" : "pointer",
-          }}
-        >
-          Load Transaction <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
-        </button>
-      </div>
-
     </Shell>
   );
 
   // ── Step 2 — Edit form ────────────────────────────────────────────────────
   if (step === "edit" && transaction) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-        <div>
-          <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Edit Transaction</h2>
-          <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>ID #{transactionId}</p>
+      <div style={{ padding: "1.75rem" }}>
+        <ModalHeader
+          title="Edit Transaction"
+          subtitle={`ID #${transactionId}`}
+          onClose={onClose}
+        />
+        {/* Read-only snapshot */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <InfoRow label="Amount"   value={formatCurrency(transaction.amount)}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Category" value={getCategoryName(transaction.category_id)} />
+          <InfoRow label="Type"     value={transaction.transaction_type}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
         </div>
-        <CloseBtn onClick={onClose} />
+        {/* Editable fields */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem" }}>
+          {[
+            { name: "description",      label: "Description", type: "text", placeholder: "Optional note…", extra: {} },
+            { name: "transaction_date", label: "Date",        type: "date", placeholder: "",               extra: { colorScheme: "dark" as const } },
+          ].map(({ name, label, type, placeholder, extra }) => (
+            <div key={name}>
+              <label style={labelStyle}>{label}</label>
+              <input
+                type={type}
+                name={name}
+                value={(form as any)[name]}
+                onChange={handleChange}
+                placeholder={placeholder}
+                onFocus={() => setFocusedField(name)}
+                onBlur={() => setFocusedField(null)}
+                style={{ ...inputStyle, borderColor: focusedField === name ? C.borderFoc : C.border, ...extra }}
+              />
+            </div>
+          ))}
+        </div>
+        <ErrorBox message={error} />
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button onClick={() => setStep("lookup")} style={backBtnStyle}>
+            <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
+          </button>
+          <button onClick={handleProceed} style={primaryBtnStyle}>
+            Review Changes <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
+          </button>
+        </div>
       </div>
-
-      {/* Read-only snapshot */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        {[
-          { label: "Amount",   value: formatCurrency(transaction.amount),   color: transaction.transaction_type === "Income" ? C.income : C.expense },
-          { label: "Category", value: getCategoryName(transaction.category_id) },
-          { label: "Type",     value: transaction.transaction_type,          color: transaction.transaction_type === "Income" ? C.income : C.expense },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.45rem 0", borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: "0.75rem", color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</span>
-            <span style={{ fontSize: "0.875rem", fontWeight: 500, color: color ?? C.fg }}>{value}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Editable fields */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem" }}>
-        {[
-          { name: "description",      label: "Description", type: "text", placeholder: "Optional note…", extra: {} },
-          { name: "transaction_date", label: "Date",         type: "date", placeholder: "",               extra: { colorScheme: "dark" as const } },
-        ].map(({ name, label, type, placeholder, extra }) => (
-          <div key={name}>
-            <label style={labelStyle}>{label}</label>
-            <input
-              type={type}
-              name={name}
-              value={(form as any)[name]}
-              onChange={handleChange}
-              placeholder={placeholder}
-              onFocus={() => setFocusedField(name)}
-              onBlur={() => setFocusedField(null)}
-              style={{ ...inputStyle, borderColor: focusedField === name ? C.borderFoc : C.border, ...extra }}
-            />
-          </div>
-        ))}
-      </div>
-
-      <ErrorBox />
-
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button onClick={() => setStep("lookup")} style={backBtnStyle}>
-          <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
-        </button>
-        <button onClick={handleProceed} style={primaryBtnStyle}>
-          Review Changes <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
-        </button>
-      </div>
-
     </Shell>
   );
 
@@ -260,54 +218,48 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   if (step === "confirm" && transaction) {
     const descDiff = diffHighlight(transaction.description ?? "", form.description);
     const dateDiff = diffHighlight(transaction.transaction_date, form.transaction_date);
-
     return (
       <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-          <div>
-            <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Confirm Update</h2>
-            <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>Review changes for ID #{transactionId}</p>
+        <div style={{ padding: "1.75rem" }}>
+          <ModalHeader
+            title="Confirm Update"
+            subtitle={`Review changes for ID #${transactionId}`}
+            onClose={() => setStep("edit")}
+          />
+          {/* Diff table */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+            {[
+              { label: "Description", before: descDiff.before, after: descDiff.after },
+              { label: "Date",        before: dateDiff.before, after: dateDiff.after },
+            ].map(({ label, before, after }) => (
+              <div key={label} style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.5rem", overflow: "hidden" }}>
+                <div style={{ padding: "0.3rem 0.75rem", borderBottom: `1px solid ${C.border}`, fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {label}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                  {[
+                    { side: "BEFORE", html: before, accent: C.expense, borderRight: true },
+                    { side: "AFTER",  html: after,  accent: C.income,  borderRight: false },
+                  ].map(({ side, html, accent, borderRight }) => (
+                    <div key={side} style={{ padding: "0.5rem 0.75rem", fontSize: "0.8rem", borderRight: borderRight ? `1px solid ${C.border}` : undefined }}>
+                      <span style={{ display: "block", fontSize: "0.65rem", color: accent, marginBottom: "0.2rem", fontWeight: 600 }}>{side}</span>
+                      <span style={{ color: C.fg }} dangerouslySetInnerHTML={{ __html: html }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-          <CloseBtn onClick={() => setStep("edit")} />
+          <ErrorBox message={error} />
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <button onClick={() => setStep("edit")} style={backBtnStyle}>
+              <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
+            </button>
+            <button onClick={handleConfirmUpdate} style={{ ...primaryBtnStyle, background: C.income }}>
+              Confirm Update
+            </button>
+          </div>
         </div>
-
-        {/* Diff table */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
-          {[
-            { label: "Description", before: descDiff.before, after: descDiff.after },
-            { label: "Date",        before: dateDiff.before, after: dateDiff.after },
-          ].map(({ label, before, after }) => (
-            <div key={label} style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.5rem", overflow: "hidden" }}>
-              <div style={{ padding: "0.3rem 0.75rem", borderBottom: `1px solid ${C.border}`, fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                {label}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-                {[
-                  { side: "BEFORE", html: before, accent: C.expense, borderRight: true },
-                  { side: "AFTER",  html: after,  accent: C.income,  borderRight: false },
-                ].map(({ side, html, accent, borderRight }) => (
-                  <div key={side} style={{ padding: "0.5rem 0.75rem", fontSize: "0.8rem", borderRight: borderRight ? `1px solid ${C.border}` : undefined }}>
-                    <span style={{ display: "block", fontSize: "0.65rem", color: accent, marginBottom: "0.2rem", fontWeight: 600 }}>{side}</span>
-                    <span style={{ color: C.fg }} dangerouslySetInnerHTML={{ __html: html }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <ErrorBox />
-
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button onClick={() => setStep("edit")} style={backBtnStyle}>
-            <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
-          </button>
-          <button onClick={handleConfirmUpdate} style={{ ...primaryBtnStyle, background: C.income, flex: 2 }}>
-            Confirm Update
-          </button>
-        </div>
-
       </Shell>
     );
   }
