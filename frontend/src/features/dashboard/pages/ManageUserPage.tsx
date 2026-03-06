@@ -1,3 +1,4 @@
+// ManageUserPage.tsx
 import { useState, useContext } from "react";
 import { AuthContext } from "../../auth/AuthContext";
 import { Users, Eye, ShieldCheck, Trash2, UserCircle } from "lucide-react";
@@ -34,7 +35,6 @@ export default function ManageUsersPage() {
   const { user } = useContext(AuthContext);
   const userRole = user!.role_id;
   const userID   = user!.id;
-
   const isSuperAdmin = userID === 1 && userRole === 1;
   const isAdmin      = userRole === 1 || userRole === 2;
 
@@ -44,7 +44,6 @@ export default function ManageUsersPage() {
   const [showHandleRequestModal, setShowHandleRequestModal] = useState(false);
   const [hoveredCard,            setHoveredCard]            = useState<number | null>(null);
 
-  // Build action list conditionally — same pattern as TransactionPage
   const actions: ActionCard[] = [
     {
       label:       "View Users",
@@ -55,8 +54,11 @@ export default function ManageUsersPage() {
       onClick:     () => setShowReadModal(true),
     },
     {
-      label:       "View User Details",
-      description: "Inspect profile and account information",
+      // Super Admin gets a management-oriented label; Admin gets read-only label
+      label:       isSuperAdmin ? "Manage User Details" : "View User Details",
+      description: isSuperAdmin
+        ? "Inspect profiles and manage account status"
+        : "Inspect profile and account information",
       icon:        UserCircle,
       color:       C.purple,
       bgColor:     "hsl(280 60% 55% / 0.08)",
@@ -85,9 +87,8 @@ export default function ManageUsersPage() {
   return (
     <>
       <title>Manage Users</title>
-
       <div className="space-y-6">
-        {/* Page header — mirrors TransactionPage */}
+        {/* Page header */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" style={{ color: C.primary }} />
@@ -132,7 +133,6 @@ export default function ManageUsersPage() {
                   gap:           "0.75rem",
                 }}
               >
-                {/* Icon badge */}
                 <div style={{
                   width:           "2.5rem",
                   height:          "2.5rem",
@@ -151,8 +151,6 @@ export default function ManageUsersPage() {
                     transition: "color 0.15s",
                   }} />
                 </div>
-
-                {/* Text */}
                 <div>
                   <p className="text-sm font-semibold" style={{ color: C.fg, marginBottom: "0.2rem" }}>
                     {action.label}
@@ -168,10 +166,10 @@ export default function ManageUsersPage() {
       </div>
 
       {/* Modals */}
-      {showReadModal          && <ReadUsers           onClose={() => setShowReadModal(false)}          />}
-      {showPromoteModal       && <PromoteUser          onClose={() => setShowPromoteModal(false)}       />}
+      {showReadModal          && <ReadUsers            onClose={() => setShowReadModal(false)}          />}
+      {showPromoteModal       && <PromoteUser           onClose={() => setShowPromoteModal(false)}       />}
       {showHandleRequestModal && <HandleDeletionRequest onClose={() => setShowHandleRequestModal(false)} />}
-      {showDetailsModal       && <UserDetails          onClose={() => setShowDetailsModal(false)}       />}
+      {showDetailsModal       && <UserDetails           onClose={() => setShowDetailsModal(false)}       />}
     </>
   );
 }
