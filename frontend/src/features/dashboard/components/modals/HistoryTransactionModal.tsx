@@ -1,6 +1,5 @@
 import { useEffect, useState, useContext } from "react";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
-
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { ReadTransactionHistory, Category } from "@/features/dashboard/schemas/transaction";
@@ -8,7 +7,7 @@ import { formatDate } from "@/features/dashboard/lib/utility";
 import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
 
-// ── Same tokens ───────────────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary:    "hsl(199,89%,38%)",
   income:     "hsl(160,60%,45%)",
@@ -23,28 +22,41 @@ const C = {
   overlay:    "rgba(0,0,0,0.55)",
 };
 
-// Action badge colors
 const ACTION_COLOR: Record<string, string> = {
-  CREATE: C.income,
   UPDATE: C.warning,
   DELETE: C.expense,
 };
 
-type SortField = "entity_id" | "user_id" | "category" | "action" | "action_taken_at";
-type SortDir   = "asc" | "desc";
-type ActionFilter = "all" | "CREATE" | "UPDATE" | "DELETE";
+// ── Types ─────────────────────────────────────────────────────────────────────
+type SortField    = "entity_id" | "user_id" | "category" | "action" | "action_taken_at";
+type SortDir      = "asc" | "desc";
+type ActionFilter = "all" | "UPDATE" | "DELETE";
 
-// ── Action filter dropdown ────────────────────────────────────────────────────
-function ActionDropdown({ value, onChange }: { value: ActionFilter; onChange: (v: ActionFilter) => void }) {
+// ── Base TD style ─────────────────────────────────────────────────────────────
+const td: React.CSSProperties = {
+  padding:      "0.55rem 0.75rem",
+  color:        "hsl(220,14%,85%)",
+  borderBottom: "1px solid hsl(220,16%,18%)",
+  overflow:     "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace:   "nowrap",
+};
+
+// ── HOISTED: ActionDropdown — defined at module level so it never remounts ────
+// (same fix as TypeDropdown in ReadTransactionModal — defining inside component
+//  gives it a new identity on every render → React unmounts/remounts → filter resets)
+interface ActionDropdownProps {
+  value:    ActionFilter;
+  onChange: (v: ActionFilter) => void;
+}
+function ActionDropdown({ value, onChange }: ActionDropdownProps) {
   const [open, setOpen] = useState(false);
   const options: { value: ActionFilter; label: string }[] = [
     { value: "all",    label: "All Actions" },
-    { value: "CREATE", label: "Created"     },
     { value: "UPDATE", label: "Updated"     },
     { value: "DELETE", label: "Deleted"     },
   ];
   const current = options.find(o => o.value === value)!;
-
   return (
     <div style={{ position: "relative" }}>
       <button
@@ -105,7 +117,7 @@ function ActionDropdown({ value, onChange }: { value: ActionFilter; onChange: (v
   );
 }
 
-// ── Sort icon ─────────────────────────────────────────────────────────────────
+// ── HOISTED: SortIcon ────────────────────────────────────────────────────────
 function SortIcon({ field, active, dir }: { field: SortField; active: SortField; dir: SortDir }) {
   const s = { width: "0.7rem", height: "0.7rem" };
   if (active !== field) return <ArrowUpDown style={{ ...s, opacity: 0.35 }} />;
@@ -114,7 +126,7 @@ function SortIcon({ field, active, dir }: { field: SortField; active: SortField;
     : <ArrowDown style={{ ...s, color: C.primary }} />;
 }
 
-// ── Shell ─────────────────────────────────────────────────────────────────────
+// ── HOISTED: Shell ────────────────────────────────────────────────────────────
 interface ShellProps {
   children:        React.ReactNode;
   onBackdropDown?: React.MouseEventHandler;
@@ -170,13 +182,13 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
-  const [history,       setHistory]       = useState<ReadTransactionHistory[]>([]);
-  const [categories,    setCategories]    = useState<Category[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [viewMode,      setViewMode]      = useState<"all" | "own">("all");
-  const [sortField,     setSortField]     = useState<SortField>("action_taken_at");
-  const [sortDir,       setSortDir]       = useState<SortDir>("desc");
-  const [actionFilter,  setActionFilter]  = useState<ActionFilter>("all");
+  const [history,      setHistory]      = useState<ReadTransactionHistory[]>([]);
+  const [categories,   setCategories]   = useState<Category[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [viewMode,     setViewMode]     = useState<"all" | "own">("all");
+  const [sortField,    setSortField]    = useState<SortField>("action_taken_at");
+  const [sortDir,      setSortDir]      = useState<SortDir>("desc");
+  const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,20 +223,33 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     }
   };
 
+  // ── Filter + sort ─────────────────────────────────────────────────────────
+  // Normalize action to uppercase for reliable comparison regardless of what
+  // the backend returns ("Update", "update", "UPDATE" all match "UPDATE")
   const processed = (() => {
     let rows = [...history];
 
     if (viewMode === "own") rows = rows.filter(r => r.user_id === user?.id);
-    if (actionFilter !== "all") rows = rows.filter(r => r.action?.toUpperCase() === actionFilter);
+
+    if (actionFilter !== "all") {
+      // Backend may return "updated"/"deleted" (past tense) or "UPDATE"/"DELETE"
+      // Match both forms case-insensitively
+      rows = rows.filter(r => {
+        const a = (r.action ?? "").toLowerCase();
+        if (actionFilter === "UPDATE") return a === "update" || a === "updated";
+        if (actionFilter === "DELETE") return a === "delete" || a === "deleted";
+        return true;
+      });
+    }
 
     rows.sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
-        case "entity_id":      cmp = a.entity_id - b.entity_id;                                            break;
-        case "user_id":        cmp = a.user_id - b.user_id;                                                break;
-        case "category":       cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id)); break;
-        case "action":         cmp = (a.action ?? "").localeCompare(b.action ?? "");                       break;
-        case "action_taken_at":cmp = new Date(a.action_taken_at).getTime() - new Date(b.action_taken_at).getTime(); break;
+        case "entity_id":       cmp = a.entity_id - b.entity_id; break;
+        case "user_id":         cmp = a.user_id - b.user_id; break;
+        case "category":        cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id)); break;
+        case "action":          cmp = (a.action ?? "").localeCompare(b.action ?? ""); break;
+        case "action_taken_at": cmp = new Date(a.action_taken_at).getTime() - new Date(b.action_taken_at).getTime(); break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -232,7 +257,9 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     return rows;
   })();
 
-  // ── Sortable TH ──────────────────────────────────────────────────────────
+  // ── HOISTED: Th — defined inside component but uses no closures that cause
+  //    remount issues (it's not a component stored in state or used as JSX type
+  //    inline — it's just called as a function directly in the table)
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
     return (
@@ -246,7 +273,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         borderBottom:  `1px solid ${C.border}`,
         background:    C.surfaceEl,
         userSelect:    "none",
-        overflow:      "hidden",
       }}>
         <button
           onClick={() => handleSort(field)}
@@ -261,6 +287,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
             fontWeight: "inherit",
             cursor:     "pointer",
             padding:    0,
+            whiteSpace: "nowrap",
           }}
         >
           {children}
@@ -270,7 +297,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     );
   };
 
-  // plain non-sortable header cell
   const ThPlain = ({ children }: { children: React.ReactNode }) => (
     <th style={{
       padding:       "0.6rem 0.75rem",
@@ -281,15 +307,14 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       letterSpacing: "0.05em",
       borderBottom:  `1px solid ${C.border}`,
       background:    C.surfaceEl,
-      overflow:      "hidden",
+      whiteSpace:    "nowrap",
     }}>
       {children}
     </th>
   );
 
-  // action counts for summary pills
-  const countOf = (a: ActionFilter) =>
-    a === "all" ? processed.length : processed.filter(r => r.action?.toUpperCase() === a).length;
+  const updateCount = history.filter(r => (r.action ?? "").toLowerCase() === "updated" || (r.action ?? "").toLowerCase() === "update").length;
+  const deleteCount = history.filter(r => (r.action ?? "").toLowerCase() === "deleted" || (r.action ?? "").toLowerCase() === "delete").length;
 
   return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -308,8 +333,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
             Transaction History
           </h2>
           <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>
-            {processed.length} audit record{processed.length !== 1 ? "s" : ""}
-            {actionFilter !== "all" ? ` · ${actionFilter} only` : ""}
+            {processed.length} record{processed.length !== 1 ? "s" : ""}
+            {actionFilter !== "all" ? ` · ${actionFilter === "UPDATE" ? "Updated" : "Deleted"} only` : ""}
           </p>
         </div>
 
@@ -351,8 +376,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         </div>
       </div>
 
-      {/* ── Summary pills ──────────────────────────────────────────────────── */}
-      {!loading && processed.length > 0 && (
+      {/* ── Summary pills — counts from full history, not filtered ────────── */}
+      {!loading && history.length > 0 && (
         <div style={{
           display:      "flex",
           gap:          "0.75rem",
@@ -360,16 +385,18 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           borderBottom: `1px solid ${C.border}`,
           flexShrink:   0,
         }}>
-          {(["UPDATE", "DELETE"] as const).map(a => (
-            <div key={a} style={{
-              background:   `${ACTION_COLOR[a]}18`,
-              border:       `1px solid ${ACTION_COLOR[a]}40`,
+          {([["UPDATE", updateCount], ["DELETE", deleteCount]] as const).map(([action, count]) => (
+            <div key={action} style={{
+              background:   `${ACTION_COLOR[action]}18`,
+              border:       `1px solid ${ACTION_COLOR[action]}40`,
               borderRadius: "0.4rem",
               padding:      "0.3rem 0.75rem",
               fontSize:     "0.75rem",
             }}>
-              <span style={{ color: C.fgMuted, marginRight: "0.4rem" }}>{a}</span>
-              <span style={{ color: ACTION_COLOR[a], fontWeight: 700 }}>{countOf(a)}</span>
+              <span style={{ color: C.fgMuted, marginRight: "0.4rem" }}>
+                {action === "UPDATE" ? "Updated" : "Deleted"}
+              </span>
+              <span style={{ color: ACTION_COLOR[action], fontWeight: 700 }}>{count}</span>
             </div>
           ))}
         </div>
@@ -380,31 +407,32 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         {loading && (
           <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>Loading…</p>
         )}
-        {!loading && processed.length === 0 && (
-          <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>No history records found.</p>
-        )}
 
-        {!loading && processed.length > 0 && (
+        {/* Always render table when not loading so the sticky header with
+            ActionDropdown stays visible even when filtered results are empty */}
+        {!loading && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", tableLayout: "fixed" }}>
-            {/* Column width hints — browser distributes proportionally within fixed layout */}
             <colgroup>
-              <col style={{ width: "5%" }}  />{/* Tx ID */}
-              {isAdmin && <col style={{ width: "5%" }} />}{/* User ID */}
-              <col style={{ width: "13%" }} />{/* Category */}
-              <col style={{ width: "8%" }}  />{/* Type */}
-              <col style={{ width: "9%" }}  />{/* Action */}
-              <col style={{ width: "12%" }} />{/* Action At */}
-              <col style={{ width: "16%" }} />{/* Old Desc */}
-              <col style={{ width: "16%" }} />{/* New Desc */}
-              <col style={{ width: "8%" }}  />{/* Old Date */}
-              <col style={{ width: "8%" }}  />{/* New Date */}
+              <col style={{ width: "5%" }}  />
+              {isAdmin && <col style={{ width: "5%" }} />}
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "8%" }}  />
+              <col style={{ width: "9%" }}  />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "8%" }}  />
+              <col style={{ width: "8%" }}  />
             </colgroup>
+
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               <tr>
                 <Th field="entity_id">Tx ID</Th>
                 {isAdmin && <Th field="user_id">User ID</Th>}
                 <Th field="category">Category</Th>
                 <ThPlain>Type</ThPlain>
+
+                {/* Action filter dropdown sits in its own column header */}
                 <th style={{
                   padding:       "0.6rem 0.75rem",
                   fontSize:      "0.7rem",
@@ -417,6 +445,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 }}>
                   <ActionDropdown value={actionFilter} onChange={setActionFilter} />
                 </th>
+
                 <Th field="action_taken_at">Action At</Th>
                 <ThPlain>Old Description</ThPlain>
                 <ThPlain>New Description</ThPlain>
@@ -426,16 +455,33 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
             </thead>
 
             <tbody>
-              {processed.map((tx, idx) => {
+              {processed.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={isAdmin ? 10 : 9}
+                    style={{ padding: "2rem", textAlign: "center", color: C.fgMuted, fontSize: "0.85rem" }}
+                  >
+                    {actionFilter !== "all"
+                      ? `No ${actionFilter === "UPDATE" ? "update" : "delete"} records found.`
+                      : "No history records found."}
+                  </td>
+                </tr>
+              ) : processed.map((tx, idx) => {
                 const isEven      = idx % 2 === 0;
-                const action      = tx.action?.toUpperCase() ?? "";
-                const actionColor = ACTION_COLOR[action] ?? C.fgMuted;
+                const actionLower = (tx.action ?? "").toLowerCase();
+                const isUpdate    = actionLower === "update" || actionLower === "updated";
+                const actionColor = isUpdate ? ACTION_COLOR["UPDATE"] : ACTION_COLOR["DELETE"];
                 const isIncome    = tx.transaction_type === "Income";
+                const descChanged = tx.old_description !== tx.new_description;
+                const dateChanged = tx.old_transaction_date !== tx.new_transaction_date;
 
                 return (
                   <tr
                     key={tx.id}
-                    style={{ backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s" }}
+                    style={{
+                      backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)",
+                      transition:      "background-color 0.1s",
+                    }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surfaceHov)}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}
                   >
@@ -477,17 +523,17 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
 
                     <td style={{ ...td, color: C.fgMuted }}>{formatDate(tx.action_taken_at)}</td>
 
-                    {/* Diff cells — highlight changes */}
-                    <td style={{ ...td, color: tx.old_description !== tx.new_description ? C.expense : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>
+                    {/* Diff cells */}
+                    <td style={{ ...td, color: descChanged ? C.expense : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>
                       {tx.old_description || "—"}
                     </td>
-                    <td style={{ ...td, color: tx.old_description !== tx.new_description ? C.income : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>
+                    <td style={{ ...td, color: descChanged ? C.income : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>
                       {tx.new_description || "—"}
                     </td>
-                    <td style={{ ...td, color: tx.old_transaction_date !== tx.new_transaction_date ? C.expense : C.fgMuted }}>
+                    <td style={{ ...td, color: dateChanged ? C.expense : C.fgMuted }}>
                       {tx.old_transaction_date || "—"}
                     </td>
-                    <td style={{ ...td, color: tx.old_transaction_date !== tx.new_transaction_date ? C.income : C.fgMuted }}>
+                    <td style={{ ...td, color: dateChanged ? C.income : C.fgMuted }}>
                       {tx.new_transaction_date || "—"}
                     </td>
                   </tr>
@@ -514,13 +560,3 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     </Shell>
   );
 }
-
-// ── Base TD ───────────────────────────────────────────────────────────────────
-const td: React.CSSProperties = {
-  padding:      "0.55rem 0.75rem",
-  color:        "hsl(220,14%,85%)",
-  borderBottom: "1px solid hsl(220,16%,18%)",
-  overflow:     "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace:   "nowrap",
-};
