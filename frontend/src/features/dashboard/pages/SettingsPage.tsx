@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
+import { validateProfileUpdate } from "@/features/dashboard/schemas/user";
 
 // ── Design tokens — matches DashboardPage sidebar + DashboardOverview ─────────
 const C = {
@@ -159,6 +160,8 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ── Validation lives in @/features/dashboard/schemas/user ──────────────────
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { user, setUser } = useContext(AuthContext);
@@ -170,10 +173,11 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("profile");
 
   // Edit form state
-  const [isEditing,  setIsEditing]  = useState(false);
-  const [saving,     setSaving]     = useState(false);
-  const [saveError,  setSaveError]  = useState<string | null>(null);
-  const [saveSuccess,setSaveSuccess]= useState(false);
+  const [isEditing,   setIsEditing]   = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [saveError,   setSaveError]   = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<string[]>([]);
 
   const [firstName,  setFirstName]  = useState(user?.first_name   ?? "");
   const [middleName, setMiddleName] = useState(user?.middle_name  ?? "");
@@ -186,6 +190,7 @@ export default function SettingsPage() {
   const avatarColor = getAvatarColor(user.id);
   const initials    = getInitials(user.first_name, user.last_name);
   const isDeactivated = !user.is_active;
+  const isSuperAdmin  = user.id === 1 && user.role_id === 1;
 
   const roleLabel =
     user.id === 1 && user.role_id === 1 ? "Super Admin"
@@ -200,6 +205,7 @@ export default function SettingsPage() {
     setPhone(user.phone_number     ?? "");
     setSaveError(null);
     setSaveSuccess(false);
+    setFieldErrors([]);
   };
 
   const handleCancelEdit = () => {
@@ -210,25 +216,48 @@ export default function SettingsPage() {
   // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!token || !tokenType) return;
+
+    // ── 1. Validate fields against the same rules as register.ts / schemas/users.py
+    const errors = validateProfileUpdate({ firstName, lastName, middleName, phone });
+    if (errors.length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    setFieldErrors([]);
+
+    // ── 2. No-change guard — skip API call if nothing actually changed
+    const trimmed = {
+      first_name:   firstName.trim()  || null,
+      middle_name:  middleName.trim() || null,
+      last_name:    lastName.trim()   || null,
+      phone_number: phone.trim()      || null,
+    };
+    const unchanged =
+      trimmed.first_name   === (user.first_name   ?? null) &&
+      trimmed.middle_name  === (user.middle_name  ?? null) &&
+      trimmed.last_name    === (user.last_name    ?? null) &&
+      trimmed.phone_number === (user.phone_number ?? null);
+
+    if (unchanged) {
+      // Nothing changed — just close edit mode silently
+      setIsEditing(false);
+      return;
+    }
+
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
     try {
+      // ── 3. Include email — UserBase on the backend requires it
       const res = await api.patch(
         "api/users/me",
-        {
-          first_name:   firstName.trim()  || null,
-          middle_name:  middleName.trim() || null,
-          last_name:    lastName.trim()   || null,
-          phone_number: phone.trim()      || null,
-        },
+        { email: user.email, ...trimmed },
         { headers: { Authorization: `${tokenType} ${token}` } }
       );
-      // Update AuthContext so sidebar name reflects change immediately
       setUser({ ...user, ...res.data });
       setSaveSuccess(true);
       setIsEditing(false);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setTimeout(() => setSaveSuccess(false), 3500);
     } catch (err: any) {
       setSaveError(err?.response?.data?.detail ?? "Failed to save changes.");
     } finally {
@@ -487,6 +516,22 @@ export default function SettingsPage() {
                 {saveError}
               </div>
             )}
+            {fieldErrors.length > 0 && (
+              <div style={{
+                padding: "0.65rem 1rem", borderRadius: "0.45rem",
+                background: "hsl(0 72% 51% / 0.07)",
+                border: "1px solid hsl(0 72% 51% / 0.25)",
+                fontSize: "0.78rem", color: C.expense,
+                display: "flex", flexDirection: "column", gap: "0.3rem",
+              }}>
+                {fieldErrors.map((e, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                    <AlertTriangle style={{ width: "0.75rem", height: "0.75rem", flexShrink: 0 }} />
+                    {e}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Read-only fields */}
             <div>
@@ -575,20 +620,60 @@ export default function SettingsPage() {
             borderRadius: "0.75rem",
             overflow:     "hidden",
             boxShadow:    "0 1px 4px hsl(0 72% 51% / 0.06)",
+            opacity:      isSuperAdmin ? 0.6 : 1,
           }}>
             <div style={{
               padding:      "0.875rem 1.5rem",
               borderBottom: `1px solid hsl(0 72% 51% / 0.2)`,
               background:   "hsl(0 72% 51% / 0.04)",
+              display:      "flex",
+              alignItems:   "center",
+              justifyContent: "space-between",
             }}>
-              <p style={{ fontSize: "0.85rem", fontWeight: 700, color: C.expense, margin: 0 }}>
-                Danger Zone
-              </p>
-              <p style={{ fontSize: "0.73rem", color: C.fgLight, margin: "0.15rem 0 0" }}>
-                Permanent and irreversible actions
-              </p>
+              <div>
+                <p style={{ fontSize: "0.85rem", fontWeight: 700, color: C.expense, margin: 0 }}>
+                  Danger Zone
+                </p>
+                <p style={{ fontSize: "0.73rem", color: C.fgLight, margin: "0.15rem 0 0" }}>
+                  Permanent and irreversible actions
+                </p>
+              </div>
+              {isSuperAdmin && (
+                <span style={{
+                  display:         "inline-flex",
+                  alignItems:      "center",
+                  gap:             "0.3rem",
+                  padding:         "0.2rem 0.6rem",
+                  borderRadius:    "999px",
+                  fontSize:        "0.68rem",
+                  fontWeight:      700,
+                  backgroundColor: "hsl(45 85% 50% / 0.12)",
+                  color:           C.warning,
+                  border:          `1px solid ${C.warning}40`,
+                }}>
+                  <Lock style={{ width: "0.6rem", height: "0.6rem" }} />
+                  Super Admin Protected
+                </span>
+              )}
             </div>
             <div style={{ padding: "1.25rem 1.5rem" }}>
+              {isSuperAdmin && (
+                <div style={{
+                  display:      "flex",
+                  alignItems:   "center",
+                  gap:          "0.5rem",
+                  padding:      "0.6rem 0.875rem",
+                  borderRadius: "0.4rem",
+                  background:   "hsl(45 85% 50% / 0.07)",
+                  border:       `1px solid ${C.warning}30`,
+                  fontSize:     "0.75rem",
+                  color:        C.warning,
+                  marginBottom: "1rem",
+                }}>
+                  <Lock style={{ width: "0.75rem", height: "0.75rem", flexShrink: 0 }} />
+                  The Super Admin account cannot be deleted. This section is shown for reference only.
+                </div>
+              )}
               <div style={{
                 display:        "flex",
                 alignItems:     "center",
@@ -602,15 +687,13 @@ export default function SettingsPage() {
                   </p>
                   <p style={{ fontSize: "0.75rem", color: C.fgLight, margin: "0.25rem 0 0", lineHeight: 1.5 }}>
                     Permanently deletes your account. Your past transactions will be retained for record-keeping.
-                    This action <strong>cannot be und
-                      
-                      one</strong>.
+                    This action <strong>cannot be undone</strong>.
                   </p>
                 </div>
-                {/* Placeholder — not wired yet */}
+                {/* Always disabled for SuperAdmin; placeholder (coming soon) for everyone else */}
                 <button
                   disabled
-                  title="Coming soon"
+                  title={isSuperAdmin ? "Super Admin accounts cannot be deleted" : "Coming soon"}
                   style={{
                     display:         "flex",
                     alignItems:      "center",
@@ -619,9 +702,9 @@ export default function SettingsPage() {
                     borderRadius:    "0.45rem",
                     fontSize:        "0.78rem",
                     fontWeight:      600,
-                    border:          `1px solid hsl(0 72% 51% / 0.3)`,
-                    background:      "hsl(0 72% 51% / 0.06)",
-                    color:           "hsl(0 72% 51% / 0.45)",
+                    border:          `1px solid hsl(0 72% 51% / 0.2)`,
+                    background:      "hsl(0 72% 51% / 0.04)",
+                    color:           "hsl(0 72% 51% / 0.35)",
                     cursor:          "not-allowed",
                     flexShrink:      0,
                   }}
@@ -633,12 +716,12 @@ export default function SettingsPage() {
                     fontWeight:      700,
                     padding:         "0.1rem 0.35rem",
                     borderRadius:    "0.25rem",
-                    backgroundColor: "hsl(45 85% 50% / 0.15)",
+                    backgroundColor: isSuperAdmin ? "hsl(45 85% 50% / 0.12)" : "hsl(45 85% 50% / 0.15)",
                     color:           C.warning,
                     border:          `1px solid ${C.warning}40`,
                     marginLeft:      "0.2rem",
                   }}>
-                    SOON
+                    {isSuperAdmin ? "N/A" : "SOON"}
                   </span>
                 </button>
               </div>

@@ -55,3 +55,49 @@ export type TransactionInfo = {
   transaction_type: string;
   transaction_date: string;
 };
+
+
+
+// ── Shared validation primitives ─────────────────────────────────────────────
+// Keep in sync with: auth/schemas/register.ts and backend schemas/users.py
+export const nameRegex  = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/;
+export const phoneRegex = /^09\d{9}$/;
+
+/** Validates name + phone fields for profile updates.
+ *  Mirrors the same rules as register.ts and backend UserBase schema.
+ *  Returns an array of human-readable error messages (empty = valid). */
+export function validateProfileUpdate(fields: {
+  firstName:  string;
+  lastName:   string;
+  middleName: string;
+  phone:      string;
+}): string[] {
+  const { firstName, lastName, middleName, phone } = fields;
+  const errors: string[] = [];
+
+  if (!firstName.trim())
+    errors.push("First name is required.");
+  else if (firstName.trim().length > 50)
+    errors.push("First name must be 50 characters or fewer.");
+  else if (!nameRegex.test(firstName.trim()))
+    errors.push("First name cannot contain numbers or special characters.");
+
+  if (!lastName.trim())
+    errors.push("Last name is required.");
+  else if (lastName.trim().length > 50)
+    errors.push("Last name must be 50 characters or fewer.");
+  else if (!nameRegex.test(lastName.trim()))
+    errors.push("Last name cannot contain numbers or special characters.");
+
+  if (middleName.trim()) {
+    if (middleName.trim().length > 50)
+      errors.push("Middle name must be 50 characters or fewer.");
+    else if (!nameRegex.test(middleName.trim()))
+      errors.push("Middle name cannot contain numbers or special characters.");
+  }
+
+  if (phone.trim() && !phoneRegex.test(phone.trim()))
+    errors.push("Phone number must be 11 digits and start with 09.");
+
+  return errors;
+}
