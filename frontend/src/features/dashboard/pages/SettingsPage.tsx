@@ -1,12 +1,13 @@
 // SettingsPage.tsx
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect, useRef } from "react";
 import {
   User, Phone, Mail, Shield, Calendar, Edit3,
-  Check, X, AlertTriangle, Trash2, Lock,
+  Check, X, AlertTriangle, Trash2, Lock, Clock,
 } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import { validateProfileUpdate } from "@/features/dashboard/schemas/user";
+import DeleteAccountModal from "@/features/dashboard/components/modals/DeleteAccountModal";
 
 // ── Design tokens — matches DashboardPage sidebar + DashboardOverview ─────────
 const C = {
@@ -184,6 +185,12 @@ export default function SettingsPage() {
   const [lastName,   setLastName]   = useState(user?.last_name    ?? "");
   const [phone,      setPhone]      = useState(user?.phone_number ?? "");
 
+  // Danger Zone: 10s countdown starts when Account tab is opened
+  const [dangerCountdown,  setDangerCountdown]  = useState(10);
+  const [dangerUnlocked,   setDangerUnlocked]   = useState(false);
+  const [showDeleteModal,  setShowDeleteModal]   = useState(false);
+  const dangerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   if (!user) return null;
 
   const fullName = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ");
@@ -264,6 +271,25 @@ export default function SettingsPage() {
       setSaving(false);
     }
   };
+
+  // ── Danger Zone countdown — starts fresh each time Account tab is opened ────
+  useEffect(() => {
+    if (activeTab !== "account") return;
+    // Reset every time the account tab is opened
+    setDangerUnlocked(false);
+    setDangerCountdown(10);
+    dangerTimerRef.current = setInterval(() => {
+      setDangerCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(dangerTimerRef.current!);
+          setDangerUnlocked(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (dangerTimerRef.current) clearInterval(dangerTimerRef.current); };
+  }, [activeTab]);
 
   // ── Tab button ──────────────────────────────────────────────────────────────
   const TabBtn = ({ tab, label }: { tab: Tab; label: string }) => {
@@ -690,46 +716,90 @@ export default function SettingsPage() {
                     This action <strong>cannot be undone</strong>.
                   </p>
                 </div>
-                {/* Always disabled for SuperAdmin; placeholder (coming soon) for everyone else */}
-                <button
-                  disabled
-                  title={isSuperAdmin ? "Super Admin accounts cannot be deleted" : "Coming soon"}
-                  style={{
-                    display:         "flex",
-                    alignItems:      "center",
-                    gap:             "0.4rem",
-                    padding:         "0.5rem 1rem",
-                    borderRadius:    "0.45rem",
-                    fontSize:        "0.78rem",
-                    fontWeight:      600,
-                    border:          `1px solid hsl(0 72% 51% / 0.2)`,
-                    background:      "hsl(0 72% 51% / 0.04)",
-                    color:           "hsl(0 72% 51% / 0.35)",
-                    cursor:          "not-allowed",
-                    flexShrink:      0,
-                  }}
-                >
-                  <Trash2 style={{ width: "0.8rem", height: "0.8rem" }} />
-                  Delete Account
-                  <span style={{
-                    fontSize:        "0.6rem",
-                    fontWeight:      700,
-                    padding:         "0.1rem 0.35rem",
-                    borderRadius:    "0.25rem",
-                    backgroundColor: isSuperAdmin ? "hsl(45 85% 50% / 0.12)" : "hsl(45 85% 50% / 0.15)",
-                    color:           C.warning,
-                    border:          `1px solid ${C.warning}40`,
-                    marginLeft:      "0.2rem",
-                  }}>
-                    {isSuperAdmin ? "N/A" : "SOON"}
-                  </span>
-                </button>
+                {/* SuperAdmin: always locked. Others: 10s countdown then clickable */}
+                {isSuperAdmin ? (
+                  <button
+                    disabled
+                    title="Super Admin accounts cannot be deleted"
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.4rem",
+                      padding: "0.5rem 1rem", borderRadius: "0.45rem",
+                      fontSize: "0.78rem", fontWeight: 600,
+                      border: `1px solid hsl(0 72% 51% / 0.2)`,
+                      background: "hsl(0 72% 51% / 0.04)",
+                      color: "hsl(0 72% 51% / 0.35)",
+                      cursor: "not-allowed", flexShrink: 0,
+                    }}
+                  >
+                    <Lock style={{ width: "0.8rem", height: "0.8rem" }} />
+                    Delete Account
+                    <span style={{
+                      fontSize: "0.6rem", fontWeight: 700,
+                      padding: "0.1rem 0.35rem", borderRadius: "0.25rem",
+                      backgroundColor: "hsl(45 85% 50% / 0.12)",
+                      color: C.warning, border: `1px solid ${C.warning}40`,
+                      marginLeft: "0.2rem",
+                    }}>N/A</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => dangerUnlocked && setShowDeleteModal(true)}
+                    disabled={!dangerUnlocked}
+                    title={dangerUnlocked ? "Delete your account permanently" : `Available in ${dangerCountdown}s`}
+                    style={{
+                      display:        "flex",
+                      alignItems:     "center",
+                      gap:            "0.4rem",
+                      padding:        "0.5rem 1rem",
+                      borderRadius:   "0.45rem",
+                      fontSize:       "0.78rem",
+                      fontWeight:     600,
+                      border:         dangerUnlocked
+                        ? `1px solid hsl(0 72% 51% / 0.5)`
+                        : `1px solid ${C.border}`,
+                      background:     dangerUnlocked
+                        ? "hsl(0 72% 51% / 0.08)"
+                        : C.surfaceSub,
+                      color:          dangerUnlocked ? C.expense : C.fgMuted,
+                      cursor:         dangerUnlocked ? "pointer" : "not-allowed",
+                      flexShrink:     0,
+                      transition:     "all 0.3s",
+                      position:       "relative",
+                      overflow:       "hidden",
+                      minWidth:       "148px",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {/* Fill progress while counting */}
+                    {!dangerUnlocked && (
+                      <div style={{
+                        position: "absolute", left: 0, top: 0, bottom: 0,
+                        width: `${((10 - dangerCountdown) / 10) * 100}%`,
+                        background: "hsl(0 72% 51% / 0.07)",
+                        transition: "width 1s linear",
+                      }} />
+                    )}
+                    <span style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      {dangerUnlocked
+                        ? <><Trash2 style={{ width: "0.8rem", height: "0.8rem" }} /> Delete Account</>
+                        : <><Clock  style={{ width: "0.8rem", height: "0.8rem" }} /> Wait {dangerCountdown}s</>
+                      }
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
-
         </div>
       )}
+
+      {showDeleteModal && (
+        <DeleteAccountModal
+          onClose={() => setShowDeleteModal(false)}
+          isAdmin={user.role_id === 1}
+        />
+      )}
+      
     </div>
   );
 }
