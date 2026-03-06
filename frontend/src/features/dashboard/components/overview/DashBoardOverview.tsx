@@ -257,51 +257,56 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
       <div className="space-y-6">
 
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard Overview -  {roleLabel}</h1>
-            <p className="text-sm text-muted-foreground">
-              {isAdmin ? "All transactions across the business" : "Your personal transaction summary"}
-            </p>
-          </div>
-
-          {/* Period toggle — dynamic, built from real transaction dates */}
-          <div
-            className="flex gap-1 rounded-lg p-1 flex-wrap"
-            style={{ backgroundColor: "hsl(220,14%,95%)", maxWidth: "100%" }}
-          >
-            {availablePeriods.map((p) => {
-              const isActive  = period === p.key;
-              const isHovered = hoveredPeriod === p.key;
-              return (
-                <button
-                  key={p.key}
-                  onClick={() => setPeriod(p.key)}
-                  onMouseEnter={() => setHoveredPeriod(p.key)}
-                  onMouseLeave={() => setHoveredPeriod(null)}
-                  style={{
-                    fontSize:        "0.75rem",
-                    fontWeight:      500,
-                    padding:         "0.25rem 0.75rem",
-                    borderRadius:    "0.375rem",
-                    border:          "none",
-                    cursor:          "pointer",
-                    whiteSpace:      "nowrap",
-                    transition:      "background-color 0.15s, color 0.15s",
-                    backgroundColor: isActive  ? PRIMARY
-                                   : isHovered ? "hsl(160 60% 45% / 0.15)"
-                                   : "transparent",
-                    color:           isActive  ? "hsl(0,0%,100%)"
-                                   : isHovered ? INCOME
-                                   : "hsl(220,10%,46%)",
-                  }}
-                >
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard Overview - {roleLabel}</h1>
+    <p className="text-sm text-muted-foreground">
+      {isAdmin ? "All transactions across the business" : "Your personal transaction summary"}
+    </p>
+  </div>
+  {/* Period toggle — max 6 per row, wraps to next row after that */}
+  <div
+    style={{
+      backgroundColor: "hsl(220,14%,95%)",
+      borderRadius: "0.5rem",
+      padding: "0.25rem",
+      display: "grid",
+      gridTemplateColumns: `repeat(${Math.min(availablePeriods.length, 6)}, auto)`,
+      gap: "0.25rem",
+    }}
+  >
+    {availablePeriods.map((p) => {
+      const isActive  = period === p.key;
+      const isHovered = hoveredPeriod === p.key;
+      return (
+        <button
+          key={p.key}
+          onClick={() => setPeriod(p.key)}
+          onMouseEnter={() => setHoveredPeriod(p.key)}
+          onMouseLeave={() => setHoveredPeriod(null)}
+          style={{
+            fontSize:        "0.75rem",
+            fontWeight:      500,
+            padding:         "0.25rem 0.75rem",
+            borderRadius:    "0.375rem",
+            border:          "none",
+            cursor:          "pointer",
+            whiteSpace:      "nowrap",
+            transition:      "background-color 0.15s, color 0.15s",
+            backgroundColor: isActive  ? PRIMARY
+                           : isHovered ? "hsl(160 60% 45% / 0.15)"
+                           : "transparent",
+            color:           isActive  ? "hsl(0,0%,100%)"
+                           : isHovered ? INCOME
+                           : "hsl(220,10%,46%)",
+          }}
+        >
+          {p.label}
+        </button>
+      );
+    })}
+  </div>
+</div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
