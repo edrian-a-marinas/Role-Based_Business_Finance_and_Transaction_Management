@@ -6,6 +6,8 @@ import json
 import logging
 from datetime import datetime 
 
+from app.services import notifications_service
+
 logger = logging.getLogger(__name__)
 
 
@@ -156,38 +158,60 @@ async def get_transaction_history(current_user_id, role):
 
 # CREATE deletion request
 async def create_transaction_deletion_request(tx_id: int, requested_by: int):
-  try:
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-      # Check if request already exists
-      existing = await conn.fetchrow(
-        """
-        SELECT *
-        FROM transaction_deletion_requests
-        WHERE transaction_id = $1
-          AND status = 'pending'
-        """,
-        tx_id
-      )
-      if existing:
-        return None
+    try:
+        pool = await get_pool()
+        async with pool.acquire() as conn:
+            # Block if a pending request already exists
+            existing = await conn.fetchrow(
+                """
+                SELECT * FROM transaction_deletion_requests
+                WHERE transaction_id = $1 AND status = 'pending'
+                """,
+                tx_id,
+            )
+            if existing:
+                return None
 
-      inserted = await conn.fetchrow(
-        """
-        INSERT INTO transaction_deletion_requests (
-          transaction_id, requested_by
-        )
-        VALUES ($1, $2)
-        RETURNING *
-        """,
-        tx_id,
-        requested_by
-      )
-      return dict(inserted)
+            inserted = await conn.fetchrow(
+                """
+                INSERT INTO transaction_deletion_requests (transaction_id, requested_by)
+                VALUES ($1, $2)
+                RETURNING *
+                """,
+                tx_id,
+                requested_by,
+            )
 
-  except Exception:
-    logger.exception(f"Error creating deletion request for tx {tx_id}")
-    raise
+            # Fetch requester name + transaction snapshot for notification payload
+            requester = await conn.fetchrow(
+                "SELECT first_name, last_name FROM users WHERE id = $1",
+                requested_by,
+            )
+            tx = await conn.fetchrow(
+                "SELECT amount, transaction_type FROM transactions WHERE id = $1",
+                tx_id,
+            )
+
+        # Fire-and-forget fan-out to all admins.
+        # Runs OUTSIDE the connection block so a notification failure
+        # can never roll back the successfully inserted request.
+        if inserted and requester and tx:
+            requester_name = f"{requester['first_name']} {requester['last_name']}"
+            await notifications_service.notify_admins_deletion_request(
+                request_id=inserted["id"],
+                transaction_id=tx_id,
+                requester_name=requester_name,
+                amount=float(tx["amount"]),
+                transaction_type=tx["transaction_type"],
+            )
+
+        return dict(inserted)
+
+    except Exception:
+        logger.exception(f"Error creating deletion request for tx {tx_id}")
+        raise
+    
+    
 
 
 # LIST all pending deletion requests (for admin)
