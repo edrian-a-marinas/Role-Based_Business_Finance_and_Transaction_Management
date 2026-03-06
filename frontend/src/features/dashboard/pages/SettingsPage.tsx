@@ -572,7 +572,7 @@ export default function SettingsPage() {
             {/* Editable fields */}
             <div>
               <SectionTitle>Personal Information</SectionTitle>
-              {isEditing ? (
+                {!isEditing && !isDeactivated ? (
                 <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
                   <EditableField label="First Name"  value={firstName}  onChange={setFirstName}  placeholder="First name" />
                   <EditableField label="Last Name"   value={lastName}   onChange={setLastName}   placeholder="Last name" />
