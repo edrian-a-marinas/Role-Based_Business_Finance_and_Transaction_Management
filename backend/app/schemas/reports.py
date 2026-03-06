@@ -2,6 +2,7 @@ from pydantic import BaseModel, model_validator
 from datetime import date, datetime
 from typing import Literal, List, Optional
 
+
 class ReportBase(BaseModel):
   report_type: Literal["daily", "weekly", "monthly"]
   start_date: date
@@ -37,7 +38,3 @@ class ReportSummaryItem(BaseModel):
 class ReportResult(BaseModel):
   report: ReportRead
   summary: List[ReportSummaryItem]
-
-
-
-

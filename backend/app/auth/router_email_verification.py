@@ -14,25 +14,27 @@ router = APIRouter(prefix="/api/auth")
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
 
+
 class EmailSchema(BaseModel):
   email: EmailStr
 
-SMTP_HOST        = "smtp.gmail.com"
-SMTP_PORT        = 587
-SMTP_USER        = os.getenv("SMTP_USER")
-SMTP_PASS        = os.getenv("SMTP_PASS")
-DISPLAY_NAME     = "TransacScope"
+
+SMTP_HOST     = "smtp.gmail.com"
+SMTP_PORT     = 587
+SMTP_USER     = os.getenv("SMTP_USER")
+SMTP_PASS     = os.getenv("SMTP_PASS")
+DISPLAY_NAME  = "TransacScope"
 
 MAX_SENDS        = 3
 SEND_WINDOW_MINS = 10
 
-async def send_email(to_email: str, subject: str, body: str):
+
+async def send_email(to_email: str, subject: str, body: str) -> None:
   message = EmailMessage()
   message["From"] = formataddr((DISPLAY_NAME, SMTP_USER))  # type: ignore
   message["To"] = to_email
   message["Subject"] = subject
   message.set_content(body, subtype="html")
-
   try:
     await aiosmtplib.send(
       message,
@@ -58,7 +60,6 @@ def build_otp_email(code: str) -> tuple[str, str]:
 async def send_code(data: EmailSchema):
   pool = await get_pool()
 
-  # ── Backend rate limit — enforced regardless of client (Postman, curl, etc.) ──
   async with pool.acquire() as conn:
     recent_count = await conn.fetchval(
       """
@@ -66,19 +67,19 @@ async def send_code(data: EmailSchema):
       WHERE email = $1
         AND created_at >= NOW() - INTERVAL '10 minutes'
       """,
-      data.email
+      data.email,
     )
     if recent_count >= MAX_SENDS:
       raise HTTPException(
         status_code=429,
-        detail=f"Too many verification attempts. Please wait {SEND_WINDOW_MINS} minutes before trying again."
+        detail=f"Too many verification attempts. Please wait {SEND_WINDOW_MINS} minutes before trying again.",
       )
 
   code = f"{random.randint(0, 999999):06d}"
   expires_at = datetime.utcnow() + timedelta(minutes=5)
   hashed_code = bcrypt.hashpw(code.encode(), bcrypt.gensalt()).decode()
 
-  # 1️⃣ DB write — keep old rows so the COUNT above stays accurate within the window
+  # DB write — keep old rows so the COUNT above stays accurate within the window
   async with pool.acquire() as conn:
     async with conn.transaction():
       await conn.execute(
@@ -88,17 +89,24 @@ async def send_code(data: EmailSchema):
         """,
         data.email,
         hashed_code,
-        expires_at
+        expires_at,
       )
 
-  # 2️⃣ Email send OUTSIDE transaction — failure correctly returns 500
+  # Email send OUTSIDE transaction — failure correctly returns 500
   subject, body = build_otp_email(code)
   await send_email(data.email, subject, body)
 
   return {"detail": "If this email exists, a verification code has been sent."}
 
 
-def create_body_html(formatted_code):
+# FROM
+#<img src="https://vitejs.dev/logo.svg" ... />
+
+# TO — host your logo somewhere public, e.g. your deployed frontend URL
+#<img src="https://your-deployed-domain.com/transacScope1.svg" ... />
+
+
+def create_body_html(formatted_code: str) -> str:
   body = f"""
 <!DOCTYPE html>
 <html>

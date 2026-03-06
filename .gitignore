@@ -7,7 +7,6 @@ postman and feature.txt
 
 # backend folder
 backend/.env
-backend/migrations/test_queries.sql
 
 *.pyc
 __pycache__/

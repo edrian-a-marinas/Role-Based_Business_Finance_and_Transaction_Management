@@ -1,24 +1,21 @@
-# auth/login.py
 from db.connection import get_pool
 from fastapi import HTTPException
-from datetime import datetime, timedelta
 
-# ── Rate limit config ─────────────────────────────────────────────────────────
-MAX_ATTEMPTS     = 5   # max failed attempts before lockout
-LOCKOUT_MINUTES  = 3   # lockout window in minutes
-WINDOW_MINUTES   = 3   # rolling window to count attempts in
+MAX_ATTEMPTS    = 5  # max failed attempts before lockout
+LOCKOUT_MINUTES = 3  # lockout window in minutes
+WINDOW_MINUTES  = 3  # rolling window to count attempts in
 
-# ── Log a failed attempt ──────────────────────────────────────────────────────
-async def record_failed_attempt(email: str, ip: str | None, conn):
+
+async def record_failed_attempt(email: str, ip: str | None, conn) -> None:
   await conn.execute(
     """
     INSERT INTO login_attempts (email, ip_address, attempted_at)
     VALUES ($1, $2, NOW())
     """,
-    email, ip
+    email, ip,
   )
 
-# ── Count recent failed attempts (by email OR ip) ─────────────────────────────
+
 async def count_recent_attempts(email: str, ip: str | None, conn) -> int:
   if ip:
     count = await conn.fetchval(
@@ -27,7 +24,7 @@ async def count_recent_attempts(email: str, ip: str | None, conn) -> int:
       WHERE (email = $1 OR ip_address = $2)
         AND attempted_at >= NOW() - INTERVAL '2 minutes 55 seconds'
       """,
-      email, ip
+      email, ip,
     )
   else:
     count = await conn.fetchval(
@@ -36,45 +33,39 @@ async def count_recent_attempts(email: str, ip: str | None, conn) -> int:
       WHERE email = $1
         AND attempted_at >= NOW() - INTERVAL '2 minutes 55 seconds'
       """,
-      email
+      email,
     )
   return count or 0
 
-# ── Clear attempts on successful login ────────────────────────────────────────
-async def clear_attempts(email: str, conn):
+
+async def clear_attempts(email: str, conn) -> None:
   await conn.execute(
     "DELETE FROM login_attempts WHERE email = $1",
-    email
+    email,
   )
 
-# ── Purge old rows to keep the table clean ───────────────────────────────────
-async def purge_old_attempts(conn):
+
+async def purge_old_attempts(conn) -> None:
   await conn.execute(
     "DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '1 hour'"
   )
 
-# ── Main verify function ──────────────────────────────────────────────────────
-async def verify_user(email: str, password: str, ip: str | None = None):
+
+async def verify_user(email: str, password: str, ip: str | None = None) -> dict | None:
   pool = await get_pool()
   async with pool.acquire() as conn:
-    # 0️⃣ Purge stale rows on every request
     await purge_old_attempts(conn)
 
-    # 1️⃣ Check rate limit BEFORE touching credentials
     recent = await count_recent_attempts(email, ip, conn)
     if recent >= MAX_ATTEMPTS:
       raise HTTPException(
         status_code=429,
-        detail=f"Too many failed login attempts. Please wait {LOCKOUT_MINUTES} minutes before trying again."
+        detail=f"Too many failed login attempts. Please wait {LOCKOUT_MINUTES} minutes before trying again.",
       )
 
-    # 2️⃣ Look up user by email only — active OR inactive both allowed to authenticate.
-    #    is_active is checked in the router to decide what the user can access,
-    #    NOT here, so deactivated users can still log in and self-delete.
-    row = await conn.fetchrow(
-      "SELECT * FROM users WHERE email = $1",
-      email
-    )
+    # Look up user by email only — active OR inactive both allowed to authenticate.
+    # is_active is checked in the router; deactivated users can still log in and self-delete.
+    row = await conn.fetchrow("SELECT * FROM users WHERE email = $1", email)
     if not row:
       # Record attempt even for non-existent emails (prevents user enumeration)
       await record_failed_attempt(email, ip, conn)
@@ -82,15 +73,13 @@ async def verify_user(email: str, password: str, ip: str | None = None):
 
     user = dict(row)
 
-    # 3️⃣ Verify password
     pw_check = await conn.fetchval(
       "SELECT crypt($1, password_hash) = password_hash FROM users WHERE id = $2",
-      password, user["id"]
+      password, user["id"],
     )
     if not pw_check:
       await record_failed_attempt(email, ip, conn)
       return None
 
-    # 4️⃣ Success — clear attempt history for this email
     await clear_attempts(email, conn)
-    return user  # caller checks user["is_active"] to decide routing
+    return user

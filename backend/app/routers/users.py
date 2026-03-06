@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Tuple
-
 from app.auth.format_role import get_user_id_and_role
 from app.services import users_service
 from app.schemas.users import UserBase, UserRead, UserRoleUpdate
@@ -12,62 +11,17 @@ router = APIRouter(prefix="/api/users")
 
 @router.get("/", response_model=List[UserRead])
 async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
- 
   CURRENT_USER_ID, role = user_data
-
   if role != "admin":
     raise HTTPException(status_code=403, detail="Admin only")
-  
-  rows = await users_service.get_all_users()
-
-  return rows
+  return await users_service.get_all_users()
 
 
-@router.put("/{target_user_id}/role", response_model=UserRead)
-async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+# /me routes must come before /{target_user_id} to avoid route shadowing
+@router.patch("/me", response_model=UserRead)
+async def update_self(payload: UserBase, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
-  current_user_role = "admin" if role == "admin" else "standard"
-  updated_user = await users_service.update_user_role(
-    target_user_id, payload.role_id, user_id, current_user_role
-  )
-  if not updated_user:
-    raise HTTPException(status_code=403, detail="Cannot update role or user not found")
-  return updated_user
-
-
-@router.put("/{target_user_id}/restore")
-async def restore_user(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
-  user_id, role = user_data
-  if role != "admin" and user_id != SUPER_ADMIN_ID:
-    raise HTTPException(status_code=403, detail="Admin only")
-
-  success = await users_service.restore_user(
-    target_user_id,
-    user_id,
-    role
-  )
-
-  if not success:
-    raise HTTPException(status_code=404, detail="User not found or cannot be restored")
-
-  return {"detail": "User restored successfully"}
-
-@router.delete("/{target_user_id}/soft")
-async def soft_delete(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
-  user_id, role = user_data
-  if role != "admin" and user_id != SUPER_ADMIN_ID:
-    raise HTTPException(status_code=403, detail="Admin only")
-
-  success = await users_service.soft_delete_user(
-    target_user_id,
-    user_id,
-    role
-  )
-
-  if not success:
-    raise HTTPException(status_code=404, detail="User not found")
-
-  return {"detail": "User soft-deleted"}
+  return await users_service.update_self_info(user_id, payload)
 
 
 @router.delete("/me")
@@ -79,8 +33,33 @@ async def hard_delete(user_data: Tuple[int, str] = Depends(get_user_id_and_role)
   return {"detail": "Account permanently deleted"}
 
 
-@router.patch("/me", response_model=UserRead)
-async def update_self(payload: UserBase, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@router.put("/{target_user_id}/role", response_model=UserRead)
+async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
-  updated_user = await users_service.update_self_info(user_id, payload)
+  current_user_role = "admin" if role == "admin" else "standard"
+  updated_user = await users_service.update_user_role(target_user_id, payload.role_id, user_id, current_user_role)
+  if not updated_user:
+    raise HTTPException(status_code=403, detail="Cannot update role or user not found")
   return updated_user
+
+
+@router.put("/{target_user_id}/restore")
+async def restore_user(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+  user_id, role = user_data
+  if role != "admin" and user_id != SUPER_ADMIN_ID:
+    raise HTTPException(status_code=403, detail="Admin only")
+  success = await users_service.restore_user(target_user_id, user_id, role)
+  if not success:
+    raise HTTPException(status_code=404, detail="User not found or cannot be restored")
+  return {"detail": "User restored successfully"}
+
+
+@router.delete("/{target_user_id}/soft")
+async def soft_delete(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+  user_id, role = user_data
+  if role != "admin" and user_id != SUPER_ADMIN_ID:
+    raise HTTPException(status_code=403, detail="Admin only")
+  success = await users_service.soft_delete_user(target_user_id, user_id, role)
+  if not success:
+    raise HTTPException(status_code=404, detail="User not found")
+  return {"detail": "User soft-deleted"}

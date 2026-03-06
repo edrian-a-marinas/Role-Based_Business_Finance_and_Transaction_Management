@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import date, datetime
 from typing import Optional
 from decimal import Decimal
-
 from enum import Enum
+
 
 class ActionType(str, Enum):
   updated = "updated"
@@ -20,7 +20,7 @@ class TransactionCreate(BaseModel):
   category_id: int
   description: str
   transaction_date: date
-  transaction_type: TransactionType 
+  transaction_type: TransactionType
 
 
 class TransactionOut(TransactionCreate):
@@ -33,9 +33,9 @@ class TransactionUpdate(BaseModel):
 
 
 class TransactionRead(TransactionOut):
-  category_name: str 
-  user_id: int       
-  created_at: datetime 
+  category_name: str
+  user_id: int
+  created_at: datetime
 
 
 class TransactionHistoryRead(BaseModel):
@@ -50,15 +50,16 @@ class TransactionHistoryRead(BaseModel):
   new_transaction_date: Optional[date] = None
   action: ActionType
   action_taken_at: datetime
-
   model_config = ConfigDict(from_attributes=True)
 
 
 class TransactionDeletionRequestCreate(BaseModel):
   transaction_id: int
 
+
 class ReviewDeletionRequestPayload(BaseModel):
   approve: bool
+
 
 class TransactionInfoRead(BaseModel):
   id: int
@@ -69,6 +70,7 @@ class TransactionInfoRead(BaseModel):
   transaction_type: str
   transaction_date: date
 
+
 class TransactionDeletionRequestRead(BaseModel):
   id: int
   transaction_id: int
@@ -78,7 +80,6 @@ class TransactionDeletionRequestRead(BaseModel):
   reviewed_by: Optional[int] = None
   reviewed_at: Optional[datetime] = None
   transaction: Optional[TransactionInfoRead] = None
-
   model_config = ConfigDict(from_attributes=True)
 
 
@@ -86,20 +87,16 @@ class ReviewerInfo(BaseModel):
   first_name: str
   last_name: str
 
+
 class DeletionRequestHistoryRead(BaseModel):
   id: int
   transaction_id: int
   requested_by: int
-  status: str                          # "approved" | "rejected" | "pending"
+  status: str
   requested_at: datetime
   reviewed_by: Optional[int] = None
   reviewed_at: Optional[datetime] = None
-
   requester: Optional[ReviewerInfo] = None
-
   reviewer: Optional[ReviewerInfo] = None
-
-
   transaction: Optional[TransactionInfoRead] = None
-
   model_config = ConfigDict(from_attributes=True)

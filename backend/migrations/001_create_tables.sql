@@ -1,151 +1,135 @@
-/*
-\i /home/edrian/Projects/Transaction-Processing/backend/migrations/001_create_tables.sql
-
-CREATE USER transaction_user WITH PASSWORD 'edrian';
-CREATE DATABASE transaction_db;
-
-ALTER DATABASE transaction_db OWNER TO transaction_user;
-\q (quit)
-
-psql -U transaction_user -d transaction_db                < ----- THIS every starting
-
-sudo nano /var/lib/pgsql/data/pg_hba.conf
-
-edrian@fedora ~$ psql -U transaction_user -d transaction_db -W       
-Password: 
-
-GRANT ALL PRIVILEGES ON DATABASE transaction_db TO transaction_user;
-
-*/
-
-/* Core business tables:
-
-References
-users: login, roles and transactions
-roles: admin vs standard user, # Rarely changes
-categories: Sales, Purchases, Expenses, Salary # admin-manage, rarely changed
-
-Transactional
-transactions: all money flow records # core table of system
-reports_history: track reports
-
-*/
-
-
-
-
-
-
 -- =========================================
 -- 001_create_tables.sql
 -- Transaction Processing & Reporting System
--- Schema only (no seed data)
 -- =========================================
+-- Setup (run as superuser before this file):
+--   CREATE USER transaction_user WITH PASSWORD 'edrian';
+--   CREATE DATABASE transaction_db;
+--   ALTER DATABASE transaction_db OWNER TO transaction_user;
+--   GRANT ALL PRIVILEGES ON DATABASE transaction_db TO transaction_user;
+-- Run:
+--   psql -U transaction_user -d transaction_db -W
+--   \i /home/edrian/Projects/Transaction-Processing/backend/migrations/001_create_tables.sql
 
-/*
 BEGIN;
 
 CREATE TABLE roles (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL,   -- admin, standard
-    description TEXT,
-    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(50)  NOT NULL UNIQUE,
+  description TEXT,
+  created_at  TIMESTAMP(0) NOT NULL DEFAULT now()
 );
 
-
-CREATE TABLE public.users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role_id INTEGER,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    first_name VARCHAR(50) NOT NULL,
-    middle_name VARCHAR(50),
-    last_name VARCHAR(50) NOT NULL,
-    phone_number VARCHAR(20),
-    CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id)
+CREATE TABLE users (
+  id            SERIAL PRIMARY KEY,
+  email         VARCHAR(255) NOT NULL UNIQUE,
+  password_hash TEXT         NOT NULL,
+  role_id       INTEGER      REFERENCES roles(id),
+  is_active     BOOLEAN      DEFAULT true,
+  created_at    TIMESTAMP(0) NOT NULL DEFAULT now(),
+  first_name    VARCHAR(50)  NOT NULL,
+  middle_name   VARCHAR(50),
+  last_name     VARCHAR(50)  NOT NULL,
+  phone_number  VARCHAR(20)
 );
 
-CREATE INDEX users_email_key ON public.users (email);
-
-ALTER TABLE public.users
-    ADD CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id);
-
-CREATE TABLE public.categories (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP(0) NOT NULL DEFAULT now(),
-    type VARCHAR(20) NOT NULL,
-    deleted_at TIMESTAMP,
-    CONSTRAINT categories_type_check CHECK (type IN ('Income', 'Expense')),
-    CONSTRAINT categories_name_unique_active UNIQUE (name) WHERE deleted_at IS NULL
+CREATE TABLE categories (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT,
+  created_at  TIMESTAMP(0) NOT NULL DEFAULT now(),
+  type        VARCHAR(20)  NOT NULL,
+  deleted_at  TIMESTAMP,
+  CONSTRAINT categories_type_check CHECK (type IN ('Income', 'Expense')),
+  CONSTRAINT categories_name_unique_active UNIQUE (name) WHERE deleted_at IS NULL
 );
 
-
-
-CREATE TABLE public.transactions (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER,
-    category_id INTEGER,
-    amount NUMERIC(12,2) NOT NULL,
-    transaction_type VARCHAR(20) NOT NULL,
-    description TEXT,
-    transaction_date DATE NOT NULL,
-    created_at TIMESTAMP(0) DEFAULT now() NOT NULL,
-    deleted_at TIMESTAMP(0),
-    CONSTRAINT transactions_transaction_type_check CHECK (transaction_type IN ('Expense', 'Income')),
-    FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+CREATE TABLE transactions (
+  id               SERIAL PRIMARY KEY,
+  user_id          INTEGER      REFERENCES users(id),
+  category_id      INTEGER      REFERENCES categories(id) ON DELETE SET NULL,
+  amount           NUMERIC(12,2) NOT NULL,
+  transaction_type VARCHAR(20)  NOT NULL,
+  description      TEXT,
+  transaction_date DATE         NOT NULL,
+  created_at       TIMESTAMP(0) NOT NULL DEFAULT now(),
+  deleted_at       TIMESTAMP(0),
+  CONSTRAINT transactions_transaction_type_check CHECK (transaction_type IN ('Expense', 'Income'))
 );
-
-
-CREATE TABLE reports_history (
-    id SERIAL PRIMARY KEY,
-    generated_by INTEGER REFERENCES users(id),
-    report_type VARCHAR(50),         -- daily, weekly, monthly
-    start_date DATE,
-    end_date DATE,
-    created_at TIMESTAMP(0) NOT NULL DEFAULT now()
-);
-
-
-CREATE TABLE log_history (
-    id SERIAL PRIMARY KEY,                 -- unique log record
-    entity_type VARCHAR(50) NOT NULL,      -- e.g., 'transaction', 'category', 'user', 'report'
-    entity_id INT NOT NULL,                -- the ID of the record in its table
-    user_id INT NOT NULL REFERENCES users(id), -- who performed the action
-    action VARCHAR(20) NOT NULL,           -- 'created', 'edited', 'deleted', etc.
-    old_data JSONB,                        -- previous state of the record
-    new_data JSONB,                        -- optional: new state after change
-    action_taken_at TIMESTAMP NOT NULL DEFAULT now()  -- timestamp of the action
-);
-
-
-CREATE TABLE email_verifications (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) NOT NULL,
-  code VARCHAR(6) NOT NULL,
-  expires_at TIMESTAMP NOT NULL,
-  is_used BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
 
 CREATE TABLE transaction_deletion_requests (
-    id SERIAL PRIMARY KEY,
-    transaction_id INTEGER NOT NULL REFERENCES transactions(id),
-    requested_by INTEGER NOT NULL REFERENCES users(id),
-    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending / approved / rejected
-    requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    reviewed_by INTEGER REFERENCES users(id), -- admin who approved/rejected
-    reviewed_at TIMESTAMP
+  id             SERIAL PRIMARY KEY,
+  transaction_id INTEGER      NOT NULL REFERENCES transactions(id),
+  requested_by   INTEGER      NOT NULL REFERENCES users(id),
+  status         VARCHAR(20)  NOT NULL DEFAULT 'pending',
+  requested_at   TIMESTAMP    NOT NULL DEFAULT now(),
+  reviewed_by    INTEGER      REFERENCES users(id),
+  reviewed_at    TIMESTAMP
 );
 
+CREATE TABLE reports_history (
+  id           SERIAL PRIMARY KEY,
+  generated_by INTEGER      REFERENCES users(id),
+  report_type  VARCHAR(50),
+  start_date   DATE,
+  end_date     DATE,
+  created_at   TIMESTAMP(0) NOT NULL DEFAULT now()
+);
+
+CREATE TABLE log_history (
+  id              SERIAL PRIMARY KEY,
+  entity_type     VARCHAR(50)  NOT NULL,
+  entity_id       INTEGER      NOT NULL,
+  user_id         INTEGER      NOT NULL REFERENCES users(id),
+  action          VARCHAR(20)  NOT NULL,
+  old_data        JSONB,
+  new_data        JSONB,
+  action_taken_at TIMESTAMP    NOT NULL DEFAULT now()
+);
+
+CREATE TABLE email_verifications (
+  id         SERIAL PRIMARY KEY,
+  email      VARCHAR(255) NOT NULL,
+  code       TEXT         NOT NULL,
+  expires_at TIMESTAMP    NOT NULL,
+  is_used    BOOLEAN      DEFAULT false,
+  created_at TIMESTAMP    DEFAULT now()
+);
+
+CREATE TYPE notification_type AS ENUM (
+  'deletion_request',
+  'deletion_approved',
+  'deletion_rejected'
+);
+
+CREATE TABLE notifications (
+  id                SERIAL PRIMARY KEY,
+  recipient_user_id INTEGER           NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type              notification_type NOT NULL,
+  payload           JSONB             NOT NULL DEFAULT '{}',
+  is_read           BOOLEAN           NOT NULL DEFAULT false,
+  created_at        TIMESTAMPTZ       NOT NULL DEFAULT now()
+);
+
+CREATE TABLE login_attempts (
+  id           SERIAL PRIMARY KEY,
+  email        VARCHAR(255)             NOT NULL,
+  ip_address   VARCHAR(45),
+  attempted_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX idx_log_entity         ON log_history (entity_type, entity_id);
+CREATE INDEX idx_log_action_time    ON log_history (action_taken_at);
+
+CREATE INDEX idx_login_attempts_email ON login_attempts (email);
+CREATE INDEX idx_login_attempts_ip    ON login_attempts (ip_address);
+CREATE INDEX idx_login_attempts_time  ON login_attempts (attempted_at);
+
+CREATE INDEX idx_email_verifications_email   ON email_verifications (email);
+CREATE INDEX idx_email_verifications_expires ON email_verifications (expires_at);
+
+CREATE INDEX idx_notifications_recipient_created ON notifications (recipient_user_id, created_at DESC);
+CREATE INDEX idx_notifications_recipient_unread  ON notifications (recipient_user_id, is_read) WHERE is_read = false;
+
 COMMIT;
-
-*/
-
-
-

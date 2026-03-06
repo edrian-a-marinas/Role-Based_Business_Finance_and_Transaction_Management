@@ -1,4 +1,3 @@
-# auth/router_auth.py
 from fastapi import APIRouter, Depends, HTTPException, Request
 from app.schemas.users import UserCreate, UserRead, UserLogin
 from .login import verify_user
@@ -8,10 +7,11 @@ from app.services.users_service import get_user_by_id
 
 router = APIRouter(prefix="/api/auth")
 
+
 @router.post("/register", response_model=UserRead)
 async def register_user(user: UserCreate):
-  new_user = await create_user(user)
-  return new_user
+  return await create_user(user)
+
 
 @router.post("/login")
 async def login_user(payload: UserLogin, request: Request):
@@ -28,14 +28,15 @@ async def login_user(payload: UserLogin, request: Request):
   access_token = create_access_token({
     "user_id":   db_user["id"],
     "role_id":   db_user["role_id"],
-    "is_active": db_user["is_active"],   # ← NEW: frontend reads this to gate routing
+    "is_active": db_user["is_active"],
   })
 
   return {
     "access_token": access_token,
     "token_type":   "bearer",
-    "user":         db_user,             # full user object including is_active
+    "user":         db_user,
   }
+
 
 @router.get("/me", response_model=UserRead)
 async def get_me(current_user=Depends(get_current_user)):
