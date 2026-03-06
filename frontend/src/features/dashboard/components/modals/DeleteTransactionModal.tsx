@@ -5,9 +5,9 @@ import { X, ChevronLeft, ChevronRight, Search, Trash2, CheckCircle } from "lucid
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction, Category } from "@/features/dashboard/schemas/transaction";
-import type { OnCloseProps } from "@/features/dashboard/lib/utility";
-import { formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utility";
-import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
+import type { OnCloseProps } from "@/features/dashboard/lib/utilsFormatFetch";
+import { formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilsHooks";
 
 // ── Same tokens ───────────────────────────────────────────────────────────────
 const C = {

@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as HoverCardPrimitive from "@radix-ui/react-hover-card";
 
-import { cn } from "@/features/dashboard/lib/utils";
+import { cn } from "@/features/dashboard/lib/utilsForUiCn";
 
 
 const HoverCard = HoverCardPrimitive.Root;

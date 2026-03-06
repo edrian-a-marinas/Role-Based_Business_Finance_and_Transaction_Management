@@ -4,10 +4,10 @@ import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
-import { formatDate, formatCurrency } from "@/features/dashboard/lib/utility";
-import type { OnCloseProps } from "@/features/dashboard/lib/utility";
+import { formatDate, formatCurrency } from "@/features/dashboard/lib/utilsFormatFetch";
+import type { OnCloseProps } from "@/features/dashboard/lib/utilsFormatFetch";
 import type { Category, ReadTransaction } from "@/features/dashboard/schemas/transaction";
-import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilsHooks";
 
 // ── Same tokens as CreateTransactionModal ────────────────────────────────────
 const C = {

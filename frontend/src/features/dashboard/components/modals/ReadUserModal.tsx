@@ -2,8 +2,8 @@ import { useEffect, useState, useContext } from "react";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
-import type { OnCloseProps } from "../../lib/utility";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
 import type { ReadUserWithCount, ViewMode } from "../../schemas/user";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────

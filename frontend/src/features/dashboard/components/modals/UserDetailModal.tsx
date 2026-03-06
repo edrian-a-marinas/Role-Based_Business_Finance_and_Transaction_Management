@@ -3,8 +3,8 @@ import { X, UserCircle, ArrowLeft, Trash2, RotateCcw, AlertTriangle } from "luci
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { ReadUserWithCount, ViewMode } from "../../schemas/user";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
-import type { OnCloseProps } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
 
 // ── Design tokens (mirrors ReadUserModal) ─────────────────────────────────────
 const C = {

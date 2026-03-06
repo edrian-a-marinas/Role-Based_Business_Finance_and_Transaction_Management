@@ -5,8 +5,8 @@ import {
 } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
-import type { OnCloseProps } from "../../lib/utility";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
 
 // ── Design tokens — light surface, matches SettingsPage ───────────────────────
 const C = {

@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
-import type { OnCloseProps } from "../../lib/utility";
-import { formatCurrency } from "../../lib/utility";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
+import { formatCurrency } from "../../lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {

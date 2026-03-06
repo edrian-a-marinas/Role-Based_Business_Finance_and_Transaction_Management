@@ -4,10 +4,10 @@ import {
   AlertTriangle, Clock, Receipt, ChevronRight,
 } from "lucide-react";
 import api from "../../../../services/apiClient";
-import type { OnCloseProps } from "../../lib/utility";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
 import type { TransactionInfo, DeletionRequest } from "../../schemas/user";
-import { formatCurrency } from "../../lib/utility";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import { formatCurrency } from "../../lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {

@@ -9,18 +9,12 @@ import { AuthContext } from "@/features/auth/AuthContext";
 import { validateProfileUpdate } from "@/features/dashboard/schemas/user";
 import DeleteAccountModal from "@/features/dashboard/components/modals/DeleteAccountModal";
 
-// ── Design tokens — matches DashboardPage sidebar + DashboardOverview ─────────
+// ── Domain/accent colors only — layout uses CSS variables ─────────────────────
 const C = {
-  primary:    "hsl(199,89%,38%)",
-  income:     "hsl(160,60%,45%)",
-  expense:    "hsl(0,72%,51%)",
-  warning:    "hsl(45,85%,50%)",
-  surface:    "hsl(0,0%,100%)",
-  surfaceSub: "hsl(220,14%,97%)",
-  border:     "hsl(220,13%,89%)",
-  fg:         "hsl(220,14%,15%)",
-  fgLight:    "hsl(220,10%,46%)",
-  fgMuted:    "hsl(220,10%,62%)",
+  primary: "hsl(var(--primary))",
+  income:  "hsl(var(--income))",
+  expense: "hsl(var(--expense))",
+  warning: "hsl(var(--warning))",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -42,11 +36,7 @@ function RoleBadge({ roleId, userId }: { roleId: number; userId: number }) {
   const isSA  = userId === 1 && roleId === 1;
   const isAdm = roleId === 1;
   const label = isSA ? "Super Admin" : isAdm ? "Admin" : "Standard User";
-  const color = isSA
-    ? C.warning
-    : isAdm
-    ? C.income
-    : C.primary;
+  const color = isSA ? C.warning : isAdm ? C.income : C.primary;
   return (
     <span style={{
       display:         "inline-flex",
@@ -73,20 +63,18 @@ function InfoRow({ icon: Icon, label, value }: {
   value: React.ReactNode;
 }) {
   return (
-    <div style={{
-      display:       "flex",
-      alignItems:    "center",
-      gap:           "0.875rem",
-      padding:       "0.75rem 1rem",
-      borderRadius:  "0.5rem",
-      background:    C.surfaceSub,
-      border:        `1px solid ${C.border}`,
+    <div className="ts-info-row" style={{
+      display:      "flex",
+      alignItems:   "center",
+      gap:          "0.875rem",
+      padding:      "0.75rem 1rem",
+      borderRadius: "0.5rem",
     }}>
       <div style={{
         width:           "2rem",
         height:          "2rem",
         borderRadius:    "0.375rem",
-        backgroundColor: `${C.primary}12`,
+        backgroundColor: "hsl(var(--primary) / 0.08)",
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
@@ -95,10 +83,10 @@ function InfoRow({ icon: Icon, label, value }: {
         <Icon style={{ width: "0.875rem", height: "0.875rem", color: C.primary }} />
       </div>
       <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: "0.68rem", color: C.fgMuted, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <p className="ts-page-fg-muted" style={{ fontSize: "0.68rem", margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
           {label}
         </p>
-        <p style={{ fontSize: "0.85rem", color: C.fg, margin: "0.1rem 0 0", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <p className="ts-page-fg" style={{ fontSize: "0.85rem", margin: "0.1rem 0 0", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {value}
         </p>
       </div>
@@ -110,15 +98,15 @@ function InfoRow({ icon: Icon, label, value }: {
 function EditableField({
   label, value, onChange, placeholder, type = "text",
 }: {
-  label:       string;
-  value:       string;
-  onChange:    (v: string) => void;
+  label:        string;
+  value:        string;
+  onChange:     (v: string) => void;
   placeholder?: string;
   type?:        string;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-      <label style={{ fontSize: "0.72rem", fontWeight: 600, color: C.fgLight, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      <label className="ts-page-fg-light" style={{ fontSize: "0.72rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
         {label}
       </label>
       <input
@@ -126,42 +114,28 @@ function EditableField({
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        className="ts-surface ts-page-fg"
         style={{
           width:        "100%",
           padding:      "0.55rem 0.75rem",
           borderRadius: "0.45rem",
-          border:       `1px solid ${C.border}`,
+          border:       "1px solid hsl(var(--page-border))",
           fontSize:     "0.85rem",
-          color:        C.fg,
-          background:   C.surface,
           outline:      "none",
           transition:   "border-color 0.15s",
           boxSizing:    "border-box",
         }}
-        onFocus={e => (e.target.style.borderColor = C.primary)}
-        onBlur={e  => (e.target.style.borderColor = C.border)}
+        onFocus={e  => (e.target.style.borderColor = "hsl(var(--primary))")}
+        onBlur={e   => (e.target.style.borderColor = "hsl(var(--page-border))")}
       />
     </div>
   );
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
+// ── Section title ─────────────────────────────────────────────────────────────
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{
-      fontSize:      "0.7rem",
-      fontWeight:    700,
-      color:         C.fgMuted,
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      margin:        "0 0 0.75rem",
-    }}>
-      {children}
-    </p>
-  );
+  return <p className="ts-section-title">{children}</p>;
 }
-
-// ── Validation lives in @/features/dashboard/schemas/user ──────────────────
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
@@ -173,7 +147,6 @@ export default function SettingsPage() {
   type Tab = "profile" | "account";
   const [activeTab, setActiveTab] = useState<Tab>("profile");
 
-  // Edit form state
   const [isEditing,   setIsEditing]   = useState(false);
   const [saving,      setSaving]      = useState(false);
   const [saveError,   setSaveError]   = useState<string | null>(null);
@@ -185,26 +158,23 @@ export default function SettingsPage() {
   const [lastName,   setLastName]   = useState(user?.last_name    ?? "");
   const [phone,      setPhone]      = useState(user?.phone_number ?? "");
 
-  // Danger Zone: 10s countdown starts when Account tab is opened
-  const [dangerCountdown,  setDangerCountdown]  = useState(10);
-  const [dangerUnlocked,   setDangerUnlocked]   = useState(false);
-  const [showDeleteModal,  setShowDeleteModal]   = useState(false);
+  const [dangerCountdown, setDangerCountdown] = useState(10);
+  const [dangerUnlocked,  setDangerUnlocked]  = useState(false);
+  const [showDeleteModal, setShowDeleteModal]  = useState(false);
   const dangerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   if (!user) return null;
 
-  const fullName = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ");
+  const fullName    = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(" ");
   const avatarColor = getAvatarColor(user.id);
   const initials    = getInitials(user.first_name, user.last_name);
   const isDeactivated = !user.is_active;
   const isSuperAdmin  = user.id === 1 && user.role_id === 1;
-
   const roleLabel =
     user.id === 1 && user.role_id === 1 ? "Super Admin"
     : user.role_id === 1               ? "Admin"
     :                                    "Standard User";
 
-  // ── Reset form to current user values ──────────────────────────────────────
   const resetForm = () => {
     setFirstName(user.first_name   ?? "");
     setMiddleName(user.middle_name ?? "");
@@ -215,24 +185,14 @@ export default function SettingsPage() {
     setFieldErrors([]);
   };
 
-  const handleCancelEdit = () => {
-    resetForm();
-    setIsEditing(false);
-  };
+  const handleCancelEdit = () => { resetForm(); setIsEditing(false); };
 
-  // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!token || !tokenType) return;
-
-    // ── 1. Validate fields against the same rules as register.ts / schemas/users.py
     const errors = validateProfileUpdate({ firstName, lastName, middleName, phone });
-    if (errors.length > 0) {
-      setFieldErrors(errors);
-      return;
-    }
+    if (errors.length > 0) { setFieldErrors(errors); return; }
     setFieldErrors([]);
 
-    // ── 2. No-change guard — skip API call if nothing actually changed
     const trimmed = {
       first_name:   firstName.trim()  || null,
       middle_name:  middleName.trim() || null,
@@ -245,17 +205,10 @@ export default function SettingsPage() {
       trimmed.last_name    === (user.last_name    ?? null) &&
       trimmed.phone_number === (user.phone_number ?? null);
 
-    if (unchanged) {
-      // Nothing changed — just close edit mode silently
-      setIsEditing(false);
-      return;
-    }
+    if (unchanged) { setIsEditing(false); return; }
 
-    setSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
+    setSaving(true); setSaveError(null); setSaveSuccess(false);
     try {
-      // ── 3. Include email — UserBase on the backend requires it
       const res = await api.patch(
         "api/users/me",
         { email: user.email, ...trimmed },
@@ -272,42 +225,36 @@ export default function SettingsPage() {
     }
   };
 
-  // ── Danger Zone countdown — starts fresh each time Account tab is opened ────
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (activeTab !== "account") return;
-    // Reset every time the account tab is opened
     setDangerUnlocked(false);
     setDangerCountdown(10);
     dangerTimerRef.current = setInterval(() => {
       setDangerCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(dangerTimerRef.current!);
-          setDangerUnlocked(true);
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(dangerTimerRef.current!); setDangerUnlocked(true); return 0; }
         return prev - 1;
       });
     }, 1000);
     return () => { if (dangerTimerRef.current) clearInterval(dangerTimerRef.current); };
   }, [activeTab]);
 
-  // ── Tab button ──────────────────────────────────────────────────────────────
   const TabBtn = ({ tab, label }: { tab: Tab; label: string }) => {
     const active = activeTab === tab;
     return (
       <button
         onClick={() => setActiveTab(tab)}
+        className={active ? "ts-surface ts-page-fg" : "ts-page-fg-light"}
         style={{
-          padding:         "0.5rem 1.25rem",
-          borderRadius:    "0.375rem",
-          fontSize:        "0.82rem",
-          fontWeight:      600,
-          border:          "none",
-          cursor:          "pointer",
-          transition:      "background-color 0.15s, color 0.15s",
-          backgroundColor: active ? C.surface : "transparent",
-          color:           active ? C.fg      : C.fgLight,
-          boxShadow:       active ? "0 1px 4px hsl(220 13% 80% / 0.6)" : "none",
+          padding:      "0.5rem 1.25rem",
+          borderRadius: "0.375rem",
+          fontSize:     "0.82rem",
+          fontWeight:   600,
+          border:       "none",
+          cursor:       "pointer",
+          transition:   "background-color 0.15s, color 0.15s",
+          background:   active ? "hsl(var(--page-surface))" : "transparent",
+          boxShadow:    active ? "0 1px 4px hsl(220 13% 80% / 0.6)" : "none",
         }}
       >
         {label}
@@ -319,51 +266,42 @@ export default function SettingsPage() {
     <div className="space-y-6" style={{ maxWidth: "680px" }}>
       <title>Settings</title>
 
-      {/* ── Page header ────────────────────────────────────────────────────── */}
+      {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: C.fg }}>
-          Settings
-        </h1>
-        <p className="text-sm" style={{ color: C.fgLight }}>
-          Manage your profile and account preferences
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight ts-page-fg">Settings</h1>
+        <p className="text-sm ts-page-fg-light">Manage your profile and account preferences</p>
       </div>
 
-      {/* ── Deactivated banner ─────────────────────────────────────────────── */}
+      {/* Deactivated banner */}
       {isDeactivated && (
         <div style={{
-          display:       "flex",
-          alignItems:    "flex-start",
-          gap:           "0.75rem",
-          padding:       "1rem 1.25rem",
-          borderRadius:  "0.6rem",
-          background:    "hsl(0 72% 51% / 0.07)",
-          border:        `1px solid hsl(0 72% 51% / 0.3)`,
+          display:      "flex",
+          alignItems:   "flex-start",
+          gap:          "0.75rem",
+          padding:      "1rem 1.25rem",
+          borderRadius: "0.6rem",
+          background:   "hsl(var(--expense) / 0.07)",
+          border:       "1px solid hsl(var(--expense) / 0.3)",
         }}>
           <AlertTriangle style={{ width: "1.1rem", height: "1.1rem", color: C.expense, flexShrink: 0, marginTop: "0.05rem" }} />
           <div>
             <p style={{ fontSize: "0.85rem", fontWeight: 700, color: C.expense, margin: 0 }}>
               Your account is deactivated
             </p>
-            <p style={{ fontSize: "0.78rem", color: C.fgLight, margin: "0.25rem 0 0", lineHeight: 1.5 }}>
+            <p className="ts-page-fg-light" style={{ fontSize: "0.78rem", margin: "0.25rem 0 0", lineHeight: 1.5 }}>
               You can only access Settings. To reactivate your account, please contact an administrator.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Avatar + name card ─────────────────────────────────────────────── */}
-      <div style={{
-        display:       "flex",
-        alignItems:    "center",
-        gap:           "1.25rem",
-        padding:       "1.25rem 1.5rem",
-        borderRadius:  "0.75rem",
-        background:    C.surface,
-        border:        `1px solid ${C.border}`,
-        boxShadow:     "0 1px 4px hsl(220 13% 80% / 0.3)",
+      {/* Avatar + name card */}
+      <div className="ts-card ts-card-shadow" style={{
+        display:      "flex",
+        alignItems:   "center",
+        gap:          "1.25rem",
+        padding:      "1.25rem 1.5rem",
       }}>
-        {/* Initials avatar */}
         <div style={{
           width:           "3.5rem",
           height:          "3.5rem",
@@ -382,15 +320,14 @@ export default function SettingsPage() {
           {initials}
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ fontSize: "1rem", fontWeight: 700, color: C.fg, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <p className="ts-page-fg" style={{ fontSize: "1rem", fontWeight: 700, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {fullName || user.email}
           </p>
-          <p style={{ fontSize: "0.78rem", color: C.fgLight, margin: "0.15rem 0 0.35rem" }}>
+          <p className="ts-page-fg-light" style={{ fontSize: "0.78rem", margin: "0.15rem 0 0.35rem" }}>
             {user.email}
           </p>
           <RoleBadge roleId={user.role_id} userId={user.id} />
         </div>
-        {/* Active/Inactive pill */}
         <div style={{ marginLeft: "auto", flexShrink: 0 }}>
           <span style={{
             display:         "inline-block",
@@ -398,132 +335,116 @@ export default function SettingsPage() {
             borderRadius:    "999px",
             fontSize:        "0.7rem",
             fontWeight:      600,
-            backgroundColor: user.is_active ? "hsl(160 60% 45% / 0.12)" : "hsl(220 10% 46% / 0.12)",
-            color:           user.is_active ? C.income : C.fgMuted,
-            border:          `1px solid ${user.is_active ? C.income : C.fgMuted}40`,
+            backgroundColor: user.is_active ? "hsl(var(--income) / 0.12)" : "hsl(220 10% 46% / 0.12)",
+            color:           user.is_active ? C.income : "hsl(var(--page-fg-muted))",
+            border:          `1px solid ${user.is_active ? C.income : "hsl(var(--page-fg-muted))"}40`,
           }}>
             {user.is_active ? "Active" : "Inactive"}
           </span>
         </div>
       </div>
 
-      {/* ── Tab bar ────────────────────────────────────────────────────────── */}
-      <div style={{
-        display:         "inline-flex",
-        gap:             "0.25rem",
-        padding:         "0.25rem",
-        borderRadius:    "0.5rem",
-        backgroundColor: "hsl(220,14%,95%)",
-      }}>
+      {/* Tab bar */}
+      <div className="ts-toggle-bar" style={{ display: "inline-flex", gap: "0.25rem" }}>
         <TabBtn tab="profile" label="Profile" />
         <TabBtn tab="account" label="Account" />
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          PROFILE TAB
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── PROFILE TAB ─────────────────────────────────────────────────────── */}
       {activeTab === "profile" && (
-        <div style={{
-          background:   C.surface,
-          border:       `1px solid ${C.border}`,
-          borderRadius: "0.75rem",
-          overflow:     "hidden",
-          boxShadow:    "0 1px 4px hsl(220 13% 80% / 0.3)",
-        }}>
-          {/* Section header */}
+        <div className="ts-card ts-card-shadow" style={{ overflow: "hidden" }}>
+
+          {/* Header */}
           <div style={{
             display:        "flex",
             alignItems:     "center",
             justifyContent: "space-between",
             padding:        "1rem 1.5rem",
-            borderBottom:   `1px solid ${C.border}`,
+            borderBottom:   "1px solid hsl(var(--page-border))",
           }}>
             <div>
-              <p style={{ fontSize: "0.9rem", fontWeight: 700, color: C.fg, margin: 0 }}>
+              <p className="ts-page-fg" style={{ fontSize: "0.9rem", fontWeight: 700, margin: 0 }}>
                 Profile Information
               </p>
-              <p style={{ fontSize: "0.75rem", color: C.fgLight, margin: "0.15rem 0 0" }}>
+              <p className="ts-page-fg-light" style={{ fontSize: "0.75rem", margin: "0.15rem 0 0" }}>
                 Update your name and contact details
               </p>
             </div>
-            {!isEditing ? (
+
+            {!isEditing && !isDeactivated ? (
               <button
                 onClick={() => { resetForm(); setIsEditing(true); }}
+                className="ts-page-fg ts-surface"
                 style={{
-                  display:         "flex",
-                  alignItems:      "center",
-                  gap:             "0.4rem",
-                  padding:         "0.45rem 0.9rem",
-                  borderRadius:    "0.45rem",
-                  fontSize:        "0.78rem",
-                  fontWeight:      600,
-                  border:          `1px solid ${C.border}`,
-                  background:      C.surface,
-                  color:           C.fg,
-                  cursor:          "pointer",
-                  transition:      "border-color 0.15s, color 0.15s",
+                  display:      "flex",
+                  alignItems:   "center",
+                  gap:          "0.4rem",
+                  padding:      "0.45rem 0.9rem",
+                  borderRadius: "0.45rem",
+                  fontSize:     "0.78rem",
+                  fontWeight:   600,
+                  border:       "1px solid hsl(var(--page-border))",
+                  cursor:       "pointer",
+                  transition:   "border-color 0.15s, color 0.15s",
                 }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = C.primary;
-                  (e.currentTarget as HTMLButtonElement).style.color = C.primary;
+                  e.currentTarget.style.borderColor = "hsl(var(--primary))";
+                  e.currentTarget.style.color = "hsl(var(--primary))";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = C.border;
-                  (e.currentTarget as HTMLButtonElement).style.color = C.fg;
+                  e.currentTarget.style.borderColor = "hsl(var(--page-border))";
+                  e.currentTarget.style.color = "hsl(var(--page-fg))";
                 }}
               >
-                <Edit3 style={{ width: "0.8rem", height: "0.8rem" }} />
-                Edit
+                <Edit3 style={{ width: "0.8rem", height: "0.8rem" }} /> Edit
               </button>
-            ) : (
+            ) : isEditing ? (
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   onClick={handleCancelEdit}
+                  className="ts-page-fg-light ts-surface"
                   style={{
                     display: "flex", alignItems: "center", gap: "0.35rem",
                     padding: "0.45rem 0.9rem", borderRadius: "0.45rem",
                     fontSize: "0.78rem", fontWeight: 600,
-                    border: `1px solid ${C.border}`, background: C.surface,
-                    color: C.fgLight, cursor: "pointer",
+                    border: "1px solid hsl(var(--page-border))", cursor: "pointer",
                   }}
                 >
-                  <X style={{ width: "0.8rem", height: "0.8rem" }} />
-                  Cancel
+                  <X style={{ width: "0.8rem", height: "0.8rem" }} /> Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving}
                   style={{
-                    display:         "flex",
-                    alignItems:      "center",
-                    gap:             "0.35rem",
-                    padding:         "0.45rem 0.9rem",
-                    borderRadius:    "0.45rem",
-                    fontSize:        "0.78rem",
-                    fontWeight:      600,
-                    border:          "none",
-                    background:      saving ? `${C.primary}80` : C.primary,
-                    color:           "hsl(0,0%,100%)",
-                    cursor:          saving ? "not-allowed" : "pointer",
-                    transition:      "opacity 0.15s",
+                    display:      "flex",
+                    alignItems:   "center",
+                    gap:          "0.35rem",
+                    padding:      "0.45rem 0.9rem",
+                    borderRadius: "0.45rem",
+                    fontSize:     "0.78rem",
+                    fontWeight:   600,
+                    border:       "none",
+                    background:   saving ? "hsl(var(--primary) / 0.5)" : "hsl(var(--primary))",
+                    color:        "hsl(0,0%,100%)",
+                    cursor:       saving ? "not-allowed" : "pointer",
                   }}
                 >
                   <Check style={{ width: "0.8rem", height: "0.8rem" }} />
                   {saving ? "Saving…" : "Save"}
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
-            {/* Success / error banners */}
+            {/* Banners */}
             {saveSuccess && (
               <div style={{
                 display: "flex", alignItems: "center", gap: "0.6rem",
                 padding: "0.65rem 1rem", borderRadius: "0.45rem",
-                background: "hsl(160 60% 45% / 0.09)",
-                border: `1px solid hsl(160 60% 45% / 0.3)`,
+                background: "hsl(var(--income) / 0.09)",
+                border: "1px solid hsl(var(--income) / 0.3)",
                 fontSize: "0.8rem", color: C.income, fontWeight: 600,
               }}>
                 <Check style={{ width: "0.85rem", height: "0.85rem" }} />
@@ -534,8 +455,8 @@ export default function SettingsPage() {
               <div style={{
                 display: "flex", alignItems: "center", gap: "0.6rem",
                 padding: "0.65rem 1rem", borderRadius: "0.45rem",
-                background: "hsl(0 72% 51% / 0.09)",
-                border: `1px solid hsl(0 72% 51% / 0.3)`,
+                background: "hsl(var(--expense) / 0.09)",
+                border: "1px solid hsl(var(--expense) / 0.3)",
                 fontSize: "0.8rem", color: C.expense, fontWeight: 600,
               }}>
                 <AlertTriangle style={{ width: "0.85rem", height: "0.85rem" }} />
@@ -545,8 +466,8 @@ export default function SettingsPage() {
             {fieldErrors.length > 0 && (
               <div style={{
                 padding: "0.65rem 1rem", borderRadius: "0.45rem",
-                background: "hsl(0 72% 51% / 0.07)",
-                border: "1px solid hsl(0 72% 51% / 0.25)",
+                background: "hsl(var(--expense) / 0.07)",
+                border: "1px solid hsl(var(--expense) / 0.25)",
                 fontSize: "0.78rem", color: C.expense,
                 display: "flex", flexDirection: "column", gap: "0.3rem",
               }}>
@@ -559,7 +480,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Read-only fields */}
+            {/* Account details (read-only) */}
             <div>
               <SectionTitle>Account Details</SectionTitle>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -569,18 +490,18 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Editable fields */}
+            {/* Personal info */}
             <div>
               <SectionTitle>Personal Information</SectionTitle>
-                {!isEditing && !isDeactivated ? (
+              {isEditing ? (
                 <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "1fr 1fr" }}>
                   <EditableField label="First Name"  value={firstName}  onChange={setFirstName}  placeholder="First name" />
                   <EditableField label="Last Name"   value={lastName}   onChange={setLastName}   placeholder="Last name" />
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <EditableField label="Middle Name" value={middleName} onChange={setMiddleName} placeholder="Middle name (optional)" />
+                    <EditableField label="Middle Name"   value={middleName} onChange={setMiddleName} placeholder="Middle name (optional)" />
                   </div>
                   <div style={{ gridColumn: "1 / -1" }}>
-                    <EditableField label="Phone Number" value={phone} onChange={setPhone} placeholder="e.g. 09123456789" type="tel" />
+                    <EditableField label="Phone Number"  value={phone}      onChange={setPhone}      placeholder="e.g. 09123456789" type="tel" />
                   </div>
                 </div>
               ) : (
@@ -592,75 +513,66 @@ export default function SettingsPage() {
             </div>
 
             {/* Locked email notice */}
-            <div style={{
+            <div className="ts-surface-sub" style={{
               display:      "flex",
               alignItems:   "center",
               gap:          "0.5rem",
               padding:      "0.6rem 0.875rem",
               borderRadius: "0.4rem",
-              background:   "hsl(220,14%,97%)",
-              border:       `1px solid ${C.border}`,
+              border:       "1px solid hsl(var(--page-border))",
               fontSize:     "0.75rem",
-              color:        C.fgMuted,
             }}>
-              <Lock style={{ width: "0.75rem", height: "0.75rem", flexShrink: 0 }} />
-              Email address cannot be changed. Contact an administrator if needed.
+              <Lock className="ts-page-fg-muted" style={{ width: "0.75rem", height: "0.75rem", flexShrink: 0 }} />
+              <span className="ts-page-fg-muted">
+                Email address cannot be changed. Contact an administrator if needed.
+              </span>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          ACCOUNT TAB
-      ══════════════════════════════════════════════════════════════════════ */}
+      {/* ── ACCOUNT TAB ─────────────────────────────────────────────────────── */}
       {activeTab === "account" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-          {/* Account summary card */}
-          <div style={{
-            background:   C.surface,
-            border:       `1px solid ${C.border}`,
-            borderRadius: "0.75rem",
-            padding:      "1.25rem 1.5rem",
-            boxShadow:    "0 1px 4px hsl(220 13% 80% / 0.3)",
-          }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 700, color: C.fg, margin: "0 0 0.2rem" }}>
+          {/* Account summary */}
+          <div className="ts-card ts-card-shadow" style={{ padding: "1.25rem 1.5rem" }}>
+            <p className="ts-page-fg" style={{ fontSize: "0.9rem", fontWeight: 700, margin: "0 0 0.2rem" }}>
               Account Summary
             </p>
-            <p style={{ fontSize: "0.75rem", color: C.fgLight, margin: "0 0 1rem" }}>
+            <p className="ts-page-fg-light" style={{ fontSize: "0.75rem", margin: "0 0 1rem" }}>
               Your account information at a glance
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <InfoRow icon={Mail}     label="Email"       value={user.email} />
-              <InfoRow icon={Shield}   label="Role"        value={<>{roleLabel} <RoleBadge roleId={user.role_id} userId={user.id} /></>} />
-              <InfoRow icon={Calendar} label="Joined"      value={new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} />
-              <InfoRow icon={User}     label="User ID"     value={`#${user.id}`} />
+              <InfoRow icon={Mail}     label="Email"   value={user.email} />
+              <InfoRow icon={Shield}   label="Role"    value={<>{roleLabel} <RoleBadge roleId={user.role_id} userId={user.id} /></>} />
+              <InfoRow icon={Calendar} label="Joined"  value={new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} />
+              <InfoRow icon={User}     label="User ID" value={`#${user.id}`} />
             </div>
           </div>
 
           {/* Danger zone */}
           <div style={{
-            background:   C.surface,
-            border:       `1px solid hsl(0 72% 51% / 0.25)`,
+            background:   "hsl(var(--page-surface))",
+            border:       "1px solid hsl(var(--expense) / 0.25)",
             borderRadius: "0.75rem",
             overflow:     "hidden",
-            boxShadow:    "0 1px 4px hsl(0 72% 51% / 0.06)",
+            boxShadow:    "0 1px 4px hsl(var(--expense) / 0.06)",
             opacity:      isSuperAdmin ? 0.6 : 1,
           }}>
             <div style={{
-              padding:      "0.875rem 1.5rem",
-              borderBottom: `1px solid hsl(0 72% 51% / 0.2)`,
-              background:   "hsl(0 72% 51% / 0.04)",
-              display:      "flex",
-              alignItems:   "center",
+              padding:        "0.875rem 1.5rem",
+              borderBottom:   "1px solid hsl(var(--expense) / 0.2)",
+              background:     "hsl(var(--expense) / 0.04)",
+              display:        "flex",
+              alignItems:     "center",
               justifyContent: "space-between",
             }}>
               <div>
                 <p style={{ fontSize: "0.85rem", fontWeight: 700, color: C.expense, margin: 0 }}>
                   Danger Zone
                 </p>
-                <p style={{ fontSize: "0.73rem", color: C.fgLight, margin: "0.15rem 0 0" }}>
+                <p className="ts-page-fg-light" style={{ fontSize: "0.73rem", margin: "0.15rem 0 0" }}>
                   Permanent and irreversible actions
                 </p>
               </div>
@@ -673,7 +585,7 @@ export default function SettingsPage() {
                   borderRadius:    "999px",
                   fontSize:        "0.68rem",
                   fontWeight:      700,
-                  backgroundColor: "hsl(45 85% 50% / 0.12)",
+                  backgroundColor: "hsl(var(--warning) / 0.12)",
                   color:           C.warning,
                   border:          `1px solid ${C.warning}40`,
                 }}>
@@ -682,6 +594,7 @@ export default function SettingsPage() {
                 </span>
               )}
             </div>
+
             <div style={{ padding: "1.25rem 1.5rem" }}>
               {isSuperAdmin && (
                 <div style={{
@@ -690,7 +603,7 @@ export default function SettingsPage() {
                   gap:          "0.5rem",
                   padding:      "0.6rem 0.875rem",
                   borderRadius: "0.4rem",
-                  background:   "hsl(45 85% 50% / 0.07)",
+                  background:   "hsl(var(--warning) / 0.07)",
                   border:       `1px solid ${C.warning}30`,
                   fontSize:     "0.75rem",
                   color:        C.warning,
@@ -700,6 +613,7 @@ export default function SettingsPage() {
                   The Super Admin account cannot be deleted. This section is shown for reference only.
                 </div>
               )}
+
               <div style={{
                 display:        "flex",
                 alignItems:     "center",
@@ -708,15 +622,15 @@ export default function SettingsPage() {
                 flexWrap:       "wrap",
               }}>
                 <div>
-                  <p style={{ fontSize: "0.85rem", fontWeight: 600, color: C.fg, margin: 0 }}>
+                  <p className="ts-page-fg" style={{ fontSize: "0.85rem", fontWeight: 600, margin: 0 }}>
                     Delete My Account
                   </p>
-                  <p style={{ fontSize: "0.75rem", color: C.fgLight, margin: "0.25rem 0 0", lineHeight: 1.5 }}>
+                  <p className="ts-page-fg-light" style={{ fontSize: "0.75rem", margin: "0.25rem 0 0", lineHeight: 1.5 }}>
                     Permanently deletes your account. Your past transactions will be retained for record-keeping.
                     This action <strong>cannot be undone</strong>.
                   </p>
                 </div>
-                {/* SuperAdmin: always locked. Others: 10s countdown then clickable */}
+
                 {isSuperAdmin ? (
                   <button
                     disabled
@@ -725,9 +639,9 @@ export default function SettingsPage() {
                       display: "flex", alignItems: "center", gap: "0.4rem",
                       padding: "0.5rem 1rem", borderRadius: "0.45rem",
                       fontSize: "0.78rem", fontWeight: 600,
-                      border: `1px solid hsl(0 72% 51% / 0.2)`,
-                      background: "hsl(0 72% 51% / 0.04)",
-                      color: "hsl(0 72% 51% / 0.35)",
+                      border: "1px solid hsl(var(--expense) / 0.2)",
+                      background: "hsl(var(--expense) / 0.04)",
+                      color: "hsl(var(--expense) / 0.35)",
                       cursor: "not-allowed", flexShrink: 0,
                     }}
                   >
@@ -736,7 +650,7 @@ export default function SettingsPage() {
                     <span style={{
                       fontSize: "0.6rem", fontWeight: 700,
                       padding: "0.1rem 0.35rem", borderRadius: "0.25rem",
-                      backgroundColor: "hsl(45 85% 50% / 0.12)",
+                      backgroundColor: "hsl(var(--warning) / 0.12)",
                       color: C.warning, border: `1px solid ${C.warning}40`,
                       marginLeft: "0.2rem",
                     }}>N/A</span>
@@ -755,12 +669,12 @@ export default function SettingsPage() {
                       fontSize:       "0.78rem",
                       fontWeight:     600,
                       border:         dangerUnlocked
-                        ? `1px solid hsl(0 72% 51% / 0.5)`
-                        : `1px solid ${C.border}`,
+                        ? "1px solid hsl(var(--expense) / 0.5)"
+                        : "1px solid hsl(var(--page-border))",
                       background:     dangerUnlocked
-                        ? "hsl(0 72% 51% / 0.08)"
-                        : C.surfaceSub,
-                      color:          dangerUnlocked ? C.expense : C.fgMuted,
+                        ? "hsl(var(--expense) / 0.08)"
+                        : "hsl(var(--page-surface-sub))",
+                      color:          dangerUnlocked ? C.expense : "hsl(var(--page-fg-muted))",
                       cursor:         dangerUnlocked ? "pointer" : "not-allowed",
                       flexShrink:     0,
                       transition:     "all 0.3s",
@@ -770,12 +684,12 @@ export default function SettingsPage() {
                       justifyContent: "center",
                     }}
                   >
-                    {/* Fill progress while counting */}
                     {!dangerUnlocked && (
                       <div style={{
-                        position: "absolute", left: 0, top: 0, bottom: 0,
-                        width: `${((10 - dangerCountdown) / 10) * 100}%`,
-                        background: "hsl(0 72% 51% / 0.07)",
+                        position:   "absolute",
+                        left: 0, top: 0, bottom: 0,
+                        width:      `${((10 - dangerCountdown) / 10) * 100}%`,
+                        background: "hsl(var(--expense) / 0.07)",
                         transition: "width 1s linear",
                       }} />
                     )}
@@ -799,7 +713,6 @@ export default function SettingsPage() {
           isAdmin={user.role_id === 1}
         />
       )}
-      
     </div>
   );
 }

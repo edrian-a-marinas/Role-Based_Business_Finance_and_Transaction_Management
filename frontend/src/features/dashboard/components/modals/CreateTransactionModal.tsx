@@ -7,8 +7,8 @@ import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction } from "@/features/dashboard/schemas/transaction";
 import { transactionSchema } from "@/features/dashboard/schemas/transaction";
 import type { CategoryRead } from "@/features/dashboard/schemas/category";
-import type { OnCloseProps } from "@/features/dashboard/lib/utility";
-import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
+import type { OnCloseProps } from "@/features/dashboard/lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilsHooks";
 
 // Same tokens as DashboardPage / DashboardOverview
 const C = {

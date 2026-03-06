@@ -1,69 +1,264 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   DESIGN TOKENS
+   All color values live here. Pages reference var(--token) instead of
+   hardcoded hsl() strings.  Dark mode just overrides these values under
+   [data-theme="dark"] — no changes needed in component files once migrated.
+───────────────────────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-
-    --primary: 199 89% 38%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 25% 10%;
-
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 46%;
-
-    --accent: 166 72% 40%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 51%;
+    /* Tailwind semantic */
+    --background:             220 20% 97%;
+    --foreground:             220 25% 10%;
+    --card:                   0 0% 100%;
+    --card-foreground:        220 25% 10%;
+    --popover:                0 0% 100%;
+    --popover-foreground:     220 25% 10%;
+    --primary:                199 89% 38%;
+    --primary-foreground:     0 0% 100%;
+    --secondary:              220 14% 92%;
+    --secondary-foreground:   220 25% 10%;
+    --muted:                  220 14% 95%;
+    --muted-foreground:       220 10% 46%;
+    --accent:                 166 72% 40%;
+    --accent-foreground:      0 0% 100%;
+    --destructive:            0 72% 51%;
     --destructive-foreground: 0 0% 100%;
+    --border:                 220 13% 89%;
+    --input:                  220 13% 89%;
+    --ring:                   199 89% 38%;
+    --radius:                 0.75rem;
 
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
-    --ring: 199 89% 38%;
+    /* Domain */
+    --income:                 160 60% 45%;
+    --expense:                0 72% 51%;
+    --warning:                45 85% 50%;
 
-    --radius: 0.75rem;
+    /* Charts */
+    --chart-1:                199 89% 38%;
+    --chart-2:                160 60% 45%;
+    --chart-3:                30 90% 56%;
+    --chart-4:                280 60% 55%;
+    --chart-5:                340 65% 55%;
 
-    --income: 160 60% 45%;
-    --income-foreground: 0 0% 100%;
-    --expense: 0 72% 51%;
-    --expense-foreground: 0 0% 100%;
+    /* Sidebar — always dark, never changes */
+    --sidebar-bg:             220 25% 10%;
+    --sidebar-fg:             220 14% 85%;
+    --sidebar-primary:        199 89% 48%;
+    --sidebar-accent:         220 20% 16%;
+    --sidebar-accent-fg:      220 14% 90%;
+    --sidebar-border:         220 20% 18%;
+    --sidebar-muted:          220 10% 46%;
 
-    --chart-1: 199 89% 38%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 90% 56%;
-    --chart-4: 280 60% 55%;
-    --chart-5: 340 65% 55%;
+    /* Modals — always dark, never changes */
+    --modal-bg:               220 20% 12%;
+    --modal-surface:          220 18% 16%;
+    --modal-surface-hov:      220 16% 20%;
+    --modal-border:           220 16% 22%;
+    --modal-fg:               220 14% 90%;
+    --modal-fg-muted:         220 10% 55%;
+    --modal-overlay:          rgba(0,0,0,0.55);
 
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 220 14% 85%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 220 14% 90%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 199 89% 48%;
-    --sidebar-muted: 220 10% 46%;
+    /* Page content area — LIGHT */
+    --page-bg:                220 14% 97%;
+    --page-fg:                220 14% 15%;
+    --page-fg-light:          220 10% 46%;
+    --page-fg-muted:          220 10% 62%;
+    --page-surface:           0 0% 100%;
+    --page-surface-sub:       220 14% 97%;
+    --page-border:            220 13% 89%;
+
+    /* Topbar */
+    --topbar-bg:              220 14% 97%;
+    --topbar-border:          220 13% 89%;
+
+    /* Period toggle */
+    --toggle-bg:              220 14% 95%;
+  }
+
+  /* ── DARK MODE — only page content area changes ─────────────────────────── */
+  [data-theme="dark"] {
+    --background:             220 20% 10%;
+    --foreground:             220 14% 90%;
+    --card:                   220 18% 14%;
+    --card-foreground:        220 14% 90%;
+    --popover:                220 18% 14%;
+    --popover-foreground:     220 14% 90%;
+    --secondary:              220 16% 20%;
+    --secondary-foreground:   220 14% 85%;
+    --muted:                  220 16% 18%;
+    --muted-foreground:       220 10% 60%;
+    --border:                 220 16% 22%;
+    --input:                  220 16% 22%;
+
+    /* Page content area — DARK */
+    --page-bg:                220 20% 10%;
+    --page-fg:                220 14% 90%;
+    --page-fg-light:          220 10% 60%;
+    --page-fg-muted:          220 10% 46%;
+    --page-surface:           220 18% 14%;
+    --page-surface-sub:       220 16% 18%;
+    --page-border:            220 16% 22%;
+
+    /* Topbar — dark */
+    --topbar-bg:              220 20% 12%;
+    --topbar-border:          220 16% 20%;
+
+    /* Period toggle — dark */
+    --toggle-bg:              220 16% 18%;
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────────────────────────────────────── */
 @layer base {
   * {
     border-color: hsl(var(--border));
   }
-
   body {
     background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: 'Inter', system-ui, sans-serif;
+    color:            hsl(var(--foreground));
+    font-family:      'Inter', system-ui, sans-serif;
+    transition:       background-color 0.2s ease, color 0.2s ease;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   UTILITY CLASSES  (prefix: ts-)
+   Use these instead of inline hsl() strings in your TSX files.
+   When you switch theme, these update automatically — no JS needed.
+───────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+
+  /* Layout */
+  .ts-page-bg        { background-color: hsl(var(--page-bg)); }
+  .ts-page-fg        { color: hsl(var(--page-fg)); }
+  .ts-page-fg-light  { color: hsl(var(--page-fg-light)); }
+  .ts-page-fg-muted  { color: hsl(var(--page-fg-muted)); }
+
+  /* Surfaces */
+  .ts-surface        { background-color: hsl(var(--page-surface)); }
+  .ts-surface-sub    { background-color: hsl(var(--page-surface-sub)); }
+  .ts-border-color   { border-color: hsl(var(--page-border)); }
+
+  /* Card — full shorthand */
+  .ts-card {
+    background-color: hsl(var(--page-surface));
+    border:           1px solid hsl(var(--page-border));
+    border-radius:    0.75rem;
+    transition:       background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .ts-card-shadow {
+    box-shadow: 0 1px 4px hsl(220 13% 80% / 0.3);
+  }
+  [data-theme="dark"] .ts-card-shadow {
+    box-shadow: 0 1px 4px hsl(0 0% 0% / 0.35);
+  }
+
+  /* Action cards (TransactionPage / ManageUserPage / ReportPage) */
+  .ts-action-card {
+    background-color: hsl(var(--page-surface));
+    border:           1px solid hsl(var(--page-border));
+    border-radius:    0.75rem;
+    padding:          1.25rem 1.5rem;
+    cursor:           pointer;
+    text-align:       left;
+    display:          flex;
+    flex-direction:   column;
+    gap:              0.75rem;
+    transition:       border-color 0.15s, box-shadow 0.15s, transform 0.12s,
+                      background-color 0.2s ease;
+  }
+
+  /* InfoRow (SettingsPage) */
+  .ts-info-row {
+    background-color: hsl(var(--page-surface-sub));
+    border:           1px solid hsl(var(--page-border));
+    transition:       background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  /* Topbar */
+  .ts-topbar {
+    background-color: hsl(var(--topbar-bg));
+    border-bottom:    1px solid hsl(var(--topbar-border));
+    transition:       background-color 0.2s ease;
+  }
+
+  /* Period toggle bar */
+  .ts-toggle-bar {
+    background-color: hsl(var(--toggle-bg));
+    border-radius:    0.5rem;
+    padding:          0.25rem;
+    transition:       background-color 0.2s ease;
+  }
+
+  /* Section title */
+  .ts-section-title {
+    font-size:      0.7rem;
+    font-weight:    700;
+    color:          hsl(var(--page-fg-muted));
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin:         0 0 0.75rem;
+  }
+
+  /* Divider */
+  .ts-divider {
+    height:           1px;
+    background-color: hsl(var(--page-border));
+  }
+
+  /* Domain colors — theme-invariant */
+  .ts-income  { color: hsl(var(--income)); }
+  .ts-expense { color: hsl(var(--expense)); }
+  .ts-warning { color: hsl(var(--warning)); }
+  .ts-primary { color: hsl(var(--primary)); }
+
+  /* Theme toggle button (in topbar) */
+  .ts-theme-btn {
+    display:          flex;
+    align-items:      center;
+    justify-content:  center;
+    width:            2rem;
+    height:           2rem;
+    border-radius:    0.5rem;
+    border:           1px solid hsl(var(--topbar-border));
+    background-color: hsl(var(--page-surface));
+    color:            hsl(var(--page-fg-light));
+    cursor:           pointer;
+    transition:       background-color 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink:      0;
+  }
+  .ts-theme-btn:hover {
+    border-color:     hsl(var(--primary));
+    color:            hsl(var(--primary));
+  }
+
+  /* Skeleton shimmer */
+  .ts-skeleton {
+    border-radius: 0.5rem;
+    border:        1px solid hsl(var(--page-border));
+    background:    linear-gradient(
+      90deg,
+      hsl(var(--page-surface-sub)) 25%,
+      hsl(var(--page-border))      50%,
+      hsl(var(--page-surface-sub)) 75%
+    );
+    background-size: 200% 100%;
+    animation:       ts-shimmer 1.4s ease-in-out infinite;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   KEYFRAMES
+───────────────────────────────────────────────────────────────────────────── */
+@keyframes ts-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }

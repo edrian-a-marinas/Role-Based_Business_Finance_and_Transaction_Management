@@ -1,23 +1,21 @@
-import { ServerStatus } from "./services/useHealthCheck"
 import { BrowserRouter } from "react-router-dom"
-import Router from "./router"
 
-import { AuthProvider } from "./features/auth/AuthContext"
-
-//import './styles/dashboard.css'
-//import './styles/login.css'
-//import './styles/register.css'
+import { ServerStatus } from "@/services/useHealthCheck"
+import Router from "@/router"
+import { AuthProvider }  from "@/features/auth/AuthContext"
+import { ThemeProvider } from "@/features/dashboard/lib/ThemeContext"
 
 function App() {
-
   return (
     <ServerStatus>
-      <AuthProvider>
-        <BrowserRouter>
-          <Router />
-        </BrowserRouter>
-      </AuthProvider>
-    </ServerStatus> 
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Router />
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
+    </ServerStatus>
   )
 }
 

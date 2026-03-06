@@ -1,3 +1,4 @@
+// TransactionPage.tsx
 import { useState, useContext } from "react";
 import { AuthContext } from "../../auth/AuthContext";
 import {
@@ -10,19 +11,15 @@ import {
   UpdateTransaction,
   DeleteTransaction,
   HistoryTransaction,
-  DeletionRequestHistory,  
+  DeletionRequestHistory,
 } from "../components/modals";
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Only domain/accent colors remain inline — layout colors use CSS vars ──────
 const C = {
-  primary:  "hsl(199,89%,38%)",
-  income:   "hsl(160,60%,45%)",
-  expense:  "hsl(0,72%,51%)",
-  muted:    "hsl(220,10%,46%)",
-  surface:  "hsl(220,14%,96%)",
-  border:   "hsl(220,13%,89%)",
-  fg:       "hsl(220,14%,15%)",
-  fgLight:  "hsl(220,10%,46%)",
+  primary: "hsl(var(--primary))",
+  income:  "hsl(var(--income))",
+  expense: "hsl(var(--expense))",
+  warning: "hsl(var(--warning))",
 };
 
 interface ActionCard {
@@ -47,14 +44,13 @@ export default function Transactions() {
   const [showDeletionHistoryModal, setShowDeletionHistoryModal] = useState(false);
   const [hoveredCard,              setHoveredCard]              = useState<string | null>(null);
 
-  // ── Section 1: CRUD actions ───────────────────────────────────────────────
   const crudActions: ActionCard[] = [
     {
       label:       "Create Transaction",
       description: "Record a new income or expense entry",
       icon:        Plus,
       color:       C.income,
-      bgColor:     "hsl(160 60% 45% / 0.08)",
+      bgColor:     "hsl(var(--income) / 0.08)",
       onClick:     () => setShowCreateModal(true),
     },
     {
@@ -62,15 +58,15 @@ export default function Transactions() {
       description: "Browse and search all transaction records",
       icon:        Eye,
       color:       C.primary,
-      bgColor:     "hsl(199 89% 38% / 0.08)",
+      bgColor:     "hsl(var(--primary) / 0.08)",
       onClick:     () => setShowReadModal(true),
     },
     {
       label:       "Edit Transaction",
       description: "Update details on an existing transaction",
       icon:        Pencil,
-      color:       "hsl(45,85%,50%)",
-      bgColor:     "hsl(45 85% 50% / 0.08)",
+      color:       C.warning,
+      bgColor:     "hsl(var(--warning) / 0.08)",
       onClick:     () => setShowUpdateModal(true),
     },
     {
@@ -80,12 +76,11 @@ export default function Transactions() {
         : "Submit a deletion request for admin approval",
       icon:        Trash2,
       color:       C.expense,
-      bgColor:     "hsl(0 72% 51% / 0.08)",
+      bgColor:     "hsl(var(--expense) / 0.08)",
       onClick:     () => setShowDeleteModal(true),
     },
   ];
 
-  // ── Section 2: History actions ────────────────────────────────────────────
   const historyActions: ActionCard[] = [
     {
       label:       "Transaction History",
@@ -102,7 +97,7 @@ export default function Transactions() {
         : "Track your pending, approved, and rejected deletion requests",
       icon:        History,
       color:       C.primary,
-      bgColor:     "hsl(199 89% 38% / 0.08)",
+      bgColor:     "hsl(var(--primary) / 0.08)",
       onClick:     () => setShowDeletionHistoryModal(true),
     },
   ];
@@ -112,28 +107,26 @@ export default function Transactions() {
       <title>Transactions</title>
       <div className="space-y-8">
 
-        {/* ── Page header ──────────────────────────────────────────────────── */}
+        {/* Page header */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <ArrowLeftRight className="h-5 w-5" style={{ color: C.primary }} />
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: C.fg }}>
+            <h1 className="text-2xl font-bold tracking-tight ts-page-fg">
               Transactions
             </h1>
           </div>
-          <p className="text-sm" style={{ color: C.fgLight }}>
+          <p className="text-sm ts-page-fg-light">
             {isAdmin
               ? "Manage all business transactions"
               : "Manage your personal transactions"}
           </p>
         </div>
 
-        {/* ── Section 1: Manage ────────────────────────────────────────────── */}
+        {/* Section: Manage */}
         <div className="space-y-3">
           <div>
-            <h2 className="text-sm font-semibold" style={{ color: C.fg }}>
-              Manage
-            </h2>
-            <p className="text-xs" style={{ color: C.fgLight }}>
+            <h2 className="text-sm font-semibold ts-page-fg">Manage</h2>
+            <p className="text-xs ts-page-fg-light">
               Create, view, edit, and delete transactions
             </p>
           </div>
@@ -150,16 +143,14 @@ export default function Transactions() {
           </div>
         </div>
 
-        {/* ── Divider ──────────────────────────────────────────────────────── */}
-        <div style={{ height: "1px", background: C.border }} />
+        {/* Divider */}
+        <div className="ts-divider" />
 
-        {/* ── Section 2: History & Requests ────────────────────────────────── */}
+        {/* Section: History */}
         <div className="space-y-3">
           <div>
-            <h2 className="text-sm font-semibold" style={{ color: C.fg }}>
-              History & Requests
-            </h2>
-            <p className="text-xs" style={{ color: C.fgLight }}>
+            <h2 className="text-sm font-semibold ts-page-fg">History & Requests</h2>
+            <p className="text-xs ts-page-fg-light">
               {isAdmin
                 ? "Audit trail and deletion requests you've reviewed"
                 : "Audit trail and your deletion request history"}
@@ -180,7 +171,6 @@ export default function Transactions() {
 
       </div>
 
-      {/* ── Modals ───────────────────────────────────────────────────────────── */}
       {showCreateModal          && <CreateTransaction       onClose={() => setShowCreateModal(false)}          />}
       {showReadModal            && <ReadTransactions        onClose={() => setShowReadModal(false)}            />}
       {showUpdateModal          && <UpdateTransaction       onClose={() => setShowUpdateModal(false)}          />}
@@ -191,7 +181,9 @@ export default function Transactions() {
   );
 }
 
-// ── Shared card button component ──────────────────────────────────────────────
+// ── Shared card button ────────────────────────────────────────────────────────
+// .ts-action-card handles: bg, border, radius, padding, transition for theme.
+// Only accent color (hover border + icon fill) stays as inline prop.
 function ActionButton({
   id, action, hoveredCard, setHoveredCard,
 }: {
@@ -202,26 +194,19 @@ function ActionButton({
 }) {
   const Icon    = action.icon;
   const hovered = hoveredCard === id;
+
   return (
     <button
       onClick={action.onClick}
       onMouseEnter={() => setHoveredCard(id)}
       onMouseLeave={() => setHoveredCard(null)}
+      className="ts-action-card"
       style={{
-        background:    "hsl(0,0%,100%)",
-        border:        `1px solid ${hovered ? action.color : "hsl(220,13%,89%)"}`,
-        borderRadius:  "0.75rem",
-        padding:       "1.25rem 1.5rem",
-        cursor:        "pointer",
-        textAlign:     "left",
-        transition:    "border-color 0.15s, box-shadow 0.15s, transform 0.12s",
-        boxShadow:     hovered
+        border:    `1px solid ${hovered ? action.color : "hsl(var(--page-border))"}`,
+        boxShadow: hovered
           ? `0 4px 16px hsl(0 0% 0% / 0.08), 0 0 0 3px ${action.color}1a`
           : "0 1px 3px hsl(0 0% 0% / 0.06)",
-        transform:     hovered ? "translateY(-2px)" : "none",
-        display:       "flex",
-        flexDirection: "column",
-        gap:           "0.75rem",
+        transform: hovered ? "translateY(-2px)" : "none",
       }}
     >
       <div style={{
@@ -243,10 +228,10 @@ function ActionButton({
         }} />
       </div>
       <div>
-        <p className="text-sm font-semibold" style={{ color: "hsl(220,14%,15%)", marginBottom: "0.2rem" }}>
+        <p className="text-sm font-semibold ts-page-fg" style={{ marginBottom: "0.2rem" }}>
           {action.label}
         </p>
-        <p className="text-xs" style={{ color: "hsl(220,10%,46%)", lineHeight: "1.4" }}>
+        <p className="text-xs ts-page-fg-light" style={{ lineHeight: "1.4" }}>
           {action.description}
         </p>
       </div>

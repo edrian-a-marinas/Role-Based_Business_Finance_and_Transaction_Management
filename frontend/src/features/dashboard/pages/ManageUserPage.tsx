@@ -9,17 +9,12 @@ import {
   HandleDeletionRequest
 } from "../components/modals";
 
-// ── Same tokens as TransactionPage / DashboardOverview ────────────────────────
+// ── Domain/accent colors only ─────────────────────────────────────────────────
 const C = {
-  primary:  "hsl(199,89%,38%)",
-  income:   "hsl(160,60%,45%)",
-  expense:  "hsl(0,72%,51%)",
-  warning:  "hsl(45,85%,50%)",
-  purple:   "hsl(280,60%,55%)",
-  surface:  "hsl(220,14%,96%)",
-  border:   "hsl(220,13%,89%)",
-  fg:       "hsl(220,14%,15%)",
-  fgLight:  "hsl(220,10%,46%)",
+  primary: "hsl(var(--primary))",
+  income:  "hsl(var(--income))",
+  expense: "hsl(var(--expense))",
+  purple:  "hsl(280,60%,55%)",
 };
 
 interface ActionCard {
@@ -50,11 +45,10 @@ export default function ManageUsersPage() {
       description: "Browse all registered user accounts",
       icon:        Eye,
       color:       C.primary,
-      bgColor:     "hsl(199 89% 38% / 0.08)",
+      bgColor:     "hsl(var(--primary) / 0.08)",
       onClick:     () => setShowReadModal(true),
     },
     {
-      // Super Admin gets a management-oriented label; Admin gets read-only label
       label:       isSuperAdmin ? "Manage User Details" : "View User Details",
       description: isSuperAdmin
         ? "Inspect profiles and manage account status"
@@ -64,22 +58,20 @@ export default function ManageUsersPage() {
       bgColor:     "hsl(280 60% 55% / 0.08)",
       onClick:     () => setShowDetailsModal(true),
     },
-    // Super Admin only
     ...(isSuperAdmin ? [{
       label:       "Promote / Demote User",
       description: "Change a user's role or access level",
       icon:        ShieldCheck,
       color:       C.income,
-      bgColor:     "hsl(160 60% 45% / 0.08)",
+      bgColor:     "hsl(var(--income) / 0.08)",
       onClick:     () => setShowPromoteModal(true),
     }] : []),
-    // Admin + Super Admin
     ...(isAdmin ? [{
       label:       "Handle Deletion Requests",
       description: "Review and approve transaction deletion requests",
       icon:        Trash2,
       color:       C.expense,
-      bgColor:     "hsl(0 72% 51% / 0.08)",
+      bgColor:     "hsl(var(--expense) / 0.08)",
       onClick:     () => setShowHandleRequestModal(true),
     }] : []),
   ];
@@ -88,15 +80,16 @@ export default function ManageUsersPage() {
     <>
       <title>Manage Users</title>
       <div className="space-y-6">
+
         {/* Page header */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" style={{ color: C.primary }} />
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: C.fg }}>
+            <h1 className="text-2xl font-bold tracking-tight ts-page-fg">
               Manage Users
             </h1>
           </div>
-          <p className="text-sm" style={{ color: C.fgLight }}>
+          <p className="text-sm ts-page-fg-light">
             {isSuperAdmin
               ? "Super admin controls — users, roles, and deletion requests"
               : isAdmin
@@ -105,7 +98,7 @@ export default function ManageUsersPage() {
           </p>
         </div>
 
-        {/* Action cards grid */}
+        {/* Action cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {actions.map((action, idx) => {
             const Icon    = action.icon;
@@ -116,21 +109,13 @@ export default function ManageUsersPage() {
                 onClick={action.onClick}
                 onMouseEnter={() => setHoveredCard(idx)}
                 onMouseLeave={() => setHoveredCard(null)}
+                className="ts-action-card"
                 style={{
-                  background:    "hsl(0,0%,100%)",
-                  border:        `1px solid ${hovered ? action.color : C.border}`,
-                  borderRadius:  "0.75rem",
-                  padding:       "1.25rem 1.5rem",
-                  cursor:        "pointer",
-                  textAlign:     "left",
-                  transition:    "border-color 0.15s, box-shadow 0.15s, transform 0.12s",
-                  boxShadow:     hovered
+                  border:    `1px solid ${hovered ? action.color : "hsl(var(--page-border))"}`,
+                  boxShadow: hovered
                     ? `0 4px 16px hsl(0 0% 0% / 0.08), 0 0 0 3px ${action.color}1a`
                     : "0 1px 3px hsl(0 0% 0% / 0.06)",
-                  transform:     hovered ? "translateY(-2px)" : "none",
-                  display:       "flex",
-                  flexDirection: "column",
-                  gap:           "0.75rem",
+                  transform: hovered ? "translateY(-2px)" : "none",
                 }}
               >
                 <div style={{
@@ -152,10 +137,10 @@ export default function ManageUsersPage() {
                   }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: C.fg, marginBottom: "0.2rem" }}>
+                  <p className="text-sm font-semibold ts-page-fg" style={{ marginBottom: "0.2rem" }}>
                     {action.label}
                   </p>
-                  <p className="text-xs" style={{ color: C.fgLight, lineHeight: "1.4" }}>
+                  <p className="text-xs ts-page-fg-light" style={{ lineHeight: "1.4" }}>
                     {action.description}
                   </p>
                 </div>
@@ -165,7 +150,6 @@ export default function ManageUsersPage() {
         </div>
       </div>
 
-      {/* Modals */}
       {showReadModal          && <ReadUsers            onClose={() => setShowReadModal(false)}          />}
       {showPromoteModal       && <PromoteUser           onClose={() => setShowPromoteModal(false)}       />}
       {showHandleRequestModal && <HandleDeletionRequest onClose={() => setShowHandleRequestModal(false)} />}

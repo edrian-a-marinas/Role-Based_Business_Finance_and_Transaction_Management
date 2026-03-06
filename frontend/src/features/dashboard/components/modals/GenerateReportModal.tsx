@@ -3,7 +3,7 @@ import { X, ChevronRight, ChevronLeft, FileText, Download, Loader2 } from "lucid
 
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
-import { formatDate, formatCurrency } from "@/features/dashboard/lib/utility";
+import { formatDate, formatCurrency } from "@/features/dashboard/lib/utilsFormatFetch";
 import type { ReportType, ReportResult, OnCloseProps } from "@/features/dashboard/schemas/report";
 import { generateReportPDF } from "@/features/dashboard/lib/generateReportPdf";
 

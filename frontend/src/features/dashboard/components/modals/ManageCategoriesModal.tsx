@@ -5,9 +5,9 @@ import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { CategoryCreate, CategoryRead, ModalStep } from "../../schemas/category";
 import { categorySchema } from "../../schemas/category";
-import type { OnCloseProps } from "../../lib/utility";
-import { diffHighlight } from "../../lib/utility";
-import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import type { OnCloseProps } from "../../lib/utilsFormatFetch";
+import { diffHighlight } from "../../lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "../../lib/utilsHooks";
 
 // ── Design tokens (same as all other modals) ─────────────────────────────────
 const C = {

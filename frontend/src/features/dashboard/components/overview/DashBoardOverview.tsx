@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useContext, lazy, Suspense } from "react";
+
 import {
   TrendingUp,
   TrendingDown,
@@ -6,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
 } from "lucide-react";
+
 import KpiCard from "./KpiCard";
 import RecentTransactions from "./RecentTransactions";
 import api from "@/services/apiClient";
@@ -29,8 +31,8 @@ const CHART_COLORS = [
   "hsl(200, 70%, 55%)",
 ];
 
-const PRIMARY = "hsl(199,89%,38%)";
-const INCOME  = "hsl(160,60%,45%)";
+const PRIMARY = "hsl(var(--primary))";
+const INCOME  = "hsl(var(--income))";
 
 // "all" is always present; other keys are dynamic "YYYY-MM" strings
 type Period = "all" | string;
@@ -47,8 +49,8 @@ function ChartSkeleton({ height = 300 }: { height?: number }) {
       style={{
         height,
         borderRadius: "0.5rem",
-        border: "1px solid hsl(220,13%,89%)",
-        background: "linear-gradient(90deg, hsl(220,14%,96%) 25%, hsl(220,14%,92%) 50%, hsl(220,14%,96%) 75%)",
+        border: "1px solid hsl(var(--page-border))",
+        background: "linear-gradient(90deg, hsl(var(--page-surface-sub)) 25%, hsl(var(--page-surface)) 50%, hsl(var(--page-surface-sub)) 75%)",
         backgroundSize: "200% 100%",
         animation: "shimmer 1.4s ease-in-out infinite",
       }}
@@ -65,7 +67,6 @@ function formatPeriodLabel(ym: string): string {
 
 export default function DashboardOverview({ userRole, userId }: DashboardOverviewProps) {
   const { user } = useContext(AuthContext);
-
   const userID   = user.id;
 
   const roleLabel =
@@ -79,13 +80,13 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
   const [chartsReady,  setChartsReady]    = useState(false);
   const [period,       setPeriod]         = useState<Period>("all");
   const [hoveredPeriod, setHoveredPeriod] = useState<Period | null>(null);
+
   const [openTransactionsModal, setOpenTransactionsModal] = useState(false);
   const [transactionTypeFilter,  setTransactionTypeFilter]  = useState<"all" | "Income" | "Expense">("all");
   const [transactionMonthFilter, setTransactionMonthFilter] = useState<string>("all");
 
   const openModal = (filter: "all" | "Income" | "Expense" = "all") => {
     setTransactionTypeFilter(filter);
-    // Pass the currently selected dashboard period as the month pre-filter
     setTransactionMonthFilter(period !== "all" ? period : "all");
     setOpenTransactionsModal(true);
   };
@@ -123,47 +124,39 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
         });
       }
     };
+
     fetchData();
   }, [token, tokenType]);
 
   // ── Derive dynamic period list from actual transaction dates ──────────────
-  // Scoped to the current user's visible transactions (admin sees all)
   const availablePeriods = useMemo(() => {
     const visibleTx = isAdmin
       ? transactions
       : transactions.filter(t => t.user_id === userId);
 
-    // Collect unique "YYYY-MM" values
     const monthSet = new Set<string>();
     visibleTx.forEach(t => {
-      const ym = t.transaction_date.slice(0, 7); // "YYYY-MM"
+      const ym = t.transaction_date.slice(0, 7);
       if (ym) monthSet.add(ym);
     });
 
-    // Sort descending (newest first), then append "All Time"
     const sorted = Array.from(monthSet).sort((a, b) => b.localeCompare(a));
-
     return [
       ...sorted.map(ym => ({ key: ym, label: formatPeriodLabel(ym) })),
       { key: "all", label: "All Time" },
     ];
   }, [transactions, isAdmin, userId]);
 
-  // When transaction data loads, default to current calendar month if it has data,
-  // otherwise fall back to the most recent month that does.
   useEffect(() => {
     if (availablePeriods.length === 0) return;
-
-    const currentYM = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const currentYM = new Date().toISOString().slice(0, 7);
     const hasCurrentMonth = availablePeriods.some(p => p.key === currentYM);
-
     if (hasCurrentMonth) {
       setPeriod(currentYM);
     } else {
-      // Current month has no transactions — pick the closest past month
       const pastMonths = availablePeriods.filter(p => p.key !== "all" && p.key <= currentYM);
       if (pastMonths.length > 0) {
-        setPeriod(pastMonths[0].key); // already sorted descending, so [0] is most recent past
+        setPeriod(pastMonths[0].key);
       } else {
         setPeriod("all");
       }
@@ -179,7 +172,6 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
     if (loading) return [];
     let txs = [...transactions];
     if (!isAdmin) txs = txs.filter((t) => t.user_id === userId);
-    // Filter by selected period — "all" shows everything, otherwise match "YYYY-MM" prefix
     if (period !== "all") txs = txs.filter(t => t.transaction_date.startsWith(period));
     return txs;
   }, [transactions, isAdmin, userId, period, loading]);
@@ -247,66 +239,72 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
     : 0;
 
   if (loading) return (
-    <p style={{ color: "hsl(220,10%,46%)", padding: "2rem" }}>Loading dashboard data...</p>
+    <p style={{ color: "hsl(var(--page-fg-muted))", padding: "2rem" }}>Loading dashboard data...</p>
   );
 
   return (
     <>
       <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
-
       <div className="space-y-6">
 
         {/* Header */}
-<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-  <div>
-    <h1 className="text-2xl font-bold tracking-tight text-foreground">Dashboard Overview - {roleLabel}</h1>
-    <p className="text-sm text-muted-foreground">
-      {isAdmin ? "All transactions across the business" : "Your personal transaction summary"}
-    </p>
-  </div>
-  {/* Period toggle — max 6 per row, wraps to next row after that */}
-  <div
-    style={{
-      backgroundColor: "hsl(220,14%,95%)",
-      borderRadius: "0.5rem",
-      padding: "0.25rem",
-      display: "grid",
-      gridTemplateColumns: `repeat(${Math.min(availablePeriods.length, 6)}, auto)`,
-      gap: "0.25rem",
-    }}
-  >
-    {availablePeriods.map((p) => {
-      const isActive  = period === p.key;
-      const isHovered = hoveredPeriod === p.key;
-      return (
-        <button
-          key={p.key}
-          onClick={() => setPeriod(p.key)}
-          onMouseEnter={() => setHoveredPeriod(p.key)}
-          onMouseLeave={() => setHoveredPeriod(null)}
-          style={{
-            fontSize:        "0.75rem",
-            fontWeight:      500,
-            padding:         "0.25rem 0.75rem",
-            borderRadius:    "0.375rem",
-            border:          "none",
-            cursor:          "pointer",
-            whiteSpace:      "nowrap",
-            transition:      "background-color 0.15s, color 0.15s",
-            backgroundColor: isActive  ? PRIMARY
-                           : isHovered ? "hsl(160 60% 45% / 0.15)"
-                           : "transparent",
-            color:           isActive  ? "hsl(0,0%,100%)"
-                           : isHovered ? INCOME
-                           : "hsl(220,10%,46%)",
-          }}
-        >
-          {p.label}
-        </button>
-      );
-    })}
-  </div>
-</div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Dashboard Overview - {roleLabel}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {isAdmin ? "All transactions across the business" : "Your personal transaction summary"}
+            </p>
+          </div>
+
+          {/* ── Period toggle — dark-mode aware ── */}
+          <div
+            className="ts-toggle-bar"
+            style={{
+              borderRadius: "0.5rem",
+              padding:      "0.25rem",
+              display:      "grid",
+              gridTemplateColumns: `repeat(${Math.min(availablePeriods.length, 6)}, auto)`,
+              gap:          "0.25rem",
+            }}
+          >
+            {availablePeriods.map((p) => {
+              const isActive  = period === p.key;
+              const isHovered = hoveredPeriod === p.key;
+              return (
+                <button
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  onMouseEnter={() => setHoveredPeriod(p.key)}
+                  onMouseLeave={() => setHoveredPeriod(null)}
+                  // Active pill reuses the same pattern as TabBtn in SettingsPage
+                  className={isActive ? "ts-surface ts-page-fg" : "ts-page-fg-light"}
+                  style={{
+                    fontSize:        "0.75rem",
+                    fontWeight:      isActive ? 600 : 500,
+                    padding:         "0.25rem 0.75rem",
+                    borderRadius:    "0.375rem",
+                    border:          "none",
+                    cursor:          "pointer",
+                    whiteSpace:      "nowrap",
+                    transition:      "background-color 0.15s, color 0.15s",
+                    // Active: filled with primary; hovered: soft income tint; default: transparent
+                    backgroundColor: isActive  ? PRIMARY
+                                   : isHovered ? "hsl(var(--income) / 0.12)"
+                                   : "transparent",
+                    color:           isActive  ? "hsl(0,0%,100%)"
+                                   : isHovered ? INCOME
+                                   : undefined, // let className handle default
+                    boxShadow:       isActive  ? "0 1px 4px hsl(var(--primary) / 0.25)" : "none",
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -383,7 +381,6 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
           </>
         )}
 
-        {/* Transactions modal — opened from RecentTransactions "View All" button */}
         {openTransactionsModal && (
           <ReadTransactions
             onClose={() => setOpenTransactionsModal(false)}
@@ -391,7 +388,6 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
             initialMonthFilter={transactionMonthFilter}
           />
         )}
-
       </div>
     </>
   );

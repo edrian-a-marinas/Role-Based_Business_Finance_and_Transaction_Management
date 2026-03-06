@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react"
 import type { ReactNode } from 'react'
-import api from "./apiClient"
+import api from "@/services/apiClient"
 
 function scheduleNextCheck(checkServerHealth: () => void, timeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>, delay: number) {
   if (timeoutRef.current) clearTimeout(timeoutRef.current);

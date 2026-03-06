@@ -5,16 +5,11 @@ import { AuthContext } from "@/features/auth/AuthContext";
 import { GenerateReport } from "@/features/dashboard/components/modals";
 import type { ReportMode } from "@/features/dashboard/schemas/report";
 
-// ── Same tokens as TransactionPage / DashboardPage ────────────────────────────
+// ── Domain/accent colors only — layout uses CSS variables ─────────────────────
 const C = {
-  primary:  "hsl(199,89%,38%)",
-  income:   "hsl(160,60%,45%)",
-  expense:  "hsl(0,72%,51%)",
-  muted:    "hsl(220,10%,46%)",
-  surface:  "hsl(220,14%,96%)",
-  border:   "hsl(220,13%,89%)",
-  fg:       "hsl(220,14%,15%)",
-  fgLight:  "hsl(220,10%,46%)",
+  primary: "hsl(var(--primary))",
+  income:  "hsl(var(--income))",
+  expense: "hsl(var(--expense))",
 };
 
 interface ReportCard {
@@ -33,7 +28,7 @@ const reportCards: ReportCard[] = [
     description: "View all income transactions, category breakdown, and revenue trends",
     icon:        TrendingUp,
     color:       C.income,
-    bgColor:     "hsl(160 60% 45% / 0.08)",
+    bgColor:     "hsl(var(--income) / 0.08)",
   },
   {
     mode:        "expense",
@@ -41,7 +36,7 @@ const reportCards: ReportCard[] = [
     description: "Analyze spending by category, track costs, and identify top expenses",
     icon:        TrendingDown,
     color:       C.expense,
-    bgColor:     "hsl(0 72% 51% / 0.08)",
+    bgColor:     "hsl(var(--expense) / 0.08)",
   },
   {
     mode:        "combined",
@@ -49,11 +44,11 @@ const reportCards: ReportCard[] = [
     description: "Full financial summary with net profit, margins, and side-by-side comparison",
     icon:        BarChart2,
     color:       C.primary,
-    bgColor:     "hsl(199 89% 38% / 0.08)",
+    bgColor:     "hsl(var(--primary) / 0.08)",
   },
 ];
 
-// ── Tooltip content ───────────────────────────────────────────────────────────
+// ── Tooltip ───────────────────────────────────────────────────────────────────
 const TOOLTIP_LINES = [
   "Select a report type, set a date range,",
   "and choose daily, weekly, or monthly grouping.",
@@ -64,10 +59,8 @@ const TOOLTIP_LINES = [
   "• Combined — net profit & full summary",
 ];
 
-// ── Tooltip component ─────────────────────────────────────────────────────────
 function InfoTooltip() {
   const [visible, setVisible] = useState(false);
-
   return (
     <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
       <button
@@ -76,14 +69,14 @@ function InfoTooltip() {
         onFocus={() => setVisible(true)}
         onBlur={() => setVisible(false)}
         style={{
-          background:  "transparent",
-          border:      "none",
-          padding:     "0.15rem",
-          cursor:      "default",
-          display:     "flex",
-          alignItems:  "center",
-          color:       C.muted,
-          lineHeight:  1,
+          background: "transparent",
+          border:     "none",
+          padding:    "0.15rem",
+          cursor:     "default",
+          display:    "flex",
+          alignItems: "center",
+          color:      "hsl(var(--page-fg-muted))",
+          lineHeight: 1,
         }}
         aria-label="Report help"
         tabIndex={0}
@@ -93,20 +86,19 @@ function InfoTooltip() {
 
       {visible && (
         <div style={{
-          position:     "absolute",
-          left:         "calc(100% + 8px)",
-          top:          "50%",
-          transform:    "translateY(-50%)",
-          zIndex:       50,
-          background:   "hsl(220,20%,12%)",
-          border:       "1px solid hsl(220,16%,22%)",
-          borderRadius: "0.55rem",
-          padding:      "0.65rem 0.875rem",
-          minWidth:     "230px",
-          boxShadow:    "0 8px 24px rgba(0,0,0,0.35)",
-          pointerEvents:"none",
+          position:      "absolute",
+          left:          "calc(100% + 8px)",
+          top:           "50%",
+          transform:     "translateY(-50%)",
+          zIndex:        50,
+          background:    "hsl(var(--modal-bg))",
+          border:        "1px solid hsl(var(--modal-border))",
+          borderRadius:  "0.55rem",
+          padding:       "0.65rem 0.875rem",
+          minWidth:      "230px",
+          boxShadow:     "0 8px 24px rgba(0,0,0,0.35)",
+          pointerEvents: "none",
         }}>
-          {/* Arrow pointing left */}
           <div style={{
             position:    "absolute",
             left:        "-5px",
@@ -116,7 +108,7 @@ function InfoTooltip() {
             height:      0,
             borderTop:   "5px solid transparent",
             borderBottom:"5px solid transparent",
-            borderRight: "5px solid hsl(220,16%,22%)",
+            borderRight: "5px solid hsl(var(--modal-border))",
           }} />
           {TOOLTIP_LINES.map((line, i) =>
             line === "" ? (
@@ -124,7 +116,9 @@ function InfoTooltip() {
             ) : (
               <p key={i} style={{
                 fontSize:   "0.72rem",
-                color:      line.startsWith("•") ? "hsl(220,14%,80%)" : "hsl(220,10%,60%)",
+                color:      line.startsWith("•")
+                  ? "hsl(var(--modal-fg))"
+                  : "hsl(var(--modal-fg-muted))",
                 margin:     0,
                 lineHeight: 1.6,
                 fontWeight: line.startsWith("•") ? 500 : 400,
@@ -142,8 +136,7 @@ function InfoTooltip() {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
   const { user } = useContext(AuthContext);
-  const userRole = user!.role_id;
-  const isAdmin  = userRole === 1;
+  const isAdmin  = user!.role_id === 1;
 
   const [activeMode,  setActiveMode]  = useState<ReportMode | null>(null);
   const [hoveredCard, setHoveredCard] = useState<ReportMode | null>(null);
@@ -152,17 +145,17 @@ export default function ReportsPage() {
     <>
       <title>Reports</title>
       <div className="space-y-6">
+
         {/* Page header */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5" style={{ color: C.primary }} />
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: C.fg }}>
+            <h1 className="text-2xl font-bold tracking-tight ts-page-fg">
               Reports
             </h1>
-            {/* ── Tooltip — sits right of the title, small and unobtrusive ── */}
             <InfoTooltip />
           </div>
-          <p className="text-sm" style={{ color: C.fgLight }}>
+          <p className="text-sm ts-page-fg-light">
             {isAdmin
               ? "Generate financial reports across all users"
               : "Generate your personal financial reports"}
@@ -180,21 +173,13 @@ export default function ReportsPage() {
                 onClick={() => setActiveMode(card.mode)}
                 onMouseEnter={() => setHoveredCard(card.mode)}
                 onMouseLeave={() => setHoveredCard(null)}
+                className="ts-action-card"
                 style={{
-                  background:    "hsl(0,0%,100%)",
-                  border:        `1px solid ${hovered ? card.color : C.border}`,
-                  borderRadius:  "0.75rem",
-                  padding:       "1.25rem 1.5rem",
-                  cursor:        "pointer",
-                  textAlign:     "left",
-                  transition:    "border-color 0.15s, box-shadow 0.15s, transform 0.12s",
-                  boxShadow:     hovered
+                  border:    `1px solid ${hovered ? card.color : "hsl(var(--page-border))"}`,
+                  boxShadow: hovered
                     ? `0 4px 16px hsl(0 0% 0% / 0.08), 0 0 0 3px ${card.color}1a`
                     : "0 1px 3px hsl(0 0% 0% / 0.06)",
-                  transform:     hovered ? "translateY(-2px)" : "none",
-                  display:       "flex",
-                  flexDirection: "column",
-                  gap:           "0.75rem",
+                  transform: hovered ? "translateY(-2px)" : "none",
                 }}
               >
                 {/* Icon badge */}
@@ -216,12 +201,12 @@ export default function ReportsPage() {
                     transition: "color 0.15s",
                   }} />
                 </div>
-                {/* Text */}
+
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: C.fg, marginBottom: "0.2rem" }}>
+                  <p className="text-sm font-semibold ts-page-fg" style={{ marginBottom: "0.2rem" }}>
                     {card.label}
                   </p>
-                  <p className="text-xs" style={{ color: C.fgLight, lineHeight: "1.4" }}>
+                  <p className="text-xs ts-page-fg-light" style={{ lineHeight: "1.4" }}>
                     {card.description}
                   </p>
                 </div>
@@ -231,7 +216,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Modal */}
       {activeMode && (
         <GenerateReport
           reportMode={activeMode}

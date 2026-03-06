@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/features/dashboard/components/ui/card";
-import { cn } from "@/features/dashboard/lib/utils";
+import { cn } from "@/features/dashboard/lib/utilsForUiCn";
 import type { LucideIcon } from "lucide-react";
 
 interface KpiCardProps {

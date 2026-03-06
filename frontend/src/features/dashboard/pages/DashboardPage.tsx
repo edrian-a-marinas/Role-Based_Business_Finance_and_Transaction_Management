@@ -1,11 +1,13 @@
 // DashboardPage.tsx
 import { useState, useContext, useEffect } from "react";
-import { cn } from "@/features/dashboard/lib/utils";
+import { cn } from "@/features/dashboard/lib/utilsForUiCn";
 import {
   LayoutDashboard, ArrowLeftRight, FileText,
   FolderOpen, Users, LogOut, ChevronLeft, ChevronRight, Settings,
+  Sun, Moon,
 } from "lucide-react";
 import { AuthContext } from "../../auth/AuthContext";
+import { useTheme } from "@/features/dashboard/lib/ThemeContext";
 import Transactions      from "./TransactionPage";
 import Reports           from "./ReportPage";
 import ManageUsers       from "./ManageUserPage";
@@ -59,6 +61,7 @@ export default function DashboardPage() {
   // Deep-link: notification → deletion modal at a specific request
   const [deepLinkRequestId,       setDeepLinkRequestId]       = useState<number | undefined>();
   const [showDeletionModalDirect,  setShowDeletionModalDirect] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   if (!user) return <p>Loading...</p>;
 
@@ -130,7 +133,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen" style={{ backgroundColor: "hsl(var(--background))", transition: "background-color 0.2s ease" }}>
       <title>TransacScope Overview</title>
 
       {/* ── Sidebar ────────────────────────────────────────────────────────── */}
@@ -225,16 +228,31 @@ export default function DashboardPage() {
       <main className={cn("flex-1 transition-all duration-300", collapsed ? "ml-[68px]" : "ml-[220px]")}>
         {/* Top bar */}
         <div style={{
-          position:     "sticky",
-          top:          0,
-          zIndex:       20,
-          display:      "flex",
+          position:       "sticky",
+          top:            0,
+          zIndex:         20,
+          display:        "flex",
           justifyContent: "flex-end",
-          alignItems:   "center",
-          padding:      "0.75rem 1.5rem",
-          background:   "hsl(220,14%,97%)",
-          borderBottom: "1px solid hsl(220,13%,89%)",
+          alignItems:     "center",
+          gap:            "0.75rem",
+          padding:        "0.75rem 1.5rem",
+          background:     "hsl(var(--topbar-bg))",
+          borderBottom:   "1px solid hsl(var(--topbar-border))",
+          transition:     "background 0.2s ease",
         }}>
+          {/* ── Theme toggle ──────────────────────────────────────────────── */}
+          <button
+            onClick={toggleTheme}
+            className="ts-theme-btn"
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label="Toggle theme"
+          >
+            {isDark
+              ? <Sun  style={{ width: "0.9rem", height: "0.9rem" }} />
+              : <Moon style={{ width: "0.9rem", height: "0.9rem" }} />
+            }
+          </button>
+
           <NotificationPanel
             isAdmin={isAdmin}
             authHeader={authHeader}
@@ -243,7 +261,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Page content */}
-        <div className="p-6 lg:p-8">
+        <div className="p-6 lg:p-8 ts-page-bg" style={{ minHeight: "calc(100vh - 57px)" }}>
           {/* Gate: deactivated users only see Settings */}
           {isDeactivated ? (
             <SettingsPage />

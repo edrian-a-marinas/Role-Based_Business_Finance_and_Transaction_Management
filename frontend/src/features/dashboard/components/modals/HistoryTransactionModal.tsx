@@ -4,9 +4,9 @@ import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { ReadTransactionHistory, Category } from "@/features/dashboard/schemas/transaction";
-import { formatDate } from "@/features/dashboard/lib/utility";
-import type { OnCloseProps } from "@/features/dashboard/lib/utility";
-import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
+import { formatDate } from "@/features/dashboard/lib/utilsFormatFetch";
+import type { OnCloseProps } from "@/features/dashboard/lib/utilsFormatFetch";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilsHooks";
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary:    "hsl(199,89%,38%)",
