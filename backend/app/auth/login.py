@@ -1,3 +1,4 @@
+# auth/login.py
 from db.connection import get_pool
 from fastapi import HTTPException
 from datetime import datetime, timedelta
@@ -6,7 +7,6 @@ from datetime import datetime, timedelta
 MAX_ATTEMPTS     = 5   # max failed attempts before lockout
 LOCKOUT_MINUTES  = 3   # lockout window in minutes
 WINDOW_MINUTES   = 3   # rolling window to count attempts in
-
 
 # ── Log a failed attempt ──────────────────────────────────────────────────────
 async def record_failed_attempt(email: str, ip: str | None, conn):
@@ -17,7 +17,6 @@ async def record_failed_attempt(email: str, ip: str | None, conn):
     """,
     email, ip
   )
-
 
 # ── Count recent failed attempts (by email OR ip) ─────────────────────────────
 async def count_recent_attempts(email: str, ip: str | None, conn) -> int:
@@ -41,7 +40,6 @@ async def count_recent_attempts(email: str, ip: str | None, conn) -> int:
     )
   return count or 0
 
-
 # ── Clear attempts on successful login ────────────────────────────────────────
 async def clear_attempts(email: str, conn):
   await conn.execute(
@@ -49,21 +47,17 @@ async def clear_attempts(email: str, conn):
     email
   )
 
-
 # ── Purge old rows to keep the table clean ───────────────────────────────────
 async def purge_old_attempts(conn):
   await conn.execute(
     "DELETE FROM login_attempts WHERE attempted_at < NOW() - INTERVAL '1 hour'"
   )
 
-
 # ── Main verify function ──────────────────────────────────────────────────────
 async def verify_user(email: str, password: str, ip: str | None = None):
   pool = await get_pool()
-
   async with pool.acquire() as conn:
-
-    # 0️⃣ Purge stale rows (older than 1 hour) on every request
+    # 0️⃣ Purge stale rows on every request
     await purge_old_attempts(conn)
 
     # 1️⃣ Check rate limit BEFORE touching credentials
@@ -74,14 +68,15 @@ async def verify_user(email: str, password: str, ip: str | None = None):
         detail=f"Too many failed login attempts. Please wait {LOCKOUT_MINUTES} minutes before trying again."
       )
 
-    # 2️⃣ Check if user exists and is active
+    # 2️⃣ Look up user by email only — active OR inactive both allowed to authenticate.
+    #    is_active is checked in the router to decide what the user can access,
+    #    NOT here, so deactivated users can still log in and self-delete.
     row = await conn.fetchrow(
-      "SELECT * FROM users WHERE email = $1 AND is_active = true",
+      "SELECT * FROM users WHERE email = $1",
       email
     )
-
     if not row:
-      # Record attempt even for non-existent emails (prevents user enumeration timing attack)
+      # Record attempt even for non-existent emails (prevents user enumeration)
       await record_failed_attempt(email, ip, conn)
       return None
 
@@ -92,11 +87,10 @@ async def verify_user(email: str, password: str, ip: str | None = None):
       "SELECT crypt($1, password_hash) = password_hash FROM users WHERE id = $2",
       password, user["id"]
     )
-
     if not pw_check:
       await record_failed_attempt(email, ip, conn)
       return None
 
     # 4️⃣ Success — clear attempt history for this email
     await clear_attempts(email, conn)
-    return user
+    return user  # caller checks user["is_active"] to decide routing
