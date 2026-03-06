@@ -1,4 +1,5 @@
-import { useEffect, useState, useContext, useMemo } from "react";
+import { useEffect, useState, useContext, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
 import api from "@/services/apiClient";
@@ -27,6 +28,62 @@ type SortField = "id" | "user_id" | "category" | "amount" | "transaction_date" |
 type SortDir   = "asc" | "desc";
 type TypeFilter = "all" | "Income" | "Expense";
 
+// ── Portal Dropdown (escapes overflow clipping) ──────────────────────────────
+interface PortalDropdownProps {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownProps) {
+  const [pos, setPos] = useState({ top: 0, left: 0, minWidth: 0 });
+
+  useEffect(() => {
+    if (!open || !anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    setPos({
+      top:      rect.bottom + window.scrollY + 4,
+      left:     rect.left   + window.scrollX,
+      minWidth: rect.width,
+    });
+  }, [open, anchorRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, onClose, anchorRef]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position:     "fixed",
+        top:          pos.top,
+        left:         pos.left,
+        minWidth:     Math.max(pos.minWidth, 130),
+        background:   C.surfaceEl,
+        border:       `1px solid ${C.border}`,
+        borderRadius: "0.4rem",
+        zIndex:       99999,
+        boxShadow:    "0 8px 24px rgba(0,0,0,0.5)",
+        overflow:     "hidden",
+        maxHeight:    "220px",
+        overflowY:    "auto",
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
 // ── Small dropdown for Type filter ──────────────────────────────────────────
 interface DropdownProps {
   value: TypeFilter;
@@ -34,6 +91,7 @@ interface DropdownProps {
 }
 function TypeDropdown({ value, onChange }: DropdownProps) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const options: { value: TypeFilter; label: string }[] = [
     { value: "all",     label: "All Types" },
     { value: "Income",  label: "Income Only" },
@@ -44,65 +102,57 @@ function TypeDropdown({ value, onChange }: DropdownProps) {
   return (
     <div style={{ position: "relative" }}>
       <button
+        ref={btnRef}
         onClick={() => setOpen(p => !p)}
         style={{
-          display:        "flex",
-          alignItems:     "center",
-          gap:            "0.3rem",
-          background:     C.surfaceEl,
-          border:         `1px solid ${C.border}`,
-          borderRadius:   "0.4rem",
-          color:          value === "Income"  ? C.income
-                        : value === "Expense" ? C.expense
-                        : C.fgMuted,
-          fontSize:       "0.72rem",
-          fontWeight:     600,
-          padding:        "0.25rem 0.5rem",
-          cursor:         "pointer",
-          whiteSpace:     "nowrap",
+          display:      "flex",
+          alignItems:   "center",
+          gap:          "0.3rem",
+          background:   C.surfaceEl,
+          border:       `1px solid ${C.border}`,
+          borderRadius: "0.4rem",
+          color:        value === "Income"  ? C.income
+                      : value === "Expense" ? C.expense
+                      : C.fgMuted,
+          fontSize:     "0.72rem",
+          fontWeight:   600,
+          padding:      "0.25rem 0.5rem",
+          cursor:       "pointer",
+          whiteSpace:   "nowrap",
         }}
       >
         {current.label}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
-      {open && (
-        <div
-          style={{
-            position:        "absolute",
-            top:             "calc(100% + 4px)",
-            left:            0,
-            background:      C.surfaceEl,
-            border:          `1px solid ${C.border}`,
-            borderRadius:    "0.4rem",
-            zIndex:          200,
-            minWidth:        "120px",
-            boxShadow:       "0 8px 24px rgba(0,0,0,0.4)",
-            overflow:        "hidden",
-          }}
-        >
-          {options.map(o => (
-            <button
-              key={o.value}
-              onClick={() => { onChange(o.value); setOpen(false); }}
-              style={{
-                display:    "block",
-                width:      "100%",
-                textAlign:  "left",
-                padding:    "0.4rem 0.75rem",
-                background: o.value === value ? C.surfaceHov : "transparent",
-                border:     "none",
-                color:      o.value === "Income"  ? C.income
-                          : o.value === "Expense" ? C.expense
-                          : C.fg,
-                fontSize:   "0.75rem",
-                cursor:     "pointer",
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+
+      <PortalDropdown
+        anchorRef={btnRef}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        {options.map(o => (
+          <button
+            key={o.value}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={() => { onChange(o.value); setOpen(false); }}
+            style={{
+              display:    "block",
+              width:      "100%",
+              textAlign:  "left",
+              padding:    "0.4rem 0.75rem",
+              background: o.value === value ? C.surfaceHov : "transparent",
+              border:     "none",
+              color:      o.value === "Income"  ? C.income
+                        : o.value === "Expense" ? C.expense
+                        : C.fg,
+              fontSize:   "0.75rem",
+              cursor:     "pointer",
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </PortalDropdown>
     </div>
   );
 }
@@ -143,16 +193,16 @@ function Shell({ children, onBackdropDown, onBackdropUp }: ShellProps) {
         onMouseDown={e => e.stopPropagation()}
         onMouseUp={e => e.stopPropagation()}
         style={{
-          background:   C.surface,
-          border:       `1px solid ${C.border}`,
-          borderRadius: "1rem",
-          width:        "100%",
-          maxWidth:     "1100px",
-          display:      "flex",
-          flexDirection:"column",
-          maxHeight:    "90vh",
-          boxShadow:    "0 24px 48px rgba(0,0,0,0.5)",
-          overflow:     "hidden",
+          background:    C.surface,
+          border:        `1px solid ${C.border}`,
+          borderRadius:  "1rem",
+          width:         "100%",
+          maxWidth:      "1100px",
+          display:       "flex",
+          flexDirection: "column",
+          maxHeight:     "90vh",
+          boxShadow:     "0 24px 48px rgba(0,0,0,0.5)",
+          overflow:      "hidden",
         }}
       >
         {children}
@@ -163,17 +213,19 @@ function Shell({ children, onBackdropDown, onBackdropUp }: ShellProps) {
 
 // ── Month filter dropdown ────────────────────────────────────────────────────
 interface MonthDropdownProps {
-  value:    string; // "all" or "YYYY-MM"
+  value:    string;
   options:  { key: string; label: string }[];
   onChange: (v: string) => void;
 }
 function MonthDropdown({ value, options, onChange }: MonthDropdownProps) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const current = options.find(o => o.key === value) ?? options[0];
 
   return (
     <div style={{ position: "relative" }}>
       <button
+        ref={btnRef}
         onClick={() => setOpen(p => !p)}
         style={{
           display:      "flex",
@@ -193,48 +245,40 @@ function MonthDropdown({ value, options, onChange }: MonthDropdownProps) {
         {current?.label ?? "All Months"}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
-      {open && (
-        <div style={{
-          position:   "absolute",
-          top:        "calc(100% + 4px)",
-          left:       0,
-          background: C.surfaceEl,
-          border:     `1px solid ${C.border}`,
-          borderRadius:"0.4rem",
-          zIndex:     200,
-          minWidth:   "130px",
-          boxShadow:  "0 8px 24px rgba(0,0,0,0.4)",
-          overflow:   "hidden",
-          maxHeight:  "220px",
-          overflowY:  "auto",
-        }}>
-          {options.map(o => (
-            <button
-              key={o.key}
-              onClick={() => { onChange(o.key); setOpen(false); }}
-              style={{
-                display:    "block",
-                width:      "100%",
-                textAlign:  "left",
-                padding:    "0.4rem 0.75rem",
-                background: o.key === value ? C.surfaceHov : "transparent",
-                border:     "none",
-                color:      o.key === "all" ? C.fg : C.primary,
-                fontSize:   "0.75rem",
-                cursor:     "pointer",
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+
+      <PortalDropdown
+        anchorRef={btnRef}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        {options.map(o => (
+          <button
+            key={o.key}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={() => { onChange(o.key); setOpen(false); }}
+            style={{
+              display:    "block",
+              width:      "100%",
+              textAlign:  "left",
+              padding:    "0.4rem 0.75rem",
+              background: o.key === value ? C.surfaceHov : "transparent",
+              border:     "none",
+              color:      o.key === "all" ? C.fg : C.primary,
+              fontSize:   "0.75rem",
+              cursor:     "pointer",
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </PortalDropdown>
     </div>
   );
 }
+
 interface ReadTransactionsProps extends OnCloseProps {
   initialTypeFilter?:  TypeFilter;
-  initialMonthFilter?: string; // "all" or "YYYY-MM"
+  initialMonthFilter?: string;
 }
 
 export default function ReadTransactions({ onClose, initialTypeFilter = "all", initialMonthFilter = "all" }: ReadTransactionsProps) {
@@ -252,9 +296,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   const [loading,      setLoading]      = useState(true);
   const [viewMode,     setViewMode]     = useState<"all" | "own">("all");
 
-  // Sort & filter state
-  const [sortField,  setSortField]  = useState<SortField>("id");
-  const [sortDir,    setSortDir]    = useState<SortDir>("desc");
+  const [sortField,   setSortField]   = useState<SortField>("id");
+  const [sortDir,     setSortDir]     = useState<SortDir>("desc");
   const [typeFilter,  setTypeFilter]  = useState<TypeFilter>(initialTypeFilter);
   const [monthFilter, setMonthFilter] = useState<string>(initialMonthFilter);
 
@@ -284,7 +327,6 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   const getCategoryName = (id: number) =>
     categories.find(c => c.id === id)?.name ?? "Unknown";
 
-  // ── Handle column header click ─────────────────────────────────────────────
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -294,7 +336,6 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     }
   };
 
-  // ── Derive available months from loaded transactions ──────────────────────
   const availableMonths = useMemo(() => {
     let txs = [...transactions];
     if (viewMode === "own") txs = txs.filter(t => t.user_id === user?.id);
@@ -315,24 +356,21 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     ];
   }, [transactions, viewMode, user]);
 
-  // ── Apply view mode + month filter + type filter + sort ───────────────────
   const processed = (() => {
     let txs = [...transactions];
-
     if (viewMode === "own") txs = txs.filter(t => t.user_id === user?.id);
     if (monthFilter !== "all") txs = txs.filter(t => t.transaction_date?.startsWith(monthFilter));
     if (typeFilter  !== "all") txs = txs.filter(t => t.transaction_type === typeFilter);
 
-    // Sort
     txs.sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
-        case "id":               cmp = a.id - b.id;                                           break;
-        case "user_id":          cmp = a.user_id - b.user_id;                                  break;
-        case "category":         cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id)); break;
-        case "amount":           cmp = parseFloat(String(a.amount)) - parseFloat(String(b.amount));                                    break;
-        case "transaction_date": cmp = a.transaction_date.localeCompare(b.transaction_date);   break;
-        case "created_at":       cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); break;
+        case "id":               cmp = a.id - b.id;                                                                    break;
+        case "user_id":          cmp = a.user_id - b.user_id;                                                          break;
+        case "category":         cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id));   break;
+        case "amount":           cmp = parseFloat(String(a.amount)) - parseFloat(String(b.amount));                    break;
+        case "transaction_date": cmp = a.transaction_date.localeCompare(b.transaction_date);                           break;
+        case "created_at":       cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();            break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -340,22 +378,21 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     return txs;
   })();
 
-  // ── Sortable TH ───────────────────────────────────────────────────────────
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
     return (
       <th
         style={{
-          padding:         "0.6rem 0.75rem",
-          fontSize:        "0.7rem",
-          fontWeight:      600,
-          color:           active ? C.primary : C.fgMuted,
-          textTransform:   "uppercase",
-          letterSpacing:   "0.05em",
-          whiteSpace:      "nowrap",
-          borderBottom:    `1px solid ${C.border}`,
-          background:      C.surfaceEl,
-          userSelect:      "none",
+          padding:       "0.6rem 0.75rem",
+          fontSize:      "0.7rem",
+          fontWeight:    600,
+          color:         active ? C.primary : C.fgMuted,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          whiteSpace:    "nowrap",
+          borderBottom:  `1px solid ${C.border}`,
+          background:    C.surfaceEl,
+          userSelect:    "none",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
@@ -388,7 +425,7 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
 
-      {/* ── Header (sticky) ───────────────────────────────────────────────── */}
+      {/* ── Header ───────────────────────────────────────────────────────────── */}
       <div style={{
         display:        "flex",
         alignItems:     "center",
@@ -409,7 +446,6 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {/* Admin: view toggle */}
           {isAdmin && (
             <select
               value={viewMode}
@@ -430,7 +466,6 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
             </select>
           )}
 
-          {/* Close */}
           <button
             onClick={onClose}
             style={{
@@ -459,10 +494,11 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
           flexShrink:   0,
         }}>
           {[
-            { label: "Income",  value: `+₱${totalIncome.toLocaleString()}`,   color: C.income,  bg: "hsl(160 60% 45% / 0.1)"  },
-            { label: "Expense", value: `-₱${totalExpense.toLocaleString()}`,   color: C.expense, bg: "hsl(0 72% 51% / 0.1)"    },
-            { label: "Net",     value: `₱${(totalIncome - totalExpense).toLocaleString()}`,
-              color: (totalIncome - totalExpense) >= 0 ? C.income : C.expense,
+            { label: "Income",  value: `+₱${totalIncome.toLocaleString()}`,  color: C.income,  bg: "hsl(160 60% 45% / 0.1)" },
+            { label: "Expense", value: `-₱${totalExpense.toLocaleString()}`, color: C.expense, bg: "hsl(0 72% 51% / 0.1)"   },
+            { label: "Net",
+              value: `₱${(totalIncome - totalExpense).toLocaleString()}`,
+              color: (totalIncome - totalExpense) >= 0 ? C.income  : C.expense,
               bg:    (totalIncome - totalExpense) >= 0 ? "hsl(160 60% 45% / 0.1)" : "hsl(0 72% 51% / 0.1)" },
           ].map(p => (
             <div key={p.label} style={{
@@ -542,8 +578,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
 
             <tbody>
               {processed.map((tx, idx) => {
-                const isIncome  = tx.transaction_type === "Income";
-                const isEven    = idx % 2 === 0;
+                const isIncome = tx.transaction_type === "Income";
+                const isEven   = idx % 2 === 0;
                 return (
                   <tr
                     key={tx.id}
@@ -589,14 +625,14 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
         )}
       </div>
 
-      {/* ── Footer row count ─────────────────────────────────────────────────── */}
+      {/* ── Footer ───────────────────────────────────────────────────────────── */}
       {!loading && processed.length > 0 && (
         <div style={{
-          padding:      "0.6rem 1.5rem",
-          borderTop:    `1px solid ${C.border}`,
-          fontSize:     "0.72rem",
-          color:        C.fgMuted,
-          flexShrink:   0,
+          padding:    "0.6rem 1.5rem",
+          borderTop:  `1px solid ${C.border}`,
+          fontSize:   "0.72rem",
+          color:      C.fgMuted,
+          flexShrink: 0,
         }}>
           Showing {processed.length} transaction{processed.length !== 1 ? "s" : ""}
           {processed.length > 15 ? " · scroll to see more" : ""}

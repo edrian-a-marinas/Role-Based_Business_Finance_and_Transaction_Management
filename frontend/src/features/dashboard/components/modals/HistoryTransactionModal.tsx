@@ -1,4 +1,5 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
@@ -6,7 +7,6 @@ import type { ReadTransactionHistory, Category } from "@/features/dashboard/sche
 import { formatDate } from "@/features/dashboard/lib/utility";
 import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
-
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   primary:    "hsl(199,89%,38%)",
@@ -21,17 +21,14 @@ const C = {
   fgMuted:    "hsl(220,10%,55%)",
   overlay:    "rgba(0,0,0,0.55)",
 };
-
 const ACTION_COLOR: Record<string, string> = {
   UPDATE: C.warning,
   DELETE: C.expense,
 };
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SortField    = "entity_id" | "user_id" | "category" | "action" | "action_taken_at";
 type SortDir      = "asc" | "desc";
 type ActionFilter = "all" | "UPDATE" | "DELETE";
-
 // ── Base TD style ─────────────────────────────────────────────────────────────
 const td: React.CSSProperties = {
   padding:      "0.55rem 0.75rem",
@@ -41,16 +38,69 @@ const td: React.CSSProperties = {
   textOverflow: "ellipsis",
   whiteSpace:   "nowrap",
 };
+// ── Portal Dropdown ───────────────────────────────────────────────────────────
+interface PortalDropdownProps {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownProps) {
+  const [pos, setPos] = useState({ top: 0, left: 0, minWidth: 0 });
 
-// ── HOISTED: ActionDropdown — defined at module level so it never remounts ────
-// (same fix as TypeDropdown in ReadTransactionModal — defining inside component
-//  gives it a new identity on every render → React unmounts/remounts → filter resets)
+  useEffect(() => {
+    if (!open || !anchorRef.current) return;
+    const rect = anchorRef.current.getBoundingClientRect();
+    setPos({
+      top:      rect.bottom + window.scrollY + 4,
+      left:     rect.left   + window.scrollX,
+      minWidth: rect.width,
+    });
+  }, [open, anchorRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, onClose, anchorRef]);
+
+  if (!open) return null;
+
+  return createPortal(
+    <div
+      style={{
+        position:     "fixed",
+        top:          pos.top,
+        left:         pos.left,
+        minWidth:     Math.max(pos.minWidth, 130),
+        background:   C.surfaceEl,
+        border:       `1px solid ${C.border}`,
+        borderRadius: "0.4rem",
+        zIndex:       99999,
+        boxShadow:    "0 8px 24px rgba(0,0,0,0.5)",
+        overflow:     "hidden",
+        maxHeight:    "220px",
+        overflowY:    "auto",
+      }}
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+// ── ActionDropdown ────────────────────────────────────────────────────────────
 interface ActionDropdownProps {
   value:    ActionFilter;
   onChange: (v: ActionFilter) => void;
 }
 function ActionDropdown({ value, onChange }: ActionDropdownProps) {
   const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const options: { value: ActionFilter; label: string }[] = [
     { value: "all",    label: "All Actions" },
     { value: "UPDATE", label: "Updated"     },
@@ -60,6 +110,7 @@ function ActionDropdown({ value, onChange }: ActionDropdownProps) {
   return (
     <div style={{ position: "relative" }}>
       <button
+        ref={btnRef}
         onClick={() => setOpen(p => !p)}
         style={{
           display:      "flex",
@@ -79,44 +130,35 @@ function ActionDropdown({ value, onChange }: ActionDropdownProps) {
         {current.label}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
-      {open && (
-        <div style={{
-          position:     "absolute",
-          top:          "calc(100% + 4px)",
-          left:         0,
-          background:   C.surfaceEl,
-          border:       `1px solid ${C.border}`,
-          borderRadius: "0.4rem",
-          zIndex:       200,
-          minWidth:     "120px",
-          boxShadow:    "0 8px 24px rgba(0,0,0,0.4)",
-          overflow:     "hidden",
-        }}>
-          {options.map(o => (
-            <button
-              key={o.value}
-              onClick={() => { onChange(o.value); setOpen(false); }}
-              style={{
-                display:    "block",
-                width:      "100%",
-                textAlign:  "left",
-                padding:    "0.4rem 0.75rem",
-                background: o.value === value ? C.surfaceHov : "transparent",
-                border:     "none",
-                color:      o.value === "all" ? C.fg : ACTION_COLOR[o.value] ?? C.fg,
-                fontSize:   "0.75rem",
-                cursor:     "pointer",
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      )}
+      <PortalDropdown
+        anchorRef={btnRef}
+        open={open}
+        onClose={() => setOpen(false)}
+      >
+        {options.map(o => (
+          <button
+            key={o.value}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={() => { onChange(o.value); setOpen(false); }}
+            style={{
+              display:    "block",
+              width:      "100%",
+              textAlign:  "left",
+              padding:    "0.4rem 0.75rem",
+              background: o.value === value ? C.surfaceHov : "transparent",
+              border:     "none",
+              color:      o.value === "all" ? C.fg : ACTION_COLOR[o.value] ?? C.fg,
+              fontSize:   "0.75rem",
+              cursor:     "pointer",
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </PortalDropdown>
     </div>
   );
 }
-
 // ── HOISTED: SortIcon ────────────────────────────────────────────────────────
 function SortIcon({ field, active, dir }: { field: SortField; active: SortField; dir: SortDir }) {
   const s = { width: "0.7rem", height: "0.7rem" };
@@ -125,7 +167,6 @@ function SortIcon({ field, active, dir }: { field: SortField; active: SortField;
     ? <ArrowUp   style={{ ...s, color: C.primary }} />
     : <ArrowDown style={{ ...s, color: C.primary }} />;
 }
-
 // ── HOISTED: Shell ────────────────────────────────────────────────────────────
 interface ShellProps {
   children:        React.ReactNode;
@@ -170,18 +211,14 @@ function Shell({ children, onBackdropDown, onBackdropUp }: ShellProps) {
     </div>
   );
 }
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const { user }  = useContext(AuthContext);
   const userRole  = user!.role_id;
   const isAdmin   = userRole === 1;
-
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const [history,      setHistory]      = useState<ReadTransactionHistory[]>([]);
   const [categories,   setCategories]   = useState<Category[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -189,7 +226,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const [sortField,    setSortField]    = useState<SortField>("action_taken_at");
   const [sortDir,      setSortDir]      = useState<SortDir>("desc");
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -210,10 +246,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     };
     fetchData();
   }, [token, tokenType]);
-
   const getCategoryName = (id: number) =>
     categories.find(c => c.id === id)?.name ?? "Unknown";
-
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -222,18 +256,11 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       setSortDir("desc");
     }
   };
-
   // ── Filter + sort ─────────────────────────────────────────────────────────
-  // Normalize action to uppercase for reliable comparison regardless of what
-  // the backend returns ("Update", "update", "UPDATE" all match "UPDATE")
   const processed = (() => {
     let rows = [...history];
-
     if (viewMode === "own") rows = rows.filter(r => r.user_id === user?.id);
-
     if (actionFilter !== "all") {
-      // Backend may return "updated"/"deleted" (past tense) or "UPDATE"/"DELETE"
-      // Match both forms case-insensitively
       rows = rows.filter(r => {
         const a = (r.action ?? "").toLowerCase();
         if (actionFilter === "UPDATE") return a === "update" || a === "updated";
@@ -241,7 +268,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         return true;
       });
     }
-
     rows.sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
@@ -253,13 +279,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-
     return rows;
   })();
-
-  // ── HOISTED: Th — defined inside component but uses no closures that cause
-  //    remount issues (it's not a component stored in state or used as JSX type
-  //    inline — it's just called as a function directly in the table)
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
     return (
@@ -296,7 +317,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       </th>
     );
   };
-
   const ThPlain = ({ children }: { children: React.ReactNode }) => (
     <th style={{
       padding:       "0.6rem 0.75rem",
@@ -312,13 +332,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       {children}
     </th>
   );
-
   const updateCount = history.filter(r => (r.action ?? "").toLowerCase() === "updated" || (r.action ?? "").toLowerCase() === "update").length;
   const deleteCount = history.filter(r => (r.action ?? "").toLowerCase() === "deleted" || (r.action ?? "").toLowerCase() === "delete").length;
-
   return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{
         display:        "flex",
@@ -337,7 +354,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
             {actionFilter !== "all" ? ` · ${actionFilter === "UPDATE" ? "Updated" : "Deleted"} only` : ""}
           </p>
         </div>
-
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {isAdmin && (
             <select
@@ -375,8 +391,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           </button>
         </div>
       </div>
-
-      {/* ── Summary pills — counts from full history, not filtered ────────── */}
+      {/* ── Summary pills ────────────────────────────────────────────────────── */}
       {!loading && history.length > 0 && (
         <div style={{
           display:      "flex",
@@ -401,15 +416,11 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           ))}
         </div>
       )}
-
       {/* ── Table ──────────────────────────────────────────────────────────── */}
       <div style={{ overflowY: "auto", overflowX: "hidden", flex: 1 }}>
         {loading && (
           <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>Loading…</p>
         )}
-
-        {/* Always render table when not loading so the sticky header with
-            ActionDropdown stays visible even when filtered results are empty */}
         {!loading && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", tableLayout: "fixed" }}>
             <colgroup>
@@ -424,15 +435,12 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
               <col style={{ width: "8%" }}  />
               <col style={{ width: "8%" }}  />
             </colgroup>
-
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               <tr>
                 <Th field="entity_id">Tx ID</Th>
                 {isAdmin && <Th field="user_id">User ID</Th>}
                 <Th field="category">Category</Th>
                 <ThPlain>Type</ThPlain>
-
-                {/* Action filter dropdown sits in its own column header */}
                 <th style={{
                   padding:       "0.6rem 0.75rem",
                   fontSize:      "0.7rem",
@@ -445,7 +453,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 }}>
                   <ActionDropdown value={actionFilter} onChange={setActionFilter} />
                 </th>
-
                 <Th field="action_taken_at">Action At</Th>
                 <ThPlain>Old Description</ThPlain>
                 <ThPlain>New Description</ThPlain>
@@ -453,7 +460,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 <ThPlain>New Date</ThPlain>
               </tr>
             </thead>
-
             <tbody>
               {processed.length === 0 ? (
                 <tr>
@@ -474,7 +480,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 const isIncome    = tx.transaction_type === "Income";
                 const descChanged = tx.old_description !== tx.new_description;
                 const dateChanged = tx.old_transaction_date !== tx.new_transaction_date;
-
                 return (
                   <tr
                     key={tx.id}
@@ -488,8 +493,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                     <td style={td}>{tx.entity_id}</td>
                     {isAdmin && <td style={td}>{tx.user_id}</td>}
                     <td style={td}>{getCategoryName(tx.category_id)}</td>
-
-                    {/* Type badge */}
                     <td style={td}>
                       <span style={{
                         display:         "inline-block",
@@ -504,8 +507,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                         {tx.transaction_type}
                       </span>
                     </td>
-
-                    {/* Action badge */}
                     <td style={td}>
                       <span style={{
                         display:         "inline-block",
@@ -520,10 +521,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                         {tx.action}
                       </span>
                     </td>
-
                     <td style={{ ...td, color: C.fgMuted }}>{formatDate(tx.action_taken_at)}</td>
-
-                    {/* Diff cells */}
                     <td style={{ ...td, color: descChanged ? C.expense : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>
                       {tx.old_description || "—"}
                     </td>
@@ -543,7 +541,6 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
           </table>
         )}
       </div>
-
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       {!loading && processed.length > 0 && (
         <div style={{
