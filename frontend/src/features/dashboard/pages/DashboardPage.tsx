@@ -53,7 +53,8 @@ export default function DashboardPage() {
   const [collapsed,     setCollapsed]     = useState(false);
   const [hoveredMenu,   setHoveredMenu]   = useState<MenuKey | null>(null);
   const [hoveredLogout, setHoveredLogout] = useState(false);
-  const [hoveredSettings, setHoveredSettings] = useState(false);
+  const [hoveredSettings,    setHoveredSettings]    = useState(false);
+  const [showLogoutConfirm,  setShowLogoutConfirm]  = useState(false);
 
   // Deep-link: notification → deletion modal at a specific request
   const [deepLinkRequestId,       setDeepLinkRequestId]       = useState<number | undefined>();
@@ -194,7 +195,7 @@ export default function DashboardPage() {
 
           {/* Logout button */}
           <button
-            onClick={logout}
+            onClick={() => setShowLogoutConfirm(true)}
             onMouseEnter={() => setHoveredLogout(true)}
             onMouseLeave={() => setHoveredLogout(false)}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
@@ -260,6 +261,103 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* ── Logout confirmation modal ──────────────────────────────────────── */}
+      {showLogoutConfirm && (
+        <div
+          onClick={() => setShowLogoutConfirm(false)}
+          style={{
+            position:        "fixed",
+            inset:           0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            display:         "flex",
+            alignItems:      "center",
+            justifyContent:  "center",
+            zIndex:          100,
+            padding:         "1rem",
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:   "hsl(220,20%,12%)",
+              border:       "1px solid hsl(220,20%,20%)",
+              borderRadius: "0.875rem",
+              padding:      "1.75rem",
+              width:        "100%",
+              maxWidth:     "360px",
+              boxShadow:    "0 24px 48px rgba(0,0,0,0.55)",
+              textAlign:    "center",
+            }}
+          >
+            {/* Icon */}
+            <div style={{
+              width:           "2.75rem",
+              height:          "2.75rem",
+              borderRadius:    "50%",
+              backgroundColor: "hsl(0 72% 51% / 0.12)",
+              border:          "1px solid hsl(0 72% 51% / 0.25)",
+              display:         "flex",
+              alignItems:      "center",
+              justifyContent:  "center",
+              margin:          "0 auto 1rem",
+            }}>
+              <LogOut style={{ width: "1.2rem", height: "1.2rem", color: S.expense }} />
+            </div>
+
+            <h2 style={{ color: "hsl(220,14%,90%)", fontSize: "0.95rem", fontWeight: 700, margin: "0 0 0.4rem" }}>
+              Log out?
+            </h2>
+            <p style={{ color: "hsl(220,10%,55%)", fontSize: "0.78rem", margin: "0 0 1.5rem", lineHeight: 1.5 }}>
+              Are you sure you want to log out?
+            </p>
+
+            <div style={{ display: "flex", gap: "0.65rem" }}>
+              {/* Cancel — left, blue/neutral */}
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  flex:         1,
+                  padding:      "0.6rem",
+                  borderRadius: "0.5rem",
+                  fontSize:     "0.82rem",
+                  fontWeight:   600,
+                  border:       "1px solid hsl(199 89% 48% / 0.4)",
+                  background:   "hsl(199 89% 48% / 0.1)",
+                  color:        S.primary,
+                  cursor:       "pointer",
+                  transition:   "opacity 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
+                onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+              >
+                Cancel
+              </button>
+
+              {/* Log Out — right, red */}
+              <button
+                onClick={() => { setShowLogoutConfirm(false); logout(); }}
+                style={{
+                  flex:         1,
+                  padding:      "0.6rem",
+                  borderRadius: "0.5rem",
+                  fontSize:     "0.82rem",
+                  fontWeight:   700,
+                  border:       "1px solid hsl(0 72% 51% / 0.4)",
+                  background:   "hsl(0 72% 51% / 0.12)",
+                  color:        S.expense,
+                  cursor:       "pointer",
+                  transition:   "opacity 0.15s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
+                onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Deep-link deletion modal */}
       {showDeletionModalDirect && (
