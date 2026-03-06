@@ -54,6 +54,14 @@ export default function ManageUsersPage() {
       bgColor:     "hsl(199 89% 38% / 0.08)",
       onClick:     () => setShowReadModal(true),
     },
+    {
+      label:       "View User Details",
+      description: "Inspect profile and account information",
+      icon:        UserCircle,
+      color:       C.purple,
+      bgColor:     "hsl(280 60% 55% / 0.08)",
+      onClick:     () => setShowDetailsModal(true),
+    },
     // Super Admin only
     ...(isSuperAdmin ? [{
       label:       "Promote / Demote User",
@@ -72,14 +80,6 @@ export default function ManageUsersPage() {
       bgColor:     "hsl(0 72% 51% / 0.08)",
       onClick:     () => setShowHandleRequestModal(true),
     }] : []),
-    {
-      label:       "View User Details",
-      description: "Inspect profile and account information",
-      icon:        UserCircle,
-      color:       C.purple,
-      bgColor:     "hsl(280 60% 55% / 0.08)",
-      onClick:     () => setShowDetailsModal(true),
-    },
   ];
 
   return (
