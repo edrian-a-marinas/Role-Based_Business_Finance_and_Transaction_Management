@@ -1,4 +1,3 @@
-// DashboardPage.tsx
 import { useState, useContext, useEffect } from "react";
 import { cn } from "@/features/dashboard/lib/utilsForUiCn";
 import {
@@ -8,16 +7,15 @@ import {
 } from "lucide-react";
 import { AuthContext } from "../../auth/AuthContext";
 import { useTheme } from "@/features/dashboard/lib/ThemeContext";
-import Transactions      from "./TransactionPage";
-import Reports           from "./ReportPage";
-import ManageUsers       from "./ManageUserPage";
-import SettingsPage      from "./SettingsPage";
+import Transactions          from "./TransactionPage";
+import Reports               from "./ReportPage";
+import ManageUsers           from "./ManageUserPage";
+import SettingsPage          from "./SettingsPage";
 import ManageCategories      from "../components/modals/ManageCategoriesModal";
 import DashboardOverview     from "@/features/dashboard/components/overview/DashBoardOverview";
 import HandleDeletionRequest from "../components/modals/HandleDeletionRequestModal";
 import NotificationPanel     from "../components/ui/NotificationPanel";
 
-// ── Sidebar tokens ────────────────────────────────────────────────────────────
 const S = {
   bg:         "hsl(220,25%,10%)",
   accent:     "hsl(220,20%,16%)",
@@ -37,8 +35,6 @@ interface NavItem {
   label:      string;
   icon:       typeof LayoutDashboard;
   adminOnly?: boolean;
-  // If true this item renders in the footer area (above logout), not main nav
-  footer?:    boolean;
 }
 
 const navItems: NavItem[] = [
@@ -50,26 +46,31 @@ const navItems: NavItem[] = [
 ];
 
 export default function DashboardPage() {
-  const { logout, user } = useContext(AuthContext);
-  const [selectedMenu,  setSelectedMenu]  = useState<MenuKey>("dashboard");
-  const [collapsed,     setCollapsed]     = useState(false);
-  const [hoveredMenu,   setHoveredMenu]   = useState<MenuKey | null>(null);
-  const [hoveredLogout, setHoveredLogout] = useState(false);
-  const [hoveredSettings,    setHoveredSettings]    = useState(false);
-  const [showLogoutConfirm,  setShowLogoutConfirm]  = useState(false);
-
-  // Deep-link: notification → deletion modal at a specific request
-  const [deepLinkRequestId,       setDeepLinkRequestId]       = useState<number | undefined>();
-  const [showDeletionModalDirect,  setShowDeletionModalDirect] = useState(false);
+  const { logout, user }    = useContext(AuthContext);
   const { isDark, toggleTheme } = useTheme();
+
+  const [selectedMenu,         setSelectedMenu]         = useState<MenuKey>("dashboard");
+  const [collapsed,            setCollapsed]            = useState(false);
+  const [hoveredMenu,          setHoveredMenu]          = useState<MenuKey | null>(null);
+  const [hoveredLogout,        setHoveredLogout]        = useState(false);
+  const [hoveredSettings,      setHoveredSettings]      = useState(false);
+  const [showLogoutConfirm,    setShowLogoutConfirm]    = useState(false);
+  const [deepLinkRequestId,    setDeepLinkRequestId]    = useState<number | undefined>();
+  const [showDeletionModalDirect, setShowDeletionModalDirect] = useState(false);
+
+  const isDeactivated = !user?.is_active;
+
+  useEffect(() => {
+    if (isDeactivated && selectedMenu !== "settings") {
+      setSelectedMenu("settings");
+    }
+  }, [isDeactivated, selectedMenu]);
 
   if (!user) return <p>Loading...</p>;
 
   const userID   = user.id;
   const userRole = user.role_id;
   const isAdmin  = userRole === 1;
-  const isDeactivated = !user.is_active;
-
   const roleLabel =
     userRole === 1 && userID === 1 ? "Super Admin"
     : userRole === 1               ? "Admin"
@@ -81,25 +82,15 @@ export default function DashboardPage() {
     ? { Authorization: `${tokenType} ${token}` }
     : {};
 
-  // ── Deactivated gate: force user to Settings only ─────────────────────────
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    if (isDeactivated && selectedMenu !== "settings") {
-      setSelectedMenu("settings");
-    }
-  }, [isDeactivated, selectedMenu]);
-
   const handleDeepLink = (requestId: number) => {
     setDeepLinkRequestId(requestId);
     setShowDeletionModalDirect(true);
   };
 
-  // ── Nav button factory ────────────────────────────────────────────────────
   const NavButton = ({ item }: { item: NavItem }) => {
     const active  = selectedMenu === item.key;
     const hovered = hoveredMenu  === item.key;
-    const locked  = isDeactivated; // deactivated users can't navigate away
-
+    const locked  = isDeactivated;
     return (
       <button
         key={item.key}
@@ -113,9 +104,9 @@ export default function DashboardPage() {
                  : active  ? S.primary
                  : hovered ? S.accentFg
                  :           S.muted,
-          border:   "none",
-          cursor:   locked ? "not-allowed" : "pointer",
-          opacity:  locked ? 0.45 : 1,
+          border:  "none",
+          cursor:  locked ? "not-allowed" : "pointer",
+          opacity: locked ? 0.45 : 1,
         }}
       >
         <item.icon
@@ -146,17 +137,14 @@ export default function DashboardPage() {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-2 px-4" style={{ borderBottom: `1px solid ${S.border}` }}>
-          <img
-            src="../../../../../src/assets/vite.svg"
-            alt="TransacScope"
-            className="h-8 w-8 shrink-0 cursor-pointer"
-            onClick={() => !isDeactivated && setSelectedMenu("dashboard")}
-          />
-          {!collapsed && (
-            <span className="text-sm font-bold tracking-tight" style={{ color: S.foreground }}>
-              TransacScope
-            </span>
-          )}
+
+        {collapsed
+          ? <img src="/transacScope1.svg" alt="TransacScope" className="h-8 w-8 shrink-0 cursor-pointer object-contain" onClick={() => !isDeactivated && setSelectedMenu("dashboard")} />
+
+          /* expanded — bump height here only */
+          : <img src="/transacScope1.svg" alt="TransacScope" style={{ height: "48px", width: "auto", cursor: "pointer" }} onClick={() => !isDeactivated && setSelectedMenu("dashboard")} />
+        }
+
         </div>
 
         {/* Nav */}
@@ -168,7 +156,6 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <div className="p-3" style={{ borderTop: `1px solid ${S.border}` }}>
-          {/* User chip */}
           {!collapsed && (
             <div className="mb-3 rounded-lg px-3 py-2" style={{ backgroundColor: S.accent }}>
               <p className="text-xs font-semibold" style={{ color: S.accentFg }}>{user.first_name}</p>
@@ -176,7 +163,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Settings button */}
           <button
             onClick={() => setSelectedMenu("settings")}
             onMouseEnter={() => setHoveredSettings(true)}
@@ -196,7 +182,6 @@ export default function DashboardPage() {
             {!collapsed && <span>Settings</span>}
           </button>
 
-          {/* Logout button */}
           <button
             onClick={() => setShowLogoutConfirm(true)}
             onMouseEnter={() => setHoveredLogout(true)}
@@ -226,7 +211,7 @@ export default function DashboardPage() {
 
       {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className={cn("flex-1 transition-all duration-300", collapsed ? "ml-[68px]" : "ml-[220px]")}>
-        {/* Top bar */}
+        {/* Topbar */}
         <div style={{
           position:       "sticky",
           top:            0,
@@ -240,7 +225,6 @@ export default function DashboardPage() {
           borderBottom:   "1px solid hsl(var(--topbar-border))",
           transition:     "background 0.2s ease",
         }}>
-          {/* ── Theme toggle ──────────────────────────────────────────────── */}
           <button
             onClick={toggleTheme}
             className="ts-theme-btn"
@@ -252,7 +236,6 @@ export default function DashboardPage() {
               : <Moon style={{ width: "0.9rem", height: "0.9rem" }} />
             }
           </button>
-
           <NotificationPanel
             isAdmin={isAdmin}
             authHeader={authHeader}
@@ -262,7 +245,6 @@ export default function DashboardPage() {
 
         {/* Page content */}
         <div className="p-6 lg:p-8 ts-page-bg" style={{ minHeight: "calc(100vh - 57px)" }}>
-          {/* Gate: deactivated users only see Settings */}
           {isDeactivated ? (
             <SettingsPage />
           ) : (
@@ -280,7 +262,7 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      {/* ── Logout confirmation modal ──────────────────────────────────────── */}
+      {/* ── Logout confirm modal ───────────────────────────────────────────── */}
       {showLogoutConfirm && (
         <div
           onClick={() => setShowLogoutConfirm(false)}
@@ -308,7 +290,6 @@ export default function DashboardPage() {
               textAlign:    "center",
             }}
           >
-            {/* Icon */}
             <div style={{
               width:           "2.75rem",
               height:          "2.75rem",
@@ -322,16 +303,13 @@ export default function DashboardPage() {
             }}>
               <LogOut style={{ width: "1.2rem", height: "1.2rem", color: S.expense }} />
             </div>
-
             <h2 style={{ color: "hsl(220,14%,90%)", fontSize: "0.95rem", fontWeight: 700, margin: "0 0 0.4rem" }}>
               Log out?
             </h2>
             <p style={{ color: "hsl(220,10%,55%)", fontSize: "0.78rem", margin: "0 0 1.5rem", lineHeight: 1.5 }}>
               Are you sure you want to log out?
             </p>
-
             <div style={{ display: "flex", gap: "0.65rem" }}>
-              {/* Cancel — left, blue/neutral */}
               <button
                 onClick={() => setShowLogoutConfirm(false)}
                 style={{
@@ -351,8 +329,6 @@ export default function DashboardPage() {
               >
                 Cancel
               </button>
-
-              {/* Log Out — right, red */}
               <button
                 onClick={() => { setShowLogoutConfirm(false); logout(); }}
                 style={{

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/features/dashboard/components/ui/card";
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Info } from "lucide-react";
+import { useState } from "react";
 import type { ReadTransaction } from "@/features/dashboard/schemas/transaction";
 
 // Hardcoded HSL from index.css — Tailwind v4 doesn't resolve CSS var-based utilities
@@ -9,19 +10,103 @@ const EXPENSE_COLOR = "hsl(0,72%,51%)";
 interface RecentTransactionsProps {
   transactions: ReadTransaction[];
   getCategoryName: (id: number | null) => string;
-  openViewTransactions: () => void; 
+  openViewTransactions: () => void;
+}
+
+function formatTxDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays >= 2 && diffDays <= 6) return `${diffDays} days ago`;
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function TitleTooltip() {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <span
+      style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <Info
+        style={{
+          width:      "13px",
+          height:     "13px",
+          marginLeft: "5px",
+          color:      "hsl(220,10%,55%)",
+          cursor:     "help",
+          flexShrink: 0,
+        }}
+      />
+      {visible && (
+        <span
+          style={{
+            position:        "absolute",
+            top:             "calc(100% + 8px)",
+            left:            "50%",
+            transform:       "translateX(-50%)",
+            backgroundColor: "hsl(220,20%,14%)",
+            border:          "1px solid hsl(220,20%,22%)",
+            borderRadius:    "7px",
+            padding:         "8px 11px",
+            whiteSpace:      "nowrap",
+            fontSize:        "11.5px",
+            color:           "hsl(220,14%,85%)",
+            lineHeight:      "1.6",
+            zIndex:          50,
+            boxShadow:       "0 4px 16px hsla(220,28%,4%,0.5)",
+            pointerEvents:   "none",
+          }}
+        >
+          <span style={{ color: "hsl(199,89%,48%)", fontWeight: 600 }}>
+            Dates are based on Transaction Date
+          </span>
+          <br />
+          <span style={{ color: "hsl(220,10%,55%)", fontSize: "11px" }}>
+            Not when the record was created in the system.
+          </span>
+          {/* Arrow up */}
+          <span
+            style={{
+              position:      "absolute",
+              bottom:        "100%",
+              left:          "50%",
+              transform:     "translateX(-50%)",
+              width:         0,
+              height:        0,
+              borderLeft:    "5px solid transparent",
+              borderRight:   "5px solid transparent",
+              borderBottom:  "5px solid hsl(220,20%,22%)",
+            }}
+          />
+        </span>
+      )}
+    </span>
+  );
 }
 
 export default function RecentTransactions({ transactions, getCategoryName, openViewTransactions }: RecentTransactionsProps) {
+  const now = new Date();
+
   const recent = transactions
     .filter((t) => !t.deleted_at)
+    .filter((t) => new Date(t.transaction_date) <= now)
     .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
     .slice(0, 8);
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
+        <CardTitle className="text-base font-semibold" style={{ display: "flex", alignItems: "center" }}>
+          Recent Transactions
+          <TitleTooltip />
+        </CardTitle>
         <p className="text-xs text-muted-foreground">Latest activity across all users</p>
       </CardHeader>
       <CardContent className="px-4 pb-4">
@@ -29,6 +114,7 @@ export default function RecentTransactions({ transactions, getCategoryName, open
           {recent.map((tx) => {
             const isIncome = tx.transaction_type === "Income";
             const color = isIncome ? INCOME_COLOR : EXPENSE_COLOR;
+            const description = tx.description?.trim() || null;
 
             return (
               <div
@@ -55,17 +141,14 @@ export default function RecentTransactions({ transactions, getCategoryName, open
                     }
                   </div>
 
-                  {/* Description + category */}
+                  {/* Category (highlight) + description · date */}
                   <div>
                     <p className="text-sm font-medium text-card-foreground leading-tight">
-                      {tx.description}
+                      {getCategoryName(tx.category_id)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {getCategoryName(tx.category_id)} ·{" "}
-                      {new Date(tx.transaction_date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {description ? `${description} · ` : ""}
+                      {formatTxDate(tx.transaction_date)}
                     </p>
                   </div>
                 </div>
@@ -87,7 +170,6 @@ export default function RecentTransactions({ transactions, getCategoryName, open
             View All Transactions
           </button>
         </div>
-
       </CardContent>
     </Card>
   );

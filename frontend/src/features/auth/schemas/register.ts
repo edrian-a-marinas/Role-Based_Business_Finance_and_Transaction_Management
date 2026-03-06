@@ -1,10 +1,5 @@
-// src/schemas/register.ts
-import { z } from "zod"
-
-// Validate phone number: starts with 09 and 9 digits after
-const phoneRegex = /^09\d{9}$/
-
-const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/
+import { z } from "zod";
+import { nameRegex, phoneRegex } from "@/features/dashboard/schemas/user";
 
 const registerSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -39,14 +34,13 @@ const registerSchema = z.object({
     .refine(
       val => !val || phoneRegex.test(val),
       { message: "Invalid phone number, must be 11 digits and starts with 09" }
-    )
-})
+    ),
+});
 
-export type RegisterForm = z.infer<typeof registerSchema>
+export type RegisterForm = z.infer<typeof registerSchema>;
 
 export function validateRegister(form: RegisterForm) {
-  const result = registerSchema.safeParse(form)
-  if (result.success) return []
-
-  return result.error.issues.map(issue => issue.message)
+  const result = registerSchema.safeParse(form);
+  if (result.success) return [];
+  return result.error.issues.map(issue => issue.message);
 }

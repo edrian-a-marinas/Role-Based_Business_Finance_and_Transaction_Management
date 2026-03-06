@@ -1,30 +1,19 @@
 import { useState, useEffect, useContext } from "react";
 import {
-  X, History, Clock, CheckCircle2, XCircle,
+  History, Clock, CheckCircle2, XCircle,
   AlertTriangle, ChevronDown, ChevronUp, Receipt,
   Undo2, ArrowLeft,
 } from "lucide-react";
 import api from "../../../../services/apiClient";
 import { AuthContext } from "../../../auth/AuthContext";
-import type { OnCloseProps } from "../../lib/utilsFormatFetch";
-import { formatCurrency } from "../../lib/utilsFormatFetch";
-import { useOutsideClickStrict } from "../../lib/utilsHooks";
+import type { OnCloseProps } from "../../lib/utility";
+import { formatCurrency } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import { ShellTable } from "./shared/Shell";
+import ModalHeader from "./shared/ModalHeader";
+import { C } from "./shared";
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  primary:    "hsl(199,89%,38%)",
-  income:     "hsl(160,60%,45%)",
-  expense:    "hsl(0,72%,51%)",
-  warning:    "hsl(45,85%,50%)",
-  surface:    "hsl(220,20%,12%)",
-  surfaceEl:  "hsl(220,18%,16%)",
-  surfaceHov: "hsl(220,16%,20%)",
-  border:     "hsl(220,16%,22%)",
-  fg:         "hsl(220,14%,90%)",
-  fgMuted:    "hsl(220,10%,55%)",
-  overlay:    "rgba(0,0,0,0.55)",
-};
-
+// ── Table styles (local — only used in this modal) ────────────────────────────
 const td: React.CSSProperties = {
   padding:      "0.55rem 0.75rem",
   color:        "hsl(220,14%,85%)",
@@ -33,7 +22,6 @@ const td: React.CSSProperties = {
   textOverflow: "ellipsis",
   whiteSpace:   "nowrap",
 };
-
 const thStyle: React.CSSProperties = {
   padding:       "0.6rem 0.75rem",
   fontSize:      "0.7rem",
@@ -71,34 +59,6 @@ interface DeletionRequestHistory {
   transaction?:   TransactionSnapshot;
 }
 
-// ── Shell ─────────────────────────────────────────────────────────────────────
-function Shell({ children, onBackdropDown, onBackdropUp }: {
-  children: React.ReactNode;
-  onBackdropDown: React.MouseEventHandler;
-  onBackdropUp:   React.MouseEventHandler;
-}) {
-  return (
-    <div onMouseDown={onBackdropDown} onMouseUp={onBackdropUp} style={{
-      position: "fixed", inset: 0, backgroundColor: C.overlay,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 50, padding: "1rem",
-    }}>
-      <div
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        onMouseUp={e => e.stopPropagation()}
-        style={{
-          background: C.surface, border: `1px solid ${C.border}`, borderRadius: "1rem",
-          width: "100%", maxWidth: "1100px", display: "flex", flexDirection: "column",
-          maxHeight: "90vh", boxShadow: "0 24px 48px rgba(0,0,0,0.5)", overflow: "hidden",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
@@ -119,12 +79,28 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ── Inline detail row (expand panel only — different layout from shared InfoRow) ──
+function Row({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
+  return (
+    <div style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
+      <span style={{
+        fontSize: "0.68rem", fontWeight: 600, color: C.fgMuted,
+        textTransform: "uppercase", letterSpacing: "0.04em",
+        minWidth: "100px", flexShrink: 0,
+      }}>
+        {label}
+      </span>
+      <span style={{ fontSize: "0.78rem", color: accent ?? C.fg }}>{value}</span>
+    </div>
+  );
+}
+
 // ── Cancel confirm dialog ─────────────────────────────────────────────────────
 function CancelConfirmDialog({ entry, onBack, onConfirm }: {
   entry: DeletionRequestHistory; onBack: () => void; onConfirm: () => void;
 }) {
-  const tx = entry.transaction;
-  const isInc = tx?.transaction_type !== "Expense";
+  const tx       = entry.transaction;
+  const isInc    = tx?.transaction_type !== "Expense";
   const amtColor = isInc ? C.income : C.expense;
   const fmt = (amount: number, type?: string) => {
     const n = formatCurrency(amount).replace("₱ ", "");
@@ -141,6 +117,7 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
         width: "100%", maxWidth: "420px", boxShadow: "0 24px 48px rgba(0,0,0,0.6)", overflow: "hidden",
       }}>
         <div style={{ height: "3px", background: `linear-gradient(90deg, ${C.warning}, ${C.warning}44)` }} />
+
         <div style={{ padding: "1.5rem 1.5rem 0", display: "flex", alignItems: "flex-start", gap: "1rem" }}>
           <div style={{
             width: "2.75rem", height: "2.75rem", borderRadius: "50%",
@@ -158,6 +135,7 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
             </p>
           </div>
         </div>
+
         {tx && (
           <div style={{
             margin: "1rem 1.5rem", background: C.surfaceEl,
@@ -182,6 +160,7 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
             </div>
           </div>
         )}
+
         <div style={{
           margin: `0 1.5rem ${tx ? "1.25rem" : "1rem"}`,
           display: "flex", alignItems: "flex-start", gap: "0.5rem",
@@ -193,6 +172,7 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
             You can resubmit a deletion request for this transaction later if needed.
           </p>
         </div>
+
         <div style={{ display: "flex", gap: "0.75rem", padding: "0 1.5rem 1.5rem", justifyContent: "flex-end" }}>
           <button
             onClick={onBack}
@@ -227,13 +207,12 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
 }
 
 // ── Expandable detail row ─────────────────────────────────────────────────────
-// onRequestCancel is only passed for standard user + pending rows
 function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }: {
-  entry:             DeletionRequestHistory;
-  isAdmin:           boolean;
-  colSpan:           number;
-  onRequestCancel?:  (e: DeletionRequestHistory) => void;
-  isCancelling:      boolean;
+  entry:            DeletionRequestHistory;
+  isAdmin:          boolean;
+  colSpan:          number;
+  onRequestCancel?: (e: DeletionRequestHistory) => void;
+  isCancelling:     boolean;
 }) {
   const tx     = entry.transaction;
   const isInc  = tx?.transaction_type !== "Expense";
@@ -242,7 +221,6 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
     const n = formatCurrency(amount).replace("₱ ", "");
     return type === "Expense" ? `₱ -${n}` : `₱ +${n}`;
   };
-
   return (
     <tr>
       <td colSpan={colSpan} style={{ padding: 0, borderBottom: `1px solid ${C.border}`, background: "hsl(220,20%,10%)" }}>
@@ -250,8 +228,7 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
           display: "grid", gridTemplateColumns: tx ? "1fr 1fr" : "1fr",
           gap: "1.25rem", padding: "1rem 1.5rem",
         }}>
-
-          {/* ── Request details ── */}
+          {/* Request details */}
           <div>
             <p style={{ fontSize: "0.68rem", fontWeight: 700, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 0.6rem" }}>
               Request Details
@@ -274,11 +251,9 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
                   value={`${entry.requester.first_name} ${entry.requester.last_name}`}
                 />
               )}
-
-              {/* Pending note + cancel button — standard user only */}
+              {/* Pending note + cancel — standard user only */}
               {!isAdmin && entry.status === "pending" && (
                 <div style={{ marginTop: "0.5rem", display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                  {/* Note */}
                   <div style={{
                     display: "flex", alignItems: "center", gap: "0.4rem",
                     padding: "0.45rem 0.6rem",
@@ -288,7 +263,6 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
                     <Clock style={{ width: "0.65rem", height: "0.65rem", color: C.warning, flexShrink: 0 }} />
                     This request is awaiting admin review.
                   </div>
-                  {/* Cancel button — directly below the note */}
                   {onRequestCancel && (
                     <button
                       disabled={isCancelling}
@@ -317,7 +291,7 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
             </div>
           </div>
 
-          {/* ── Transaction snapshot ── */}
+          {/* Transaction snapshot */}
           {tx ? (
             <div>
               <p style={{ fontSize: "0.68rem", fontWeight: 700, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 0.6rem" }}>
@@ -335,7 +309,7 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
           ) : (
             <div style={{
               display: "flex", alignItems: "center", gap: "0.5rem", alignSelf: "start",
-              background: "hsl(45 85% 50% / 0.07)", border: `1px solid hsl(45 85% 50% / 0.2)`,
+              background: "hsl(45 85% 50% / 0.07)", border: "1px solid hsl(45 85% 50% / 0.2)",
               borderRadius: "0.5rem", padding: "0.75rem",
             }}>
               <AlertTriangle style={{ width: "0.85rem", height: "0.85rem", color: C.warning, flexShrink: 0 }} />
@@ -350,31 +324,29 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
   );
 }
 
-function Row({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
-  return (
-    <div style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-      <span style={{ fontSize: "0.68rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.04em", minWidth: "100px", flexShrink: 0 }}>
-        {label}
-      </span>
-      <span style={{ fontSize: "0.78rem", color: accent ?? C.fg }}>{value}</span>
-    </div>
-  );
-}
-
 // ── Filter pill ───────────────────────────────────────────────────────────────
 type FilterStatus = "all" | "pending" | "approved" | "rejected";
-function FilterPill({ value, active, count, onClick }: { value: FilterStatus; active: boolean; count: number; onClick: () => void }) {
-  const colorMap: Record<FilterStatus, string> = { all: C.primary, pending: C.warning, approved: C.income, rejected: C.expense };
+function FilterPill({ value, active, count, onClick }: {
+  value: FilterStatus; active: boolean; count: number; onClick: () => void;
+}) {
+  const colorMap: Record<FilterStatus, string> = {
+    all: C.primary, pending: C.warning, approved: C.income, rejected: C.expense,
+  };
   const color = colorMap[value];
   return (
     <button onClick={onClick} style={{
       display: "flex", alignItems: "center", gap: "0.35rem",
       padding: "0.3rem 0.75rem", borderRadius: "999px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer",
-      border: `1px solid ${active ? color : C.border}`, background: active ? `${color}18` : "transparent",
+      border: `1px solid ${active ? color : C.border}`,
+      background: active ? `${color}18` : "transparent",
       color: active ? color : C.fgMuted, transition: "all 0.15s", textTransform: "capitalize",
     }}>
       {value === "all" ? "All" : value}
-      <span style={{ background: active ? `${color}30` : C.surfaceEl, color: active ? color : C.fgMuted, borderRadius: "999px", padding: "0 0.35rem", fontSize: "0.65rem", fontWeight: 700 }}>
+      <span style={{
+        background: active ? `${color}30` : C.surfaceEl,
+        color: active ? color : C.fgMuted,
+        borderRadius: "999px", padding: "0 0.35rem", fontSize: "0.65rem", fontWeight: 700,
+      }}>
         {count}
       </span>
     </button>
@@ -440,45 +412,28 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
     rejected: history.filter(h => h.status === "rejected").length,
   };
   const filtered = filter === "all" ? history : history.filter(h => h.status === filter);
+
   const fmt = (amount: number, type?: string) => {
     const n = formatCurrency(amount).replace("₱ ", "");
     return type === "Expense" ? `₱ -${n}` : `₱ +${n}`;
   };
-  const toggleExpand = (id: number) => setExpandedId(prev => prev === id ? null : id);
 
-  // colSpan: chevron + id + tx_id + (admin: requestedBy) + type + amount + status + requestedAt + reviewedAt
-  // No action column on either role — cancel lives inside the expanded row
+  const toggleExpand = (id: number) => setExpandedId(prev => prev === id ? null : id);
   const colSpan = isAdmin ? 9 : 8;
 
   return (
     <>
-      <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-
+      <ShellTable onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
         {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}`, flexShrink: 0,
-        }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <History style={{ width: "1rem", height: "1rem", color: C.primary }} />
-              <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>
-                Deletion Request History
-              </h2>
-            </div>
-            <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>
-              {isAdmin
-                ? "Requests you reviewed (approved & rejected) · Pending requests are in Manage Users"
-                : "Your deletion requests · Click any row to expand details"}
-            </p>
-          </div>
-          <button onClick={onClose} style={{
-            background: "transparent", border: `1px solid ${C.border}`, borderRadius: "0.5rem",
-            color: C.fgMuted, cursor: "pointer", padding: "0.3rem", display: "flex", alignItems: "center",
-          }}>
-            <X style={{ width: "1rem", height: "1rem" }} />
-          </button>
-        </div>
+        <ModalHeader
+          title="Deletion Request History"
+          subtitle={isAdmin
+            ? "Requests you reviewed (approved & rejected) · Pending requests are in Manage Users"
+            : "Your deletion requests · Click any row to expand details"}
+          icon={History}
+          iconColor={C.primary}
+          onClose={onClose}
+        />
 
         {/* Filter pills */}
         {!loading && history.length > 0 && (
@@ -527,15 +482,15 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
           {!loading && filtered.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", tableLayout: "fixed" }}>
               <colgroup>
-                <col style={{ width: "3%"  }} /> {/* chevron */}
-                <col style={{ width: "6%"  }} /> {/* ID */}
-                <col style={{ width: "8%"  }} /> {/* Tx ID */}
-                {isAdmin && <col style={{ width: "15%" }} />} {/* Requested By */}
-                <col style={{ width: "11%" }} /> {/* Type */}
-                <col style={{ width: "13%" }} /> {/* Amount */}
-                <col style={{ width: "11%" }} /> {/* Status */}
-                <col style={{ width: isAdmin ? "22%" : "24%" }} /> {/* Requested At */}
-                <col style={{ width: isAdmin ? "22%" : "24%" }} /> {/* Reviewed At */}
+                <col style={{ width: "3%"  }} />
+                <col style={{ width: "6%"  }} />
+                <col style={{ width: "8%"  }} />
+                {isAdmin && <col style={{ width: "15%" }} />}
+                <col style={{ width: "11%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "11%" }} />
+                <col style={{ width: isAdmin ? "22%" : "24%" }} />
+                <col style={{ width: isAdmin ? "22%" : "24%" }} />
               </colgroup>
               <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
                 <tr>
@@ -552,14 +507,13 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
               </thead>
               <tbody>
                 {filtered.map((entry, idx) => {
-                  const isEven     = idx % 2 === 0;
-                  const hovered    = hoveredRow === idx;
-                  const expanded   = expandedId === entry.id;
-                  const tx         = entry.transaction;
-                  const isInc      = tx?.transaction_type !== "Expense";
-                  const amtColor   = isInc ? C.income : C.expense;
-                  const isPending  = entry.status === "pending";
-
+                  const isEven   = idx % 2 === 0;
+                  const hovered  = hoveredRow === idx;
+                  const expanded = expandedId === entry.id;
+                  const tx       = entry.transaction;
+                  const isInc    = tx?.transaction_type !== "Expense";
+                  const amtColor = isInc ? C.income : C.expense;
+                  const isPending = entry.status === "pending";
                   return (
                     <>
                       <tr
@@ -573,13 +527,17 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
                         onMouseLeave={() => setHoveredRow(null)}
                       >
                         <td style={{ ...td, textAlign: "center", color: C.fgMuted }}>
-                          {expanded ? <ChevronUp style={{ width: "0.75rem", height: "0.75rem" }} /> : <ChevronDown style={{ width: "0.75rem", height: "0.75rem" }} />}
+                          {expanded
+                            ? <ChevronUp   style={{ width: "0.75rem", height: "0.75rem" }} />
+                            : <ChevronDown style={{ width: "0.75rem", height: "0.75rem" }} />}
                         </td>
                         <td style={td}>{entry.id}</td>
                         <td style={td}>{entry.transaction_id}</td>
                         {isAdmin && (
                           <td style={td}>
-                            {entry.requester ? `${entry.requester.first_name} ${entry.requester.last_name}` : `User #${entry.requested_by}`}
+                            {entry.requester
+                              ? `${entry.requester.first_name} ${entry.requester.last_name}`
+                              : `User #${entry.requested_by}`}
                           </td>
                         )}
                         <td style={td}>
@@ -603,14 +561,12 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
                             : <span style={{ fontStyle: "italic" }}>Pending review</span>}
                         </td>
                       </tr>
-
                       {expanded && (
                         <ExpandedRow
                           key={`exp-${entry.id}`}
                           entry={entry}
                           isAdmin={isAdmin}
                           colSpan={colSpan}
-                          // Pass cancel handler only when standard user + pending
                           onRequestCancel={!isAdmin && isPending ? setCancelTarget : undefined}
                           isCancelling={cancelling === entry.id}
                         />
@@ -631,7 +587,7 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
             {" · Click any row to expand details"}
           </div>
         )}
-      </Shell>
+      </ShellTable>
 
       {cancelTarget && (
         <CancelConfirmDialog

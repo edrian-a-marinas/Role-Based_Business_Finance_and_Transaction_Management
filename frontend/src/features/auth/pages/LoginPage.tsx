@@ -6,10 +6,11 @@ import type { LoginForm } from "../schemas/login";
 import { UserSchema } from "../schemas/userAuth";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../AuthContext";
-import { S } from "../lib/authConstants";
+import { S } from "../lib/authTokens";
 import { useParticles } from "../lib/useParticles";
 import { buildAuthStyles } from "../lib/authStyles";
 import PrototypeBadge from "../lib/authToolTip";
+import WatchDemoLink from "../lib/authDemoVid";
 
 // ── Frontend rate-limit config (mirrors backend) ──────────────────────────────
 const FE_MAX_ATTEMPTS    = 5;
@@ -178,15 +179,16 @@ export default function Login() {
             <PrototypeBadge />
           </div>
 
-          <div className="logo-row">
-            <div className="logo-icon-wrap">
-              <img src="/vite.svg" alt="TransacScope" />
-            </div>
-            <span className="logo-name">TransacScope</span>
+          <div className="logo-row" style={{ justifyContent: "flex-start" }}>
+            <img 
+              src="/transacScope1.svg" 
+              alt="TransacScope" 
+              style={{ height: "100px", width: "auto" }}
+            />
           </div>
+          <p className="card-subtitle" style={{ textAlign: "center" }}>Sign in to your account to continue</p>
 
-          <h1 className="card-title" style={{ fontSize: "26px" }}>Welcome back</h1>
-          <p className="card-subtitle">Sign in to your account to continue</p>
+
           <div className="accent-line" />
 
           {isLocked && (
@@ -254,6 +256,7 @@ export default function Login() {
             Don't have an account? <Link to="/register">Create one</Link>
           </p>
         </div>
+        <WatchDemoLink />
       </div>
     </>
   );

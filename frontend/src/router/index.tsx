@@ -8,6 +8,8 @@ import Login      from "../features/auth/pages/LoginPage"
 import Register   from "../features/auth/pages/RegisterPage"
 import Deactivated from "../features/dashboard/pages/DeactivatedPage"
 
+import NotFound   from "../features/dashboard/pages/NotFoundPage"
+
 function RootController() {
   const { isLoggedIn, user } = useContext(AuthContext)
 
@@ -38,6 +40,7 @@ export default function Router() {
       <Route path="/"         element={<RootController />} />
       <Route path="/login"    element={isLoggedIn ? <Navigate to="/" /> : <Login />} />
       <Route path="/register" element={isLoggedIn ? <Navigate to="/" /> : <Register />} />
+      <Route path="*"         element={<NotFound />} />
     </Routes>
   )
 }

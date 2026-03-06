@@ -1,28 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  X, Trash2, ArrowLeft, CheckCircle2, XCircle,
+  Trash2, ArrowLeft, CheckCircle2, XCircle,
   AlertTriangle, Clock, Receipt, ChevronRight,
 } from "lucide-react";
 import api from "../../../../services/apiClient";
-import type { OnCloseProps } from "../../lib/utilsFormatFetch";
+import type { OnCloseProps } from "../../lib/utility";
 import type { TransactionInfo, DeletionRequest } from "../../schemas/user";
-import { formatCurrency } from "../../lib/utilsFormatFetch";
-import { useOutsideClickStrict } from "../../lib/utilsHooks";
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  primary:    "hsl(199,89%,38%)",
-  income:     "hsl(160,60%,45%)",
-  expense:    "hsl(0,72%,51%)",
-  warning:    "hsl(45,85%,50%)",
-  surface:    "hsl(220,20%,12%)",
-  surfaceEl:  "hsl(220,18%,16%)",
-  surfaceHov: "hsl(220,16%,20%)",
-  border:     "hsl(220,16%,22%)",
-  fg:         "hsl(220,14%,90%)",
-  fgMuted:    "hsl(220,10%,55%)",
-  overlay:    "rgba(0,0,0,0.55)",
-};
+import { formatCurrency } from "../../lib/utility";
+import { useOutsideClickStrict } from "../../lib/utilityHooks";
+import { ShellTable } from "./shared/Shell";
+import ModalHeader from "./shared/ModalHeader";
+import { DetailRow } from "./shared/InfoRow";
+import { C } from "./shared";
 
 type Step = "list" | "detail" | "confirmApprove" | "confirmReject";
 
@@ -35,105 +24,12 @@ const td: React.CSSProperties = {
   whiteSpace:   "nowrap",
 };
 
-// ── HOISTED components ────────────────────────────────────────────────────────
-function Shell({ children, onBackdropDown, onBackdropUp, narrow = false }: {
-  children: React.ReactNode;
-  onBackdropDown: React.MouseEventHandler;
-  onBackdropUp:   React.MouseEventHandler;
-  narrow?:        boolean;
-}) {
-  return (
-    <div onMouseDown={onBackdropDown} onMouseUp={onBackdropUp} style={{
-      position: "fixed", inset: 0,
-      backgroundColor: C.overlay,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      zIndex: 50, padding: "1rem",
-    }}>
-      <div
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        onMouseUp={e => e.stopPropagation()}
-        style={{
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: "1rem", width: "100%",
-          maxWidth: narrow ? "500px" : "1100px",
-          display: "flex", flexDirection: "column",
-          maxHeight: "90vh", overflow: "hidden",
-          boxShadow: "0 24px 48px rgba(0,0,0,0.5)",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function ModalHeader({ title, subtitle, icon: Icon, iconColor, onClose, onBack }: {
-  title:      string;
-  subtitle?:  string;
-  icon?:      typeof X;
-  iconColor?: string;
-  onClose:    () => void;
-  onBack?:    () => void;
-}) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}`, flexShrink: 0,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        {onBack && (
-          <button onClick={onBack} style={{
-            background: "transparent", border: `1px solid ${C.border}`,
-            borderRadius: "0.4rem", color: C.fgMuted, cursor: "pointer",
-            padding: "0.25rem 0.5rem", display: "flex", alignItems: "center",
-            gap: "0.25rem", fontSize: "0.75rem",
-          }}>
-            <ArrowLeft style={{ width: "0.8rem", height: "0.8rem" }} /> Back
-          </button>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {Icon && <Icon style={{ width: "1rem", height: "1rem", color: iconColor ?? C.fg }} />}
-          <div>
-            <h2 style={{ color: C.fg, fontSize: "1.05rem", fontWeight: 700, margin: 0 }}>{title}</h2>
-            {subtitle && <p style={{ color: C.fgMuted, fontSize: "0.72rem", margin: "0.1rem 0 0" }}>{subtitle}</p>}
-          </div>
-        </div>
-      </div>
-      <button onClick={onClose} style={{
-        background: "transparent", border: `1px solid ${C.border}`,
-        borderRadius: "0.5rem", color: C.fgMuted, cursor: "pointer",
-        padding: "0.3rem", display: "flex", alignItems: "center",
-      }}>
-        <X style={{ width: "1rem", height: "1rem" }} />
-      </button>
-    </div>
-  );
-}
-
-function DetailRow({ label, value, accent }: { label: string; value: React.ReactNode; accent?: string }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", gap: "0.5rem",
-      padding: "0.55rem 0", borderBottom: `1px solid ${C.border}`,
-    }}>
-      <span style={{
-        fontSize: "0.72rem", fontWeight: 600, color: C.fgMuted,
-        textTransform: "uppercase", letterSpacing: "0.05em",
-        minWidth: "140px", paddingTop: "0.05rem",
-      }}>{label}</span>
-      <span style={{ fontSize: "0.82rem", color: accent ?? C.fg }}>{value}</span>
-    </div>
-  );
-}
-
+// ── Local helpers (scoped to this modal) ─────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{
-      fontSize: "0.65rem", fontWeight: 700, color: C.fgMuted,
-      textTransform: "uppercase", letterSpacing: "0.08em",
-      margin: "1rem 0 0.2rem",
-    }}>{children}</p>
+    <p style={{ fontSize: "0.65rem", fontWeight: 700, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "1rem 0 0.2rem" }}>
+      {children}
+    </p>
   );
 }
 
@@ -141,13 +37,20 @@ function TypeBadge({ type }: { type: string }) {
   const isIncome = type !== "Expense";
   return (
     <span style={{
-      display: "inline-block", padding: "0.12rem 0.5rem",
-      borderRadius: "999px", fontSize: "0.68rem", fontWeight: 700,
+      display: "inline-block", padding: "0.12rem 0.5rem", borderRadius: "999px",
+      fontSize: "0.68rem", fontWeight: 700,
       backgroundColor: isIncome ? "hsl(160 60% 45% / 0.12)" : "hsl(0 72% 51% / 0.12)",
-      color: isIncome ? C.income : C.expense,
+      color:  isIncome ? C.income : C.expense,
       border: `1px solid ${isIncome ? C.income : C.expense}40`,
-    }}>{type}</span>
+    }}>
+      {type}
+    </span>
   );
+}
+
+// ── Accent bar on narrow steps ────────────────────────────────────────────────
+function AccentBar({ color }: { color: string }) {
+  return <div style={{ height: "3px", background: `linear-gradient(90deg, ${color}, ${color}44)` }} />;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -174,29 +77,22 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
 
   useEffect(() => { fetchRequests(); }, []);
 
-  // Deep-link from notification: once requests load, jump straight to detail step
   useEffect(() => {
     if (!initialRequestId || requests.length === 0) return;
     const req = requests.find(r => r.id === initialRequestId);
     if (req) handleRowClick(req);
   }, [initialRequestId, requests]);
 
-  // Kick off 5s countdown whenever confirmApprove step starts
   useEffect(() => {
-    if (step === "confirmApprove") {
-      setCountdown(5);
-      setCanApprove(false);
-      countdownRef.current = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(countdownRef.current!);
-            setCanApprove(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (step !== "confirmApprove") return;
+    setCountdown(5);
+    setCanApprove(false);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(countdownRef.current!); setCanApprove(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [step]);
 
@@ -219,9 +115,7 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
   const fetchTransaction = async (transactionId: number) => {
     if (!token || !tokenType) return null;
     try {
-      const res = await api.get(`api/transactions/${transactionId}`, {
-        headers: { Authorization: `${tokenType} ${token}` },
-      });
+      const res = await api.get(`api/transactions/${transactionId}`, { headers: { Authorization: `${tokenType} ${token}` } });
       return res.data;
     } catch { return null; }
   };
@@ -232,22 +126,14 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
     setLoadingTx(true);
     const txInfo = await fetchTransaction(req.transaction_id);
     setLoadingTx(false);
-    if (txInfo) {
-      setTransactionInfo(txInfo);
-      setStep("detail");
-    } else {
-      setError("Failed to fetch transaction details.");
-    }
+    if (txInfo) { setTransactionInfo(txInfo); setStep("detail"); }
+    else setError("Failed to fetch transaction details.");
   };
 
   const handleFinalApprove = async () => {
     if (!selectedRequest) return;
     try {
-      await api.patch(
-        `/api/transactions/deletion-requests/${selectedRequest.id}`,
-        { approve: true },
-        { headers: { Authorization: `${tokenType} ${token}` } }
-      );
+      await api.patch(`/api/transactions/deletion-requests/${selectedRequest.id}`, { approve: true }, { headers: { Authorization: `${tokenType} ${token}` } });
       alert("Transaction deleted successfully.");
       onClose();
     } catch { setError("Failed to delete transaction."); }
@@ -256,11 +142,7 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
   const handleFinalReject = async () => {
     if (!selectedRequest) return;
     try {
-      await api.patch(
-        `/api/transactions/deletion-requests/${selectedRequest.id}`,
-        { approve: false },
-        { headers: { Authorization: `${tokenType} ${token}` } }
-      );
+      await api.patch(`/api/transactions/deletion-requests/${selectedRequest.id}`, { approve: false }, { headers: { Authorization: `${tokenType} ${token}` } });
       alert("Deletion request rejected.");
       onClose();
     } catch { setError("Failed to reject request."); }
@@ -273,7 +155,7 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
 
   const pendingCount = requests.filter(r => r.status === "pending").length;
 
-  // Shared detail body used in steps 2, 3, 4
+  // Shared tx detail block (steps 2, 3, 4)
   const TxDetailBlock = () => {
     if (!selectedRequest || !transactionInfo) return null;
     const isIncome = transactionInfo.transaction_type !== "Expense";
@@ -286,30 +168,25 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
             ? `${selectedRequest.requester.first_name} ${selectedRequest.requester.last_name}`
             : `User #${selectedRequest.requested_by}`}
         />
-
-
         <SectionLabel>Transaction Details</SectionLabel>
         <DetailRow label="Transaction ID" value={transactionInfo.id} />
-        <DetailRow label="Type" value={<TypeBadge type={transactionInfo.transaction_type} />} />
-        <DetailRow
-          label="Amount"
-          value={formatSignedAmount(transactionInfo.amount, transactionInfo.transaction_type)}
-          accent={isIncome ? C.income : C.expense}
-        />
-        <DetailRow label="Category"    value={transactionInfo.category_name} />
-        <DetailRow label="Date"        value={transactionInfo.transaction_date} accent={C.fgMuted} />
-        <DetailRow label="Description" value={transactionInfo.description || "—"} accent={C.fgMuted} />
+        <DetailRow label="Type"           value={<TypeBadge type={transactionInfo.transaction_type} />} />
+        <DetailRow label="Amount"         value={formatSignedAmount(transactionInfo.amount, transactionInfo.transaction_type)} accent={isIncome ? C.income : C.expense} />
+        <DetailRow label="Category"       value={transactionInfo.category_name} />
+        <DetailRow label="Date"           value={transactionInfo.transaction_date} accent={C.fgMuted} />
+        <DetailRow label="Description"    value={transactionInfo.description || "—"} accent={C.fgMuted} />
       </>
     );
   };
 
   // ── STEP: LIST ────────────────────────────────────────────────────────────
   if (step === "list") return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+    <ShellTable onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
       <ModalHeader
         title="Deletion Requests"
         subtitle={loading ? "Loading…" : `${pendingCount} pending request${pendingCount !== 1 ? "s" : ""}`}
-        icon={Trash2} iconColor={C.expense}
+        icon={Trash2}
+        iconColor={C.expense}
         onClose={onClose}
       />
 
@@ -319,10 +196,7 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
             { label: "Pending", value: pendingCount,    color: C.expense },
             { label: "Total",   value: requests.length, color: C.fgMuted },
           ].map(p => (
-            <div key={p.label} style={{
-              background: `${p.color}18`, border: `1px solid ${p.color}40`,
-              borderRadius: "0.4rem", padding: "0.3rem 0.75rem", fontSize: "0.75rem",
-            }}>
+            <div key={p.label} style={{ background: `${p.color}18`, border: `1px solid ${p.color}40`, borderRadius: "0.4rem", padding: "0.3rem 0.75rem", fontSize: "0.75rem" }}>
               <span style={{ color: C.fgMuted, marginRight: "0.4rem" }}>{p.label}</span>
               <span style={{ color: p.color, fontWeight: 700 }}>{p.value}</span>
             </div>
@@ -332,21 +206,18 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
 
       <div style={{ overflowY: "auto", overflowX: "hidden", flex: 1 }}>
         {loading && <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>Loading…</p>}
-
         {error && (
           <div style={{ margin: "1rem 1.5rem", display: "flex", alignItems: "center", gap: "0.5rem", background: "hsl(0 72% 51% / 0.08)", border: `1px solid ${C.expense}40`, borderRadius: "0.5rem", padding: "0.6rem 0.75rem" }}>
             <AlertTriangle style={{ width: "0.85rem", height: "0.85rem", color: C.expense, flexShrink: 0 }} />
             <p style={{ color: "hsl(0,72%,70%)", fontSize: "0.78rem", margin: 0 }}>{error}</p>
           </div>
         )}
-
         {!loading && requests.length === 0 && (
           <div style={{ padding: "3rem", textAlign: "center" }}>
             <CheckCircle2 style={{ width: "2rem", height: "2rem", color: C.income, margin: "0 auto 0.75rem" }} />
             <p style={{ color: C.fgMuted, fontSize: "0.85rem", margin: 0 }}>No pending deletion requests.</p>
           </div>
         )}
-
         {!loading && requests.length > 0 && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", tableLayout: "fixed" }}>
             <colgroup>
@@ -361,12 +232,9 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               <tr>
                 {["Tx ID", "Type", "Amount", "Requested By", "Status", "Requested At", ""].map((h, i) => (
-                  <th key={i} style={{
-                    padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600,
-                    color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em",
-                    borderBottom: `1px solid ${C.border}`, background: C.surfaceEl,
-                    textAlign: "left", whiteSpace: "nowrap",
-                  }}>{h}</th>
+                  <th key={i} style={{ padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.surfaceEl, textAlign: "left", whiteSpace: "nowrap" }}>
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -377,16 +245,11 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
                 const isPending = req.status === "pending";
                 const isIncome  = req.transaction?.transaction_type !== "Expense";
                 const amtColor  = isIncome ? C.income : C.expense;
-
                 return (
                   <tr
                     key={req.id}
                     onClick={() => isPending && handleRowClick(req)}
-                    style={{
-                      backgroundColor: hovered && isPending ? C.surfaceHov : isEven ? "transparent" : "hsl(220,14%,14%)",
-                      transition: "background-color 0.1s",
-                      cursor: isPending ? (loadingTx ? "wait" : "pointer") : "default",
-                    }}
+                    style={{ backgroundColor: hovered && isPending ? C.surfaceHov : isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s", cursor: isPending ? (loadingTx ? "wait" : "pointer") : "default" }}
                     onMouseEnter={() => setHoveredRow(idx)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
@@ -399,27 +262,14 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
                       {req.requester ? `${req.requester.first_name} ${req.requester.last_name}` : `User #${req.requested_by}`}
                     </td>
                     <td style={td}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: "0.25rem",
-                        padding: "0.12rem 0.5rem", borderRadius: "999px",
-                        fontSize: "0.68rem", fontWeight: 600,
-                        backgroundColor: isPending ? "hsl(45 85% 50% / 0.12)" : "hsl(220 10% 46% / 0.12)",
-                        color: isPending ? C.warning : C.fgMuted,
-                        border: `1px solid ${isPending ? C.warning : C.fgMuted}40`,
-                      }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", padding: "0.12rem 0.5rem", borderRadius: "999px", fontSize: "0.68rem", fontWeight: 600, backgroundColor: isPending ? "hsl(45 85% 50% / 0.12)" : "hsl(220 10% 46% / 0.12)", color: isPending ? C.warning : C.fgMuted, border: `1px solid ${isPending ? C.warning : C.fgMuted}40` }}>
                         {isPending && <Clock style={{ width: "0.6rem", height: "0.6rem" }} />}
                         {req.status}
                       </span>
                     </td>
                     <td style={{ ...td, color: C.fgMuted }}>{new Date(req.requested_at).toLocaleString()}</td>
                     <td style={{ ...td, textAlign: "center" }}>
-                      {isPending && (
-                        <ChevronRight style={{
-                          width: "0.85rem", height: "0.85rem",
-                          color: hovered ? C.primary : C.border,
-                          transition: "color 0.15s",
-                        }} />
-                      )}
+                      {isPending && <ChevronRight style={{ width: "0.85rem", height: "0.85rem", color: hovered ? C.primary : C.border, transition: "color 0.15s" }} />}
                     </td>
                   </tr>
                 );
@@ -434,16 +284,16 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
           {pendingCount > 0 ? "Click a pending row to review and take action" : "No pending actions"}
         </div>
       )}
-    </Shell>
+    </ShellTable>
   );
 
+  // ── Narrow steps 2, 3, 4 share ShellTable with maxWidth="narrow" ─────────
   // ── STEP: DETAIL ──────────────────────────────────────────────────────────
   if (step === "detail") return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp} narrow>
-      <div style={{ height: "3px", background: `linear-gradient(90deg, ${C.expense}, ${C.expense}44)` }} />
+    <ShellTable maxWidth="narrow" onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+      <AccentBar color={C.expense} />
       <ModalHeader
-        title="Review Request"
-        subtitle="Decide whether to approve or reject"
+        title="Review Request" subtitle="Decide whether to approve or reject"
         icon={Receipt} iconColor={C.expense}
         onClose={onClose} onBack={() => setStep("list")}
       />
@@ -477,16 +327,15 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
           <Trash2 style={{ width: "0.85rem", height: "0.85rem" }} /> Approve Deletion
         </button>
       </div>
-    </Shell>
+    </ShellTable>
   );
 
-  // ── STEP: CONFIRM APPROVE (5s countdown) ─────────────────────────────────
+  // ── STEP: CONFIRM APPROVE ─────────────────────────────────────────────────
   if (step === "confirmApprove") return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp} narrow>
-      <div style={{ height: "3px", background: `linear-gradient(90deg, ${C.expense}, ${C.expense}44)` }} />
+    <ShellTable maxWidth="narrow" onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+      <AccentBar color={C.expense} />
       <ModalHeader
-        title="Confirm Deletion"
-        subtitle="This action is irreversible"
+        title="Confirm Deletion" subtitle="This action is irreversible"
         icon={Trash2} iconColor={C.expense}
         onClose={onClose} onBack={() => setStep("detail")}
       />
@@ -506,30 +355,22 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
         <button onClick={() => setStep("detail")} style={{ flex: 1, padding: "0.55rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, background: "transparent", color: C.fgMuted, fontSize: "0.82rem", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem" }}>
           <ArrowLeft style={{ width: "0.8rem", height: "0.8rem" }} /> Back
         </button>
-
-        {/* Countdown button with progress fill */}
         <button
           onClick={canApprove ? handleFinalApprove : undefined}
           disabled={!canApprove}
           style={{
             flex: 2, padding: "0.55rem", borderRadius: "0.5rem",
-            border: canApprove ? `1px solid ${C.expense}80` : `1px solid ${C.border}`,
-            background: canApprove ? "hsl(0 72% 51% / 0.15)" : C.surfaceEl,
-            color: canApprove ? C.expense : C.fgMuted,
+            border:      canApprove ? `1px solid ${C.expense}80` : `1px solid ${C.border}`,
+            background:  canApprove ? "hsl(0 72% 51% / 0.15)" : C.surfaceEl,
+            color:       canApprove ? C.expense : C.fgMuted,
             fontSize: "0.82rem", fontWeight: 700,
             cursor: canApprove ? "pointer" : "not-allowed",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
             transition: "all 0.3s", position: "relative", overflow: "hidden",
           }}
         >
-          {/* Progress bar fill */}
           {!canApprove && (
-            <div style={{
-              position: "absolute", left: 0, top: 0, bottom: 0,
-              width: `${((5 - countdown) / 5) * 100}%`,
-              background: "hsl(0 72% 51% / 0.15)",
-              transition: "width 1s linear",
-            }} />
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${((5 - countdown) / 5) * 100}%`, background: "hsl(0 72% 51% / 0.15)", transition: "width 1s linear" }} />
           )}
           <span style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.4rem" }}>
             {canApprove
@@ -539,16 +380,15 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
           </span>
         </button>
       </div>
-    </Shell>
+    </ShellTable>
   );
 
   // ── STEP: CONFIRM REJECT ──────────────────────────────────────────────────
   if (step === "confirmReject") return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp} narrow>
-      <div style={{ height: "3px", background: `linear-gradient(90deg, ${C.fgMuted}, ${C.fgMuted}44)` }} />
+    <ShellTable maxWidth="narrow" onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+      <AccentBar color={C.fgMuted} />
       <ModalHeader
-        title="Confirm Rejection"
-        subtitle="The deletion request will be declined"
+        title="Confirm Rejection" subtitle="The deletion request will be declined"
         icon={XCircle} iconColor={C.fgMuted}
         onClose={onClose} onBack={() => setStep("detail")}
       />
@@ -568,7 +408,7 @@ export default function HandleDeletionRequestModal({ onClose, initialRequestId }
           <XCircle style={{ width: "0.85rem", height: "0.85rem" }} /> Confirm Rejection
         </button>
       </div>
-    </Shell>
+    </ShellTable>
   );
 
   return null;

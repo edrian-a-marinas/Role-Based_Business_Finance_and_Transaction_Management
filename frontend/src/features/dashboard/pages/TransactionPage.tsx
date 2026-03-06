@@ -1,4 +1,3 @@
-// TransactionPage.tsx
 import { useState, useContext } from "react";
 import { AuthContext } from "../../auth/AuthContext";
 import {
@@ -13,8 +12,9 @@ import {
   HistoryTransaction,
   DeletionRequestHistory,
 } from "../components/modals";
+import { ActionButton } from "../components/overview/ActionCard";
+import type { ActionCard } from "../components/overview/ActionCard";
 
-// ── Only domain/accent colors remain inline — layout colors use CSS vars ──────
 const C = {
   primary: "hsl(var(--primary))",
   income:  "hsl(var(--income))",
@@ -22,19 +22,9 @@ const C = {
   warning: "hsl(var(--warning))",
 };
 
-interface ActionCard {
-  label:       string;
-  description: string;
-  icon:        typeof Plus;
-  color:       string;
-  bgColor:     string;
-  onClick:     () => void;
-}
-
 export default function Transactions() {
   const { user } = useContext(AuthContext);
-  const userRole = user!.role_id;
-  const isAdmin  = userRole === 1;
+  const isAdmin  = user!.role_id === 1;
 
   const [showCreateModal,          setShowCreateModal]          = useState(false);
   const [showReadModal,            setShowReadModal]            = useState(false);
@@ -106,19 +96,14 @@ export default function Transactions() {
     <>
       <title>Transactions</title>
       <div className="space-y-8">
-
         {/* Page header */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <ArrowLeftRight className="h-5 w-5" style={{ color: C.primary }} />
-            <h1 className="text-2xl font-bold tracking-tight ts-page-fg">
-              Transactions
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight ts-page-fg">Transactions</h1>
           </div>
           <p className="text-sm ts-page-fg-light">
-            {isAdmin
-              ? "Manage all business transactions"
-              : "Manage your personal transactions"}
+            {isAdmin ? "Manage all business transactions" : "Manage your personal transactions"}
           </p>
         </div>
 
@@ -126,9 +111,7 @@ export default function Transactions() {
         <div className="space-y-3">
           <div>
             <h2 className="text-sm font-semibold ts-page-fg">Manage</h2>
-            <p className="text-xs ts-page-fg-light">
-              Create, view, edit, and delete transactions
-            </p>
+            <p className="text-xs ts-page-fg-light">Create, view, edit, and delete transactions</p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {crudActions.map((action, idx) => (
@@ -143,7 +126,6 @@ export default function Transactions() {
           </div>
         </div>
 
-        {/* Divider */}
         <div className="ts-divider" />
 
         {/* Section: History */}
@@ -168,73 +150,14 @@ export default function Transactions() {
             ))}
           </div>
         </div>
-
       </div>
 
-      {showCreateModal          && <CreateTransaction       onClose={() => setShowCreateModal(false)}          />}
-      {showReadModal            && <ReadTransactions        onClose={() => setShowReadModal(false)}            />}
-      {showUpdateModal          && <UpdateTransaction       onClose={() => setShowUpdateModal(false)}          />}
-      {showDeleteModal          && <DeleteTransaction       onClose={() => setShowDeleteModal(false)}          />}
-      {showHistoryModal         && <HistoryTransaction      onClose={() => setShowHistoryModal(false)}         />}
-      {showDeletionHistoryModal && <DeletionRequestHistory  onClose={() => setShowDeletionHistoryModal(false)} />}
+      {showCreateModal          && <CreateTransaction      onClose={() => setShowCreateModal(false)}          />}
+      {showReadModal            && <ReadTransactions       onClose={() => setShowReadModal(false)}            />}
+      {showUpdateModal          && <UpdateTransaction      onClose={() => setShowUpdateModal(false)}          />}
+      {showDeleteModal          && <DeleteTransaction      onClose={() => setShowDeleteModal(false)}          />}
+      {showHistoryModal         && <HistoryTransaction     onClose={() => setShowHistoryModal(false)}         />}
+      {showDeletionHistoryModal && <DeletionRequestHistory onClose={() => setShowDeletionHistoryModal(false)} />}
     </>
-  );
-}
-
-// ── Shared card button ────────────────────────────────────────────────────────
-// .ts-action-card handles: bg, border, radius, padding, transition for theme.
-// Only accent color (hover border + icon fill) stays as inline prop.
-function ActionButton({
-  id, action, hoveredCard, setHoveredCard,
-}: {
-  id:             string;
-  action:         ActionCard;
-  hoveredCard:    string | null;
-  setHoveredCard: (id: string | null) => void;
-}) {
-  const Icon    = action.icon;
-  const hovered = hoveredCard === id;
-
-  return (
-    <button
-      onClick={action.onClick}
-      onMouseEnter={() => setHoveredCard(id)}
-      onMouseLeave={() => setHoveredCard(null)}
-      className="ts-action-card"
-      style={{
-        border:    `1px solid ${hovered ? action.color : "hsl(var(--page-border))"}`,
-        boxShadow: hovered
-          ? `0 4px 16px hsl(0 0% 0% / 0.08), 0 0 0 3px ${action.color}1a`
-          : "0 1px 3px hsl(0 0% 0% / 0.06)",
-        transform: hovered ? "translateY(-2px)" : "none",
-      }}
-    >
-      <div style={{
-        width:           "2.5rem",
-        height:          "2.5rem",
-        borderRadius:    "0.5rem",
-        backgroundColor: hovered ? action.color : action.bgColor,
-        display:         "flex",
-        alignItems:      "center",
-        justifyContent:  "center",
-        transition:      "background-color 0.15s",
-        flexShrink:      0,
-      }}>
-        <Icon style={{
-          width:      "1.1rem",
-          height:     "1.1rem",
-          color:      hovered ? "hsl(0,0%,100%)" : action.color,
-          transition: "color 0.15s",
-        }} />
-      </div>
-      <div>
-        <p className="text-sm font-semibold ts-page-fg" style={{ marginBottom: "0.2rem" }}>
-          {action.label}
-        </p>
-        <p className="text-xs ts-page-fg-light" style={{ lineHeight: "1.4" }}>
-          {action.description}
-        </p>
-      </div>
-    </button>
   );
 }

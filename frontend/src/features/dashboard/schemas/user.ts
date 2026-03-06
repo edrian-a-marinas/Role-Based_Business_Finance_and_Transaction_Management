@@ -1,71 +1,53 @@
-// schemas/user.ts
-
 type ReadUser = {
-  id: number;
-  email: string;
-  first_name: string;
-  middle_name: string | null;
-  last_name: string;
-  phone_number: string | null;
-  role_id: 1 | 2;
-  is_active: boolean;
-  created_at: string;
-  request_admin: boolean;
-  requested_by: number;
+  id:              number;
+  email:           string;
+  first_name:      string;
+  middle_name:     string | null;
+  last_name:       string;
+  phone_number:    string | null;
+  role_id:         1 | 2;
+  is_active:       boolean;
+  created_at:      string;
+  request_admin:   boolean;
+  requested_by:    number;
 };
 
 export type ReadUserWithCount = ReadUser & {
-  transaction_count?: number; 
+  transaction_count?: number;
 };
 
-export type ViewMode = "all" | "admin" | "standard";
-
-export type PromoteUserPayload = {
-  role_id: 1 | 2;
-};
-
-export type PromoteUserResponse = {
-  message: string;
-};
-
+export type ViewMode        = "all" | "admin" | "standard";
 export type PromoteViewMode = "all" | "admin" | "standard";
 
+export type PromoteUserPayload  = { role_id: 1 | 2 };
+export type PromoteUserResponse = { message: string };
 
 export type DeletionRequest = {
-  id: number;
+  id:             number;
   transaction_id: number;
-  requested_by: number;
-  status: "pending" | "approved" | "rejected";
-  requested_at: string;
-  reviewed_by: number | null;
-  reviewed_at: string | null;
-
-  requester?: ReadUser | null;
-
-  transaction?: TransactionInfo | null;
+  requested_by:   number;
+  status:         "pending" | "approved" | "rejected";
+  requested_at:   string;
+  reviewed_by:    number | null;
+  reviewed_at:    string | null;
+  requester?:     ReadUser | null;
+  transaction?:   TransactionInfo | null;
 };
 
-
 export type TransactionInfo = {
-  id: number;
-  amount: number;
-  category_id: number;
-  category_name: string;
-  description: string;
+  id:               number;
+  amount:           number;
+  category_id:      number;
+  category_name:    string;
+  description:      string;
   transaction_type: string;
   transaction_date: string;
 };
 
-
-
-// ── Shared validation primitives ─────────────────────────────────────────────
-// Keep in sync with: auth/schemas/register.ts and backend schemas/users.py
+// Shared with auth/schemas/register.ts and backend schemas/users.py
 export const nameRegex  = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/;
 export const phoneRegex = /^09\d{9}$/;
 
-/** Validates name + phone fields for profile updates.
- *  Mirrors the same rules as register.ts and backend UserBase schema.
- *  Returns an array of human-readable error messages (empty = valid). */
 export function validateProfileUpdate(fields: {
   firstName:  string;
   lastName:   string;

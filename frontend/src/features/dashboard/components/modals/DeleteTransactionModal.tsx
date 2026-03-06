@@ -1,158 +1,23 @@
 import { useState, useContext } from "react";
 import type { KeyboardEvent } from "react";
-import { X, ChevronLeft, ChevronRight, Search, Trash2, CheckCircle } from "lucide-react";
-
+import { ChevronLeft, ChevronRight, Search, Trash2, CheckCircle } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction, Category } from "@/features/dashboard/schemas/transaction";
-import type { OnCloseProps } from "@/features/dashboard/lib/utilsFormatFetch";
-import { formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utilsFormatFetch";
-import { useOutsideClickStrict } from "@/features/dashboard/lib/utilsHooks";
-
-// ── Same tokens ───────────────────────────────────────────────────────────────
-const C = {
-  primary:   "hsl(199,89%,38%)",
-  income:    "hsl(160,60%,45%)",
-  expense:   "hsl(0,72%,51%)",
-  surface:   "hsl(220,20%,12%)",
-  surfaceEl: "hsl(220,18%,16%)",
-  border:    "hsl(220,16%,22%)",
-  borderFoc: "hsl(199,89%,38%)",
-  fg:        "hsl(220,14%,90%)",
-  fgMuted:   "hsl(220,10%,55%)",
-  error:     "hsl(0,72%,60%)",
-  warning:   "hsl(30,90%,56%)",
-  overlay:   "rgba(0,0,0,0.55)",
-};
-
-const inputStyle: React.CSSProperties = {
-  width:           "100%",
-  backgroundColor: C.surfaceEl,
-  border:          `1px solid ${C.border}`,
-  borderRadius:    "0.5rem",
-  color:           C.fg,
-  fontSize:        "0.875rem",
-  padding:         "0.5rem 0.75rem",
-  outline:         "none",
-  transition:      "border-color 0.15s",
-  boxSizing:       "border-box",
-};
-
-const labelStyle: React.CSSProperties = {
-  display:       "block",
-  fontSize:      "0.75rem",
-  fontWeight:    500,
-  color:         C.fgMuted,
-  marginBottom:  "0.35rem",
-  letterSpacing: "0.02em",
-  textTransform: "uppercase",
-};
-
-// ── Shell ─────────────────────────────────────────────────────────────────────
-interface ShellProps {
-  children:        React.ReactNode;
-  onBackdropDown?: React.MouseEventHandler;
-  onBackdropUp?:   React.MouseEventHandler;
-}
-function Shell({ children, onBackdropDown, onBackdropUp }: ShellProps) {
-  return (
-    <div
-      onMouseDown={onBackdropDown}
-      onMouseUp={onBackdropUp}
-      style={{
-        position:        "fixed",
-        inset:           0,
-        backgroundColor: C.overlay,
-        display:         "flex",
-        alignItems:      "center",
-        justifyContent:  "center",
-        zIndex:          50,
-        padding:         "1rem",
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        onMouseUp={e => e.stopPropagation()}
-        style={{
-          background:   C.surface,
-          border:       `1px solid ${C.border}`,
-          borderRadius: "1rem",
-          width:        "100%",
-          maxWidth:     "420px",
-          padding:      "1.75rem",
-          position:     "relative",
-          boxShadow:    "0 24px 48px rgba(0,0,0,0.4)",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ── Read-only info row ────────────────────────────────────────────────────────
-function InfoRow({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div style={{
-      display:        "flex",
-      justifyContent: "space-between",
-      alignItems:     "center",
-      padding:        "0.45rem 0",
-      borderBottom:   `1px solid ${C.border}`,
-    }}>
-      <span style={{ fontSize: "0.75rem", color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-        {label}
-      </span>
-      <span style={{ fontSize: "0.875rem", fontWeight: 500, color: color ?? C.fg }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// ── Modal header ──────────────────────────────────────────────────────────────
-function ModalHeader({ title, subtitle, onClose }: { title: string; subtitle: string; onClose: () => void }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
-      <div>
-        <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>{title}</h2>
-        <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>{subtitle}</p>
-      </div>
-      <button
-        onClick={onClose}
-        style={{
-          background: "transparent", border: `1px solid ${C.border}`,
-          borderRadius: "0.5rem", color: C.fgMuted, cursor: "pointer",
-          padding: "0.3rem", display: "flex", alignItems: "center",
-        }}
-      >
-        <X style={{ width: "1rem", height: "1rem" }} />
-      </button>
-    </div>
-  );
-}
-
-// ── Error box ─────────────────────────────────────────────────────────────────
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div style={{
-      backgroundColor: "hsl(0 72% 51% / 0.1)", border: `1px solid ${C.error}`,
-      borderRadius: "0.5rem", padding: "0.6rem 0.75rem", marginBottom: "1rem",
-    }}>
-      <p style={{ color: C.error, fontSize: "0.8rem", margin: 0 }}>• {message}</p>
-    </div>
-  );
-}
+import type { OnCloseProps } from "@/features/dashboard/lib/utility";
+import { formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utility";
+import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
+import Shell from "./shared/Shell";
+import ModalHeader from "./shared/ModalHeader";
+import ErrorBox from "./shared/ErrorBox";
+import InfoRow from "./shared/InfoRow";
+import { C, inputStyle, labelStyle } from "./shared";
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user }  = useContext(AuthContext);
-  const userRole  = user!.role_id;
-  const isAdmin   = userRole === 1;
-
+  const isAdmin   = user!.role_id === 1;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
@@ -195,11 +60,7 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const handleProceed = () => {
     if (!transaction) return;
     setError("");
-    if (!isAdmin) {
-      handleRequestDeletion();
-    } else {
-      setShowConfirmation(true);
-    }
+    isAdmin ? setShowConfirmation(true) : handleRequestDeletion();
   };
 
   const handleRequestDeletion = async () => {
@@ -238,236 +99,238 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
     }
   };
 
-  // ── Step 1 — ID lookup ───────────────────────────────────────────────────
+  // ── Step 1 — ID lookup ────────────────────────────────────────────────────
   if (!transaction && !requestSent) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-      <ModalHeader
-        title={isAdmin ? "Delete Transaction" : "Request Deletion"}
-        subtitle="Enter the transaction ID to load"
-        onClose={onClose}
-      />
+      <div style={{ padding: "1.75rem" }}>
+        <ModalHeader
+          title={isAdmin ? "Delete Transaction" : "Request Deletion"}
+          subtitle="Enter the transaction ID to load"
+          onClose={onClose}
+        />
 
-      <div style={{ marginBottom: "1rem" }}>
-        <label style={labelStyle}>Transaction ID</label>
-        <div style={{ position: "relative" }}>
-          <input
-            value={transactionId}
-            placeholder="e.g. 42"
-            onChange={e => {
-              const val = e.target.value;
-              if (/^\d{0,3}$/.test(val)) setTransactionId(val);
-            }}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setFocusedField("id")}
-            onBlur={() => setFocusedField(null)}
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={labelStyle}>Transaction ID</label>
+          <div style={{ position: "relative" }}>
+            <input
+              value={transactionId}
+              placeholder="e.g. 42"
+              onChange={e => {
+                const val = e.target.value;
+                if (/^\d{0,3}$/.test(val)) setTransactionId(val);
+              }}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setFocusedField("id")}
+              onBlur={() => setFocusedField(null)}
+              style={{ ...inputStyle, paddingRight: "2.5rem", borderColor: focusedField === "id" ? C.borderFoc : C.border }}
+            />
+            <Search style={{
+              position: "absolute", right: "0.75rem", top: "50%",
+              transform: "translateY(-50%)", width: "0.9rem", height: "0.9rem",
+              color: C.fgMuted, pointerEvents: "none",
+            }} />
+          </div>
+        </div>
+
+        <ErrorBox message={error} />
+        {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Loading…</p>}
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            onClick={onClose}
             style={{
-              ...inputStyle,
-              paddingRight: "2.5rem",
-              borderColor: focusedField === "id" ? C.borderFoc : C.border,
+              flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
+              border: `1px solid ${C.border}`, background: "transparent",
+              color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
             }}
-          />
-          <Search style={{
-            position: "absolute", right: "0.75rem", top: "50%",
-            transform: "translateY(-50%)", width: "0.9rem", height: "0.9rem",
-            color: C.fgMuted, pointerEvents: "none",
-          }} />
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleFetch}
+            disabled={loading || !transactionId}
+            style={{
+              flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
+              border: "none",
+              background: !transactionId ? C.surfaceEl : C.primary,
+              color: !transactionId ? C.fgMuted : "#fff",
+              fontSize: "0.875rem", fontWeight: 600,
+              cursor: !transactionId ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+            }}
+          >
+            Load Transaction <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
+          </button>
         </div>
       </div>
+    </Shell>
+  );
 
-      {error && <ErrorBox message={error} />}
-      {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Loading…</p>}
+  // ── Step 2 — Review transaction ───────────────────────────────────────────
+  if (transaction && !showConfirmation && !requestSent) return (
+    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+      <div style={{ padding: "1.75rem" }}>
+        <ModalHeader
+          title={isAdmin ? "Delete Transaction" : "Request Deletion"}
+          subtitle={`ID #${transactionId} · review before proceeding`}
+          onClose={onClose}
+        />
 
-      <div style={{ display: "flex", gap: "0.75rem" }}>
+        {/* Warning banner */}
+        <div style={{
+          backgroundColor: isAdmin ? "hsl(0 72% 51% / 0.08)" : "hsl(30 90% 56% / 0.08)",
+          border:          `1px solid ${isAdmin ? C.expense : C.warning}40`,
+          borderRadius:    "0.5rem",
+          padding:         "0.6rem 0.75rem",
+          marginBottom:    "1.25rem",
+          display:         "flex",
+          alignItems:      "center",
+          gap:             "0.5rem",
+        }}>
+          <Trash2 style={{ width: "0.9rem", height: "0.9rem", color: isAdmin ? C.expense : C.warning, flexShrink: 0 }} />
+          <p style={{ color: isAdmin ? C.expense : C.warning, fontSize: "0.78rem", margin: 0, lineHeight: "1.4" }}>
+            {isAdmin
+              ? "This will permanently delete the transaction and cannot be undone."
+              : "This will submit a deletion request for admin approval."}
+          </p>
+        </div>
+
+        <div style={{ marginBottom: "1.25rem" }}>
+          <InfoRow label="Amount"      value={formatCurrency(transaction.amount)}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Category"    value={getCategoryName(transaction.category_id)} />
+          <InfoRow label="Type"        value={transaction.transaction_type}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Description" value={transaction.description || "—"} />
+          <InfoRow label="Date"        value={transaction.transaction_date} />
+        </div>
+
+        <ErrorBox message={error} />
+        {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Processing…</p>}
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            onClick={() => { setTransaction(null); setError(""); }}
+            style={{
+              flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
+              border: `1px solid ${C.border}`, background: "transparent",
+              color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+            }}
+          >
+            <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
+          </button>
+          <button
+            onClick={handleProceed}
+            style={{
+              flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
+              border: "none",
+              background: isAdmin ? C.expense : C.warning,
+              color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+            }}
+          >
+            <Trash2 style={{ width: "0.85rem", height: "0.85rem" }} />
+            {isAdmin ? "Proceed to Delete" : "Request Deletion"}
+          </button>
+        </div>
+      </div>
+    </Shell>
+  );
+
+  // ── Step 3 — Admin confirm delete ─────────────────────────────────────────
+  if (showConfirmation && transaction) return (
+    <Shell>
+      <div style={{ padding: "1.75rem" }}>
+        <ModalHeader
+          title="Confirm Deletion"
+          subtitle={`You are about to permanently delete ID #${transactionId}`}
+          onClose={() => setShowConfirmation(false)}
+        />
+
+        {/* Danger box */}
+        <div style={{
+          background:   "hsl(0 72% 51% / 0.06)",
+          border:       `1px solid ${C.expense}`,
+          borderRadius: "0.75rem",
+          padding:      "1rem",
+          marginBottom: "1.25rem",
+        }}>
+          <InfoRow label="Amount"      value={formatCurrency(transaction.amount)}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Category"    value={getCategoryName(transaction.category_id)} />
+          <InfoRow label="Type"        value={transaction.transaction_type}
+            color={transaction.transaction_type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Description" value={transaction.description || "—"} />
+          <InfoRow label="Date"        value={transaction.transaction_date} />
+        </div>
+
+        <ErrorBox message={error} />
+
+        <div style={{ display: "flex", gap: "0.75rem" }}>
+          <button
+            onClick={() => { setShowConfirmation(false); setError(""); }}
+            style={{
+              flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
+              border: `1px solid ${C.border}`, background: "transparent",
+              color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+            }}
+          >
+            <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
+          </button>
+          <button
+            onClick={handleConfirmDelete}
+            style={{
+              flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
+              border: `1px solid ${C.expense}`, background: "hsl(0 72% 51% / 0.15)",
+              color: C.expense, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+            }}
+          >
+            <Trash2 style={{ width: "0.85rem", height: "0.85rem" }} /> Confirm Delete
+          </button>
+        </div>
+      </div>
+    </Shell>
+  );
+
+  // ── Request sent success ──────────────────────────────────────────────────
+  if (requestSent) return (
+    <Shell>
+      <div style={{ padding: "1.75rem" }}>
+        <div style={{ textAlign: "center", padding: "0.5rem 0 1.5rem" }}>
+          <div style={{
+            width:           "3rem",
+            height:          "3rem",
+            borderRadius:    "50%",
+            backgroundColor: "hsl(160 60% 45% / 0.12)",
+            border:          `1px solid ${C.income}`,
+            display:         "flex",
+            alignItems:      "center",
+            justifyContent:  "center",
+            margin:          "0 auto 1rem",
+          }}>
+            <CheckCircle style={{ width: "1.4rem", height: "1.4rem", color: C.income }} />
+          </div>
+          <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: "0 0 0.4rem" }}>
+            Request Sent
+          </h2>
+          <p style={{ color: C.fgMuted, fontSize: "0.8rem", lineHeight: "1.5", margin: 0 }}>
+            Your deletion request has been submitted and is pending admin approval.
+          </p>
+        </div>
         <button
           onClick={onClose}
           style={{
-            flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
-            border: `1px solid ${C.border}`, background: "transparent",
-            color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
+            width: "100%", padding: "0.6rem", borderRadius: "0.5rem",
+            border: "none", background: C.primary,
+            color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
           }}
         >
-          Cancel
-        </button>
-        <button
-          onClick={handleFetch}
-          disabled={loading || !transactionId}
-          style={{
-            flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
-            border: "none", background: !transactionId ? C.surfaceEl : C.primary,
-            color: !transactionId ? C.fgMuted : "hsl(0,0%,100%)",
-            fontSize: "0.875rem", fontWeight: 600,
-            cursor: !transactionId ? "not-allowed" : "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-          }}
-        >
-          Load Transaction <ChevronRight style={{ width: "0.9rem", height: "0.9rem" }} />
+          Done
         </button>
       </div>
-    </Shell>
-  );
-
-  // ── Step 2 — Review transaction ──────────────────────────────────────────
-  if (transaction && !showConfirmation && !requestSent) return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-      <ModalHeader
-        title={isAdmin ? "Delete Transaction" : "Request Deletion"}
-        subtitle={`ID #${transactionId} · review before proceeding`}
-        onClose={onClose}
-      />
-
-      {/* Warning banner */}
-      <div style={{
-        backgroundColor: isAdmin ? "hsl(0 72% 51% / 0.08)" : "hsl(30 90% 56% / 0.08)",
-        border:          `1px solid ${isAdmin ? C.expense : C.warning}40`,
-        borderRadius:    "0.5rem",
-        padding:         "0.6rem 0.75rem",
-        marginBottom:    "1.25rem",
-        display:         "flex",
-        alignItems:      "center",
-        gap:             "0.5rem",
-      }}>
-        <Trash2 style={{ width: "0.9rem", height: "0.9rem", color: isAdmin ? C.expense : C.warning, flexShrink: 0 }} />
-        <p style={{ color: isAdmin ? C.expense : C.warning, fontSize: "0.78rem", margin: 0, lineHeight: "1.4" }}>
-          {isAdmin
-            ? "This will permanently delete the transaction and cannot be undone."
-            : "This will submit a deletion request for admin approval."}
-        </p>
-      </div>
-
-      {/* Transaction details */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        <InfoRow label="Amount"      value={formatCurrency(transaction.amount)}
-          color={transaction.transaction_type === "Income" ? C.income : C.expense} />
-        <InfoRow label="Category"    value={getCategoryName(transaction.category_id)} />
-        <InfoRow label="Type"        value={transaction.transaction_type}
-          color={transaction.transaction_type === "Income" ? C.income : C.expense} />
-        <InfoRow label="Description" value={transaction.description || "—"} />
-        <InfoRow label="Date"        value={transaction.transaction_date} />
-      </div>
-
-      {error && <ErrorBox message={error} />}
-      {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Processing…</p>}
-
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button
-          onClick={() => { setTransaction(null); setError(""); }}
-          style={{
-            flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
-            border: `1px solid ${C.border}`, background: "transparent",
-            color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-          }}
-        >
-          <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
-        </button>
-        <button
-          onClick={handleProceed}
-          style={{
-            flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
-            border: "none",
-            background: isAdmin ? C.expense : C.warning,
-            color: "hsl(0,0%,100%)", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-          }}
-        >
-          <Trash2 style={{ width: "0.85rem", height: "0.85rem" }} />
-          {isAdmin ? "Proceed to Delete" : "Request Deletion"}
-        </button>
-      </div>
-    </Shell>
-  );
-
-  // ── Step 3 — Admin confirm delete ────────────────────────────────────────
-  if (showConfirmation && transaction) return (
-    <Shell>
-      <ModalHeader
-        title="Confirm Deletion"
-        subtitle={`You are about to permanently delete ID #${transactionId}`}
-        onClose={() => setShowConfirmation(false)}
-      />
-
-      {/* Danger confirmation box */}
-      <div style={{
-        background:   "hsl(0 72% 51% / 0.06)",
-        border:       `1px solid ${C.expense}`,
-        borderRadius: "0.75rem",
-        padding:      "1rem",
-        marginBottom: "1.25rem",
-      }}>
-        <InfoRow label="Amount"      value={formatCurrency(transaction.amount)}
-          color={transaction.transaction_type === "Income" ? C.income : C.expense} />
-        <InfoRow label="Category"    value={getCategoryName(transaction.category_id)} />
-        <InfoRow label="Type"        value={transaction.transaction_type}
-          color={transaction.transaction_type === "Income" ? C.income : C.expense} />
-        <InfoRow label="Description" value={transaction.description || "—"} />
-        <InfoRow label="Date"        value={transaction.transaction_date} />
-      </div>
-
-      {error && <ErrorBox message={error} />}
-
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button
-          onClick={() => { setShowConfirmation(false); setError(""); }}
-          style={{
-            flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
-            border: `1px solid ${C.border}`, background: "transparent",
-            color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-          }}
-        >
-          <ChevronLeft style={{ width: "0.9rem", height: "0.9rem" }} /> Back
-        </button>
-        <button
-          onClick={handleConfirmDelete}
-          style={{
-            flex: 2, padding: "0.6rem", borderRadius: "0.5rem",
-            border: `1px solid ${C.expense}`, background: "hsl(0 72% 51% / 0.15)",
-            color: C.expense, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
-          }}
-        >
-          <Trash2 style={{ width: "0.85rem", height: "0.85rem" }} />
-          Confirm Delete
-        </button>
-      </div>
-    </Shell>
-  );
-
-  // ── Request sent success ─────────────────────────────────────────────────
-  if (requestSent) return (
-    <Shell>
-      <div style={{ textAlign: "center", padding: "0.5rem 0 1.5rem" }}>
-        <div style={{
-          width:           "3rem",
-          height:          "3rem",
-          borderRadius:    "50%",
-          backgroundColor: "hsl(160 60% 45% / 0.12)",
-          border:          `1px solid ${C.income}`,
-          display:         "flex",
-          alignItems:      "center",
-          justifyContent:  "center",
-          margin:          "0 auto 1rem",
-        }}>
-          <CheckCircle style={{ width: "1.4rem", height: "1.4rem", color: C.income }} />
-        </div>
-        <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: "0 0 0.4rem" }}>
-          Request Sent
-        </h2>
-        <p style={{ color: C.fgMuted, fontSize: "0.8rem", lineHeight: "1.5", margin: 0 }}>
-          Your deletion request has been submitted and is pending admin approval.
-        </p>
-      </div>
-
-      <button
-        onClick={onClose}
-        style={{
-          width: "100%", padding: "0.6rem", borderRadius: "0.5rem",
-          border: "none", background: C.primary,
-          color: "hsl(0,0%,100%)", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
-        }}
-      >
-        Done
-      </button>
     </Shell>
   );
 
