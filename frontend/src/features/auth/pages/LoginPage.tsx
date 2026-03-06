@@ -6,7 +6,7 @@ import type { LoginForm } from "../schemas/login";
 import { UserSchema } from "../schemas/userAuth";
 import api from "../../../services/apiClient";
 import { AuthContext } from "../AuthContext";
-import { S } from "../lib/authTokens";
+import { S } from "../lib/authConst";
 import { useParticles } from "../lib/useParticles";
 import { buildAuthStyles } from "../lib/authStyles";
 import PrototypeBadge from "../lib/authToolTip";

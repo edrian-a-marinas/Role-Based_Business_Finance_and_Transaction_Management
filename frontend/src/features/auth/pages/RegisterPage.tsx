@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../../../services/apiClient";
 import { validateRegister } from "../schemas/register";
 import type { RegisterForm } from "../schemas/register";
-import { S } from "../lib/authTokens";
+import { S } from "../lib/authConst";
 import { useParticles } from "../lib/useParticles";
 import { buildAuthStyles } from "../lib/authStyles";
 

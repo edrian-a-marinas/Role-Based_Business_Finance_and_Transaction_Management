@@ -1,4 +1,4 @@
-import { S } from "./authTokens";
+import { S } from "./authConst";
 
 /**
  * Shared CSS injected via <style> in both LoginPage and RegisterPage.

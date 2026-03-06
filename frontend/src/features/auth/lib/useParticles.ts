@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { S } from "./authTokens";
+import { S } from "./authConst";
 
 export interface Particle {
   id:       number;
