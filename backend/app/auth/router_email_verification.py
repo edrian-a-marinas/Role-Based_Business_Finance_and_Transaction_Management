@@ -115,7 +115,7 @@ def create_body_html(formatted_code: str) -> str:
                 <table cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding-right:10px; vertical-align:middle;">
-                      <img src="https://transacscope.vercel.app/transacScope1.svg" width="490" height="80" style="border-radius:8px; display:block;" alt="TransacScope" />
+                      <img src="https://transacscope.vercel.app/transacScope1.png" width="490" height="80" style="border-radius:8px; display:block;" alt="TransacScope" />
                     </td>
                     <td style="vertical-align:middle;">
                     </td>
@@ -126,7 +126,7 @@ def create_body_html(formatted_code: str) -> str:
 
             <!-- Body -->
             <tr>
-              <td style="padding-top:28px; padding-bottom:28px;">
+              <td style="padding-top:28px; padding-bottom:28px; text-align:center;">
                 <p style="margin:0 0 8px 0; font-size:20px; font-weight:700; color:#e8eaf0; letter-spacing:-0.02em;">
                   Verify your email
                 </p>
@@ -155,7 +155,7 @@ def create_body_html(formatted_code: str) -> str:
 
             <!-- Footer -->
             <tr>
-              <td style="padding-top:24px; border-top:1px solid #1f2937;">
+              <td style="padding-top:24px; border-top:1px solid #1f2937; text-align:center;">
                 <p style="margin:0; font-size:11px; color:#6b7280;">
                   © 2026 TransacScope. All rights reserved.
                 </p>
