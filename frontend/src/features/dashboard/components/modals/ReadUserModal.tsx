@@ -23,7 +23,7 @@ const td: React.CSSProperties = {
   whiteSpace:   "nowrap",
 };
 
-// ── Shared TH base style (mirrors ReadTransactionModal) ───────────────────────
+// ── Shared TH base style ──────────────────────────────────────────────────────
 const thBase: React.CSSProperties = {
   padding:       "0.6rem 0.75rem",
   fontSize:      "0.7rem",
@@ -44,7 +44,7 @@ function RoleDropdown({ value, onChange }: { value: RoleFilter; onChange: (v: Ro
     { value: "admin",    label: "Admin Only"    },
     { value: "standard", label: "Standard Only" },
   ];
-  const current    = options.find(o => o.value === value)!;
+  const current     = options.find(o => o.value === value)!;
   const activeColor = value === "admin" ? C.income : value === "standard" ? C.primary : C.fgMuted;
 
   return (
@@ -213,14 +213,14 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
         {!loading && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem", tableLayout: "fixed" }}>
             <colgroup>
-              <col style={{ width: "4%"  }} />  {/* ID */}
-              <col style={{ width: "20%" }} />  {/* Email */}
-              <col style={{ width: "16%" }} />  {/* Name */}
-              <col style={{ width: "10%" }} />  {/* Phone */}
-              <col style={{ width: "9%"  }} />  {/* Role */}
-              <col style={{ width: "7%"  }} />  {/* Active */}
-              <col style={{ width: "10%" }} />  {/* Tx Count */}
-              <col style={{ width: "14%" }} />  {/* Created */}
+              <col style={{ width: "4%"  }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "16%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "9%"  }} />
+              <col style={{ width: "7%"  }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "14%" }} />
             </colgroup>
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
               <tr>
@@ -228,7 +228,6 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                 <Th field="email">Email</Th>
                 <Th field="name">Full Name</Th>
                 <th style={thBase}>Phone</th>
-                {/* Role column header doubles as filter dropdown */}
                 <th style={thBase}>
                   <RoleDropdown value={roleFilter} onChange={setRoleFilter} />
                 </th>
@@ -259,8 +258,6 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                     <td style={td}>{u.email}</td>
                     <td style={td}>{fullName}</td>
                     <td style={{ ...td, color: C.fgMuted }}>{u.phone_number || "—"}</td>
-
-                    {/* Role badge */}
                     <td style={td}>
                       <span style={{
                         display: "inline-block", padding: "0.15rem 0.55rem", borderRadius: "999px",
@@ -272,8 +269,6 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                         {isAdmin ? "Admin" : "Standard"}
                       </span>
                     </td>
-
-                    {/* Active badge */}
                     <td style={td}>
                       <span style={{
                         display: "inline-block", padding: "0.15rem 0.5rem", borderRadius: "999px",
@@ -285,7 +280,6 @@ export default function ReadUserModal({ onClose }: OnCloseProps) {
                         {u.is_active ? "Active" : "Inactive"}
                       </span>
                     </td>
-
                     <td style={{ ...td, textAlign: "center" }}>{u.transaction_count ?? 0}</td>
                     <td style={{ ...td, color: C.fgMuted }}>{new Date(u.created_at).toLocaleString()}</td>
                   </tr>
