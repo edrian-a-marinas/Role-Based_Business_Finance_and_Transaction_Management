@@ -1,4 +1,4 @@
-const DEMO_VIDEO_URL = "https://your-demo-video-link-here";
+const DEMO_VIDEO_URL = "https://drive.google.com/drive/folders/1u7WnkaLEA_4eJaf3D4nfk8o-e--OSsNe?usp=sharing";
 
 export default function WatchDemoLink() {
   return (

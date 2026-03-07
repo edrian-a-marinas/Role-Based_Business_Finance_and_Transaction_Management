@@ -5,7 +5,7 @@ export type ModalStep = "list" | "add" | "confirmAdd" | "edit" | "deleteConfirm"
 // schema for category validation
 export const categorySchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
-  description: z.string().min(1, { message: "Description is required" }),
+  description: z.string().optional().or(z.literal("")),
   type: z.enum(["Expense", "Income"], { message: "Type must be Expense or Income" })
 });
 

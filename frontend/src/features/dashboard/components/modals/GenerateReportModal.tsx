@@ -5,7 +5,7 @@ import { AuthContext } from "@/features/auth/AuthContext";
 import { formatDate, formatCurrency } from "@/features/dashboard/lib/utility";
 import type { ReportType, ReportResult, OnCloseProps } from "@/features/dashboard/schemas/report";
 import { generateReportPDF } from "@/features/dashboard/lib/generateReportPdf";
-import Shell from "./shared/Shell";
+import Shell, { ShellTable } from "./shared/Shell";
 import ModalHeader from "./shared/ModalHeader";
 import ErrorBox from "./shared/ErrorBox";
 import InfoRow from "./shared/InfoRow";
@@ -40,7 +40,6 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   const [error,            setError]            = useState<string | null>(null);
   const [focusedField,     setFocusedField]     = useState<string | null>(null);
 
-  // Outside-click via mousedown/mouseup strict pattern
   const [backdropPressed, setBackdropPressed] = useState(false);
   const handleBackdropMouseDown = () => setBackdropPressed(true);
   const handleBackdropMouseUp   = () => { if (backdropPressed) onClose(); setBackdropPressed(false); };
@@ -105,7 +104,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
   const totalExpense  = reportResult?.summary.filter(i => i.transaction_type === "Expense").reduce((a, i) => a + i.total_amount, 0) ?? 0;
   const overallTotal  = totalIncome - totalExpense;
 
-  // ── Shared footer for form + confirm steps ────────────────────────────────
+  // ── Shared footer ─────────────────────────────────────────────────────────
   const ModalFooter = ({ left, right }: { left: React.ReactNode; right: React.ReactNode }) => (
     <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
       {left}
@@ -234,9 +233,9 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
     </Shell>
   );
 
-  // ── Step 3 — Summary ──────────────────────────────────────────────────────
+  // ── Step 3 — Summary (uses ShellTable for proper scroll) ──────────────────
   if (showSummary && reportResult) return (
-    <Shell maxWidth="wide" onBackdropDown={handleBackdropMouseDown} onBackdropUp={handleBackdropMouseUp}>
+    <ShellTable maxWidth="wide" onBackdropDown={handleBackdropMouseDown} onBackdropUp={handleBackdropMouseUp}>
       <ModalHeader
         title={`${modeLabel} Report Summary`}
         subtitle={`${formatDate(reportResult.report.start_date)} → ${formatDate(reportResult.report.end_date)}`}
@@ -244,13 +243,12 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
         iconColor={modeColor}
         onClose={handleCloseSummary}
       />
-      <div style={{ overflowY: "auto", flex: 1, padding: "1.5rem" }}>
+      <div style={{ overflowY: "auto", flex: 1, padding: "1.5rem", minHeight: 0 }}>
         <div style={{ marginBottom: "1.25rem" }}>
           <InfoRow label="View Mode"    value={viewMode === "all users" ? "All Users" : "Own"} />
           <InfoRow label="Report Type"  value={reportResult.report.report_type} />
           <InfoRow label="Generated At" value={formatDate(reportResult.report.created_at)} />
         </div>
-
         {Object.entries(groupedData).map(([periodKey, items], idx) => {
           const groupIncome  = items.filter(i => i.transaction_type === "Income") .reduce((a: number, i: any) => a + i.total_amount, 0);
           const groupExpense = items.filter(i => i.transaction_type === "Expense").reduce((a: number, i: any) => a + i.total_amount, 0);
@@ -308,13 +306,12 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
             </div>
           );
         })}
-
         {/* Net result */}
         <div style={{
-          background:     overallTotal >= 0 ? "hsl(160 60% 45% / 0.08)" : "hsl(0 72% 51% / 0.08)",
-          border:         `1px solid ${overallTotal >= 0 ? C.income : C.expense}40`,
-          borderRadius:   "0.75rem", padding: "0.75rem 1rem",
-          display:        "flex", justifyContent: "space-between", alignItems: "center",
+          background:   overallTotal >= 0 ? "hsl(160 60% 45% / 0.08)" : "hsl(0 72% 51% / 0.08)",
+          border:       `1px solid ${overallTotal >= 0 ? C.income : C.expense}40`,
+          borderRadius: "0.75rem", padding: "0.75rem 1rem",
+          display:      "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <span style={{ fontSize: "0.8rem", fontWeight: 700, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Net Result</span>
           <span style={{ fontSize: "1rem", fontWeight: 800, color: overallTotal >= 0 ? C.income : C.expense }}>
@@ -324,7 +321,6 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
           </span>
         </div>
       </div>
-
       <ModalFooter
         left={
           <button onClick={handleCloseSummary} style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, background: "transparent", color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>
@@ -338,7 +334,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
         }
       />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </Shell>
+    </ShellTable>
   );
 
   return null;

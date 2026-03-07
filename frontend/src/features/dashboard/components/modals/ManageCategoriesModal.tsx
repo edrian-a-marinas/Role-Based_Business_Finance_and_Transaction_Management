@@ -42,6 +42,15 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+// ── Helper: extract readable message from FastAPI error response ──────────────
+function extractErrorMessage(err: any): string {
+  const detail = err?.response?.data?.detail;
+  if (!detail) return "Something went wrong";
+  if (Array.isArray(detail)) return detail.map((d: any) => d.msg ?? String(d)).join(", ");
+  if (typeof detail === "string") return detail;
+  return "Something went wrong";
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ManageCategories({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
@@ -84,13 +93,22 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
     setErrors([]);
     setStep("add");
   };
+
   const handleOpenEdit = (cat: CategoryRead) => {
     setSelectedCategory(cat);
     setFormData({ name: cat.name, description: cat.description || "", type: cat.type });
     setErrors([]);
+    setShowEditConfirmation(false);
     setStep("edit");
   };
-  const handleOpenDelete = (cat: CategoryRead) => { setSelectedCategory(cat); setStep("deleteConfirm"); };
+
+  const handleOpenDelete = (cat: CategoryRead) => {
+    setSelectedCategory(cat);
+    setTransactionUsageCount(null);  // ← reset
+    setShowUsageCheck(false);         // ← reset
+    setStep("deleteConfirm");
+  };
+
   const handleAddNext = () => {
     if (!user || userRole !== 1) return alert("Not authorized");
     const result = categorySchema.safeParse(formData);
@@ -98,19 +116,26 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
     setErrors([]);
     setStep("confirmAdd");
   };
+
   const handleConfirmAdd = async () => {
     if (!user || userRole !== 1) return alert("Not authorized");
     try {
-      const res = await api.post("api/categories/", formData, { headers: { Authorization: `${tokenType} ${token}` } });
+      const payload = {
+        name:        formData.name.trim(),
+        type:        formData.type,
+        description: formData.description?.trim() || null,
+      };
+      const res = await api.post("api/categories/", payload, { headers: { Authorization: `${tokenType} ${token}` } });
       setCategories([...categories, res.data]);
       alert("Category successfully added!");
       setStep("list");
       setFormData({ name: "", description: "", type: "" as any });
     } catch (err: any) {
-      setErrors([err?.response?.data?.message || "Failed to add category"]);
+      setErrors([extractErrorMessage(err)]);
       setStep("add");
     }
   };
+
   const handleDelete = async () => {
     if (!user || userRole !== 1 || !selectedCategory) return;
     setDeleteLoading(true);
@@ -118,9 +143,13 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
       const res = await api.get(`api/transactions/count-by-category/${selectedCategory.id}`, { headers: { Authorization: `${tokenType} ${token}` } });
       setTransactionUsageCount(res.data.count);
       setShowUsageCheck(true);
-    } catch (err) { console.error(err); }
-    finally { setDeleteLoading(false); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteLoading(false);
+    }
   };
+
   const handleFinalDelete = async () => {
     if (!selectedCategory || !user || userRole !== 1) return;
     try {
@@ -130,25 +159,41 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
       setSelectedCategory(null);
       setTransactionUsageCount(null);
       setShowUsageCheck(false);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   };
-  const handleBack = () => { setStep("list"); setSelectedCategory(null); setErrors([]); };
+
+  const handleBack = () => {
+    setStep("list");
+    setSelectedCategory(null);
+    setErrors([]);
+    setShowEditConfirmation(false);
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
   const handleConfirmEdit = async () => {
     if (!selectedCategory || !user || userRole !== 1) return alert("Not authorized");
     try {
-      const parsed = categorySchema.parse(formData);
-      await api.put(`api/categories/${selectedCategory.id}`, parsed, { headers: { Authorization: `${tokenType} ${token}` } });
-      setCategories(categories.map(c => c.id === selectedCategory.id ? { ...c, ...parsed } : c));
+      const payload = {
+        name:        formData.name.trim(),
+        type:        formData.type,
+        description: formData.description?.trim() || null,
+      };
+      await api.put(`api/categories/${selectedCategory.id}`, payload, { headers: { Authorization: `${tokenType} ${token}` } });
+      setCategories(categories.map(c =>
+        c.id === selectedCategory.id ? { ...c, ...payload } : c
+      ));
       setStep("list");
       setSelectedCategory(null);
       setShowEditConfirmation(false);
       alert("Successfully updated category!");
     } catch (err: any) {
-      setErrors(err?.message ? [err.message] : ["Validation error"]);
+      setErrors([extractErrorMessage(err)]);
       setShowEditConfirmation(false);
     }
   };
@@ -189,7 +234,10 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
             />
           </div>
           <div>
-            <label style={labelStyle}>Description</label>
+            <label style={labelStyle}>
+              Description{" "}
+              <span style={{ fontSize: "0.7rem", color: C.fgMuted, fontWeight: 400, textTransform: "none" }}>(optional)</span>
+            </label>
             <input
               type="text" name="description" placeholder="Brief description of this category"
               value={formData.description} onChange={handleChange}
@@ -201,7 +249,10 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
       </div>
       <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
         {step === "add" ? (
-          <button onClick={handleAddNext} style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: C.primary, color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
+          <button
+            onClick={handleAddNext}
+            style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: C.primary, color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}
+          >
             <Plus style={{ width: "0.9rem", height: "0.9rem" }} /> Continue
           </button>
         ) : (
@@ -209,9 +260,9 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
             onClick={() => {
               if (!selectedCategory) return;
               const noChanges =
-                formData.name === selectedCategory.name &&
-                formData.description === (selectedCategory.description || "") &&
-                formData.type === selectedCategory.type;
+                formData.name.trim()              === selectedCategory.name &&
+                (formData.description?.trim() || null) === (selectedCategory.description || null) &&
+                formData.type                     === selectedCategory.type;
               if (noChanges) { setErrors(["Nothing to update."]); return; }
               setErrors([]);
               setShowEditConfirmation(true);
@@ -229,8 +280,8 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
   if (step === "list") {
     const incomeCategories  = categories.filter(c => c.type === "Income");
     const expenseCategories = categories.filter(c => c.type === "Expense");
-    const visibleIncome  = typeFilter === "Expense" ? [] : incomeCategories;
-    const visibleExpense = typeFilter === "Income"  ? [] : expenseCategories;
+    const visibleIncome     = typeFilter === "Expense" ? [] : incomeCategories;
+    const visibleExpense    = typeFilter === "Income"  ? [] : expenseCategories;
 
     const CategoryRow = ({ cat, idx }: { cat: CategoryRead; idx: number }) => (
       <tr
@@ -298,18 +349,16 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
           iconColor={C.primary}
           onClose={onClose}
         />
-        {/* Toolbar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1.5rem", borderBottom: `1px solid ${C.border}`, flexShrink: 0, gap: "0.75rem" }}>
           {userRole === 1 ? (
             <button onClick={handleOpenAdd} style={{ padding: "0.45rem 1rem", borderRadius: "0.5rem", border: "none", background: C.primary, color: "#fff", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
               <Plus style={{ width: "0.85rem", height: "0.85rem" }} /> Add Category
             </button>
           ) : <div />}
-          {/* Type filter pills */}
           <div style={{ display: "flex", gap: "0.25rem", background: C.surfaceEl, borderRadius: "0.5rem", padding: "0.25rem", border: `1px solid ${C.border}` }}>
             {(["all", "Income", "Expense"] as const).map(f => {
               const isActive = typeFilter === f;
-              const fColor = f === "Income" ? C.income : f === "Expense" ? C.expense : C.fgMuted;
+              const fColor   = f === "Income" ? C.income : f === "Expense" ? C.expense : C.fgMuted;
               return (
                 <button
                   key={f}
@@ -345,16 +394,13 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
     );
   }
 
-  // ── Step: Add / Edit form ─────────────────────────────────────────────────
-  if (step === "add" || step === "edit") return renderForm();
-
   // ── Step: Confirm Add ─────────────────────────────────────────────────────
   if (step === "confirmAdd") return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
       <ModalHeader title="Confirm New Category" subtitle="Review before saving" icon={Tag} iconColor={C.primary} onClose={onClose} onBack={() => setStep("add")} />
       <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1 }}>
         <div style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.625rem", padding: "1rem", marginBottom: "1rem" }}>
-          <InfoRow label="Type"        value={formData.type} color={formData.type === "Income" ? C.income : C.expense} />
+          <InfoRow label="Type"        value={formData.type}              color={formData.type === "Income" ? C.income : C.expense} />
           <InfoRow label="Name"        value={formData.name} />
           <InfoRow label="Description" value={formData.description || "—"} />
         </div>
@@ -366,6 +412,56 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
+
+  // ── Edit confirmation diff view — MUST be before step === "edit" check ────
+  if (showEditConfirmation && selectedCategory) return (
+    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
+      <ModalHeader title="Confirm Edit" subtitle="Review changes before saving" icon={Pencil} iconColor={C.primary} onClose={onClose} onBack={() => setShowEditConfirmation(false)} />
+      <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          {(["before", "after"] as const).map(side => {
+            const isAfter  = side === "after";
+            const accent   = isAfter ? C.income : C.expense;
+            const accentBg = isAfter ? "hsl(160 60% 45% / 0.1)" : "hsl(0 72% 51% / 0.1)";
+            const fields = [
+              { label: "Name",        before: selectedCategory.name,              after: formData.name              },
+              { label: "Description", before: selectedCategory.description || "", after: formData.description || "" },
+              { label: "Type",        before: selectedCategory.type,              after: formData.type              },
+            ];
+            return (
+              <div key={side} style={{ background: C.surfaceEl, border: `1px solid ${accent}40`, borderRadius: "0.625rem", padding: "1rem" }}>
+                <p style={{ fontSize: "0.68rem", fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 0.75rem" }}>
+                  {isAfter ? "After" : "Before"}
+                </p>
+                {fields.map(({ label, before, after }) => (
+                  <div key={label} style={{ marginBottom: "0.6rem" }}>
+                    <p style={{ fontSize: "0.68rem", color: C.fgMuted, margin: "0 0 0.15rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
+                    <p style={{ fontSize: "0.82rem", margin: 0, background: before !== after ? accentBg : "transparent", borderRadius: "0.25rem", padding: before !== after ? "0.1rem 0.3rem" : "0" }}>
+                      <span
+                        style={{ color: C.fg }}
+                        dangerouslySetInnerHTML={{ __html: diffHighlight(before, after)[side] }}
+                      />
+                    </p>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
+        <button onClick={() => setShowEditConfirmation(false)} style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, background: "transparent", color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>
+          Go Back
+        </button>
+        <button onClick={handleConfirmEdit} style={{ flex: 2, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: C.primary, color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer" }}>
+          Confirm Update
+        </button>
+      </div>
+    </Shell>
+  );
+
+  // ── Step: Add / Edit form — AFTER showEditConfirmation check ─────────────
+  if (step === "add" || step === "edit") return renderForm();
 
   // ── Step: Delete confirm — initial ────────────────────────────────────────
   if (step === "deleteConfirm" && selectedCategory && !showUsageCheck) return (
@@ -430,54 +526,6 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
         </button>
         <button onClick={handleFinalDelete} style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${C.expense}`, background: "hsl(0 72% 51% / 0.1)", color: C.expense, fontSize: "0.875rem", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
           <Trash2 style={{ width: "0.9rem", height: "0.9rem" }} /> Confirm Delete
-        </button>
-      </div>
-    </Shell>
-  );
-
-  // ── Edit confirmation diff view ───────────────────────────────────────────
-  if (showEditConfirmation && selectedCategory) return (
-    <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
-      <ModalHeader title="Confirm Edit" subtitle="Review changes before saving" icon={Pencil} iconColor={C.primary} onClose={onClose} onBack={() => setShowEditConfirmation(false)} />
-      <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-          {/* Before / After columns */}
-          {(["before", "after"] as const).map(side => {
-            const isAfter  = side === "after";
-            const accent   = isAfter ? C.income : C.expense;
-            const accentBg = isAfter ? "hsl(160 60% 45% / 0.1)" : "hsl(0 72% 51% / 0.1)";
-            const fields = [
-              { label: "Name",        before: selectedCategory.name,              after: formData.name        },
-              { label: "Description", before: selectedCategory.description || "", after: formData.description },
-              { label: "Type",        before: selectedCategory.type,              after: formData.type        },
-            ];
-            return (
-              <div key={side} style={{ background: C.surfaceEl, border: `1px solid ${accent}40`, borderRadius: "0.625rem", padding: "1rem" }}>
-                <p style={{ fontSize: "0.68rem", fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 0.75rem" }}>
-                  {isAfter ? "After" : "Before"}
-                </p>
-                {fields.map(({ label, before, after }) => (
-                  <div key={label} style={{ marginBottom: "0.6rem" }}>
-                    <p style={{ fontSize: "0.68rem", color: C.fgMuted, margin: "0 0 0.15rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</p>
-                    <p style={{ fontSize: "0.82rem", margin: 0, background: before !== after ? accentBg : "transparent", borderRadius: "0.25rem", padding: before !== after ? "0.1rem 0.3rem" : "0" }}>
-                      <span
-                        style={{ color: C.fg }}
-                        dangerouslySetInnerHTML={{ __html: diffHighlight(before, after)[side] }}
-                      />
-                    </p>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
-        <button onClick={() => setShowEditConfirmation(false)} style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", border: `1px solid ${C.border}`, background: "transparent", color: C.fgMuted, fontSize: "0.875rem", fontWeight: 500, cursor: "pointer" }}>
-          Go Back
-        </button>
-        <button onClick={handleConfirmEdit} style={{ flex: 2, padding: "0.6rem", borderRadius: "0.5rem", border: "none", background: C.primary, color: "#fff", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer" }}>
-          Confirm Update
         </button>
       </div>
     </Shell>

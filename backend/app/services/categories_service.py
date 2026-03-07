@@ -4,6 +4,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Only the Super Admin can perform unrestricted category actions
+SUPER_ADMIN_ID = 1
+
 
 async def get_categories():
   try:
@@ -61,7 +64,7 @@ async def get_category_by_id(ctg_id: int):
     async with pool.acquire() as conn:
       row = await conn.fetchrow(
         """
-        SELECT id, name, description, created_at
+        SELECT id, name, description, type, created_at
         FROM categories
         WHERE id = $1
           AND deleted_at IS NULL
@@ -74,11 +77,17 @@ async def get_category_by_id(ctg_id: int):
     raise
 
 
-async def create_category(ctg, current_user_id: int, role):
-  if role != "admin":
+async def create_category(ctg, current_user_id: int, role: str):
+  # Allow super admin (by ID) or admin (by role)
+  if current_user_id != SUPER_ADMIN_ID and role != "admin":
     return None
+
   if ctg.type not in ("Expense", "Income"):
     raise ValueError("Category type must be 'Expense' or 'Income'")
+
+  # Treat empty description as None to avoid min_length=5 violation
+  description = ctg.description if ctg.description and ctg.description.strip() else None
+
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -90,7 +99,7 @@ async def create_category(ctg, current_user_id: int, role):
           RETURNING id, name, description, type, created_at
           """,
           ctg.name,
-          ctg.description,
+          description,
           ctg.type
         )
         return dict(row) if row else None
@@ -99,9 +108,13 @@ async def create_category(ctg, current_user_id: int, role):
     raise
 
 
-async def update_category(ctg_id: int, ctg, current_user_id: int, role):
-  if role != "admin":
+async def update_category(ctg_id: int, ctg, current_user_id: int, role: str):
+  # Allow super admin (by ID) or admin (by role)
+  if current_user_id != SUPER_ADMIN_ID and role != "admin":
     return None
+
+  description = ctg.description if ctg.description and ctg.description.strip() else None
+
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -112,21 +125,23 @@ async def update_category(ctg_id: int, ctg, current_user_id: int, role):
         )
         if not old:
           return None
+
         updated = await conn.fetchrow(
           """
           UPDATE categories
           SET
-            name = COALESCE($1, name),
+            name        = COALESCE($1, name),
             description = COALESCE($2, description),
-            type = COALESCE($3, type)
+            type        = COALESCE($3, type)
           WHERE id = $4
           RETURNING id, name, description, type, created_at
           """,
           ctg.name,
-          ctg.description,
+          description,
           ctg.type,
           ctg_id
         )
+
         await conn.execute(
           """
           INSERT INTO log_history (
@@ -145,9 +160,11 @@ async def update_category(ctg_id: int, ctg, current_user_id: int, role):
     raise
 
 
-async def delete_category(ctg_id: int, current_user_id: int, role):
-  if role != "admin":
+async def delete_category(ctg_id: int, current_user_id: int, role: str):
+  # Allow super admin (by ID) or admin (by role)
+  if current_user_id != SUPER_ADMIN_ID and role != "admin":
     return None
+
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -158,10 +175,12 @@ async def delete_category(ctg_id: int, current_user_id: int, role):
         )
         if not old:
           return None
+
         await conn.execute(
           "UPDATE categories SET deleted_at = now() WHERE id = $1",
           ctg_id
         )
+
         await conn.execute(
           """
           INSERT INTO log_history (

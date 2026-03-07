@@ -124,6 +124,7 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
           onClose={onClose}
         />
         <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "1rem" }}></div>
           <label style={labelStyle}>Transaction ID</label>
           <div style={{ position: "relative" }}>
             <input

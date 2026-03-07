@@ -167,6 +167,8 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
         <ErrorBox messages={errors} />
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}></div>
+                  
           {/* Type */}
           <div>
             <label style={labelStyle}>Type</label>
