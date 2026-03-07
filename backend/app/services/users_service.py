@@ -50,7 +50,12 @@ async def get_all_users() -> list[dict]:
         FROM users u
         LEFT JOIN transactions t ON t.user_id = u.id AND t.deleted_at IS NULL
         GROUP BY u.id
-        ORDER BY transaction_count DESC
+        ORDER BY
+          CASE WHEN u.id = 1 THEN 0
+              WHEN u.role_id = 1 THEN 1
+              ELSE 2
+          END,
+          u.id ASC
         """
       )
       return [dict(row) for row in rows]
