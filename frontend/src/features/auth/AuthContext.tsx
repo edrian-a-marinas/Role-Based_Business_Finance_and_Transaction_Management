@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen cursor-wait">
-        <img src="@/assets/vite.svg" alt="App Logo" className="w-24 animate-pulse mb-4" />
+        <img src="/favicon.svg" alt="App Logo" className="w-24 animate-pulse mb-4" />
       </div>
     );
   }
