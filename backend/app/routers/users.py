@@ -27,6 +27,8 @@ async def change_my_password(
     raise HTTPException(status_code=404, detail="User not found.")
   if result is False:
     raise HTTPException(status_code=401, detail="Current password is incorrect.")
+  if result == "reused":
+    raise HTTPException(status_code=409, detail="This password was used within the last 7 days and cannot be reused.")
   return {"detail": "Password changed successfully."}
 
 # /me routes must come before /{target_user_id} to avoid route shadowing
