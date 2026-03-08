@@ -34,3 +34,7 @@ class UserRoleUpdate(BaseModel):
 class UserLogin(BaseModel):
   email: EmailStr
   password: PasswordStr
+
+class PasswordChange(BaseModel):
+  current_password: PasswordStr
+  new_password:     PasswordStr

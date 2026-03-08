@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Tuple
 from app.auth.format_role import get_user_id_and_role
 from app.services import users_service
-from app.schemas.users import UserBase, UserRead, UserRoleUpdate
+from app.schemas.users import UserBase, UserRead, UserRoleUpdate, PasswordChange
 
 SUPER_ADMIN_ID = 1
 
@@ -16,6 +16,18 @@ async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role))
     raise HTTPException(status_code=403, detail="Admin only")
   return await users_service.get_all_users()
 
+@router.patch("/me/password")
+async def change_my_password(
+  payload: PasswordChange,
+  user_data: Tuple[int, str] = Depends(get_user_id_and_role),
+):
+  user_id, _ = user_data
+  result = await users_service.change_password(user_id, payload.current_password, payload.new_password)
+  if result is None:
+    raise HTTPException(status_code=404, detail="User not found.")
+  if result is False:
+    raise HTTPException(status_code=401, detail="Current password is incorrect.")
+  return {"detail": "Password changed successfully."}
 
 # /me routes must come before /{target_user_id} to avoid route shadowing
 @router.patch("/me", response_model=UserRead)

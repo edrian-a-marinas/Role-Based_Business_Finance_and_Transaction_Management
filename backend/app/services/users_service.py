@@ -1,6 +1,6 @@
 from db.connection import get_pool
 from app.schemas.users import UserBase
-import logging
+import logging, bcrypt
 
 logger = logging.getLogger(__name__)
 
@@ -211,4 +211,21 @@ async def update_self_info(user_id: int, payload: UserBase) -> dict:
         return dict(row)
   except Exception:
     logger.exception(f"Error updating self info for user_id: {user_id}")
+    raise
+
+async def change_password(user_id: int, current_password: str, new_password: str) -> bool | None:
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      async with conn.transaction():
+        row = await conn.fetchrow("SELECT password FROM users WHERE id=$1", user_id)
+        if not row:
+          return None
+        if not bcrypt.checkpw(current_password.encode(), row["password"].encode()):
+          return False
+        hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+        await conn.execute("UPDATE users SET password=$1 WHERE id=$2", hashed, user_id)
+        return True
+  except Exception:
+    logger.exception(f"Error changing password for user_id: {user_id}")
     raise
