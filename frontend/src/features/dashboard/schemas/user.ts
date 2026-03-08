@@ -83,3 +83,26 @@ export function validateProfileUpdate(fields: {
 
   return errors;
 }
+
+
+export function validatePasswordChange(fields: {
+  currentPw: string;
+  newPw:     string;
+  confirmPw: string;
+}): string[] {
+  const { currentPw, newPw, confirmPw } = fields;
+  const errors: string[] = [];
+  if (!currentPw)
+    errors.push("Current password is required.");
+  if (!newPw)
+    errors.push("New password is required.");
+  else if (newPw.length < 8)
+    errors.push("New password must be at least 8 characters.");
+  else if (newPw.length > 72)
+    errors.push("New password must be at most 72 characters.");
+  if (newPw && confirmPw && newPw !== confirmPw)
+    errors.push("New passwords do not match.");
+  if (currentPw && newPw && newPw === currentPw)
+    errors.push("New password must differ from the current password.");
+  return errors;
+}
