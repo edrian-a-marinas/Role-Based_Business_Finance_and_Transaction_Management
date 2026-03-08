@@ -1,7 +1,7 @@
 from db.connection import get_pool
 from app.schemas.users import UserBase
 import logging
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 logger = logging.getLogger(__name__)
 
 # Only the Super Admin can demote other admins or perform unrestricted actions
@@ -242,7 +242,7 @@ async def change_password(user_id: int, current_password: str, new_password: str
 
         # ── 2. Check reuse: compare new password against recent history ───────
         # History hashes were stored by pgcrypto too, so use crypt() to verify.
-        cutoff = datetime.utcnow() - timedelta(days=PASSWORD_REUSE_DAYS)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=PASSWORD_REUSE_DAYS)
         recent = await conn.fetch(
           "SELECT password_hash FROM password_history WHERE user_id=$1 AND created_at >= $2",
           user_id, cutoff,
