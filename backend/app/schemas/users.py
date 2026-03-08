@@ -38,3 +38,6 @@ class UserLogin(BaseModel):
 class PasswordChange(BaseModel):
   current_password: PasswordStr
   new_password:     PasswordStr
+
+class PasswordExpiryResponse(BaseModel):
+  expires_at: datetime | None

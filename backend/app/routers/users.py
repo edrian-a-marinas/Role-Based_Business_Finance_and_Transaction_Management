@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Tuple
 from app.auth.format_role import get_user_id_and_role
 from app.services import users_service
-from app.schemas.users import UserBase, UserRead, UserRoleUpdate, PasswordChange
+from app.schemas.users import UserBase, UserRead, UserRoleUpdate, PasswordChange, PasswordExpiryResponse
 
 SUPER_ADMIN_ID = 1
 
@@ -15,6 +15,14 @@ async def list_users(user_data: Tuple[int, str] = Depends(get_user_id_and_role))
   if role != "admin":
     raise HTTPException(status_code=403, detail="Admin only")
   return await users_service.get_all_users()
+
+@router.get("/me/password-expiry", response_model=PasswordExpiryResponse)
+async def get_my_password_expiry(
+  user_data: Tuple[int, str] = Depends(get_user_id_and_role),
+):
+  user_id, _ = user_data
+  expires_at = await users_service.get_password_expiry(user_id)
+  return PasswordExpiryResponse(expires_at=expires_at)
 
 @router.patch("/me/password")
 async def change_my_password(

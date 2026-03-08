@@ -262,3 +262,25 @@ async def change_password(user_id: int, current_password: str, new_password: str
   except Exception:
     logger.exception(f"Error changing password for user_id: {user_id}")
     raise
+
+
+PASSWORD_EXPIRY_DAYS = 90
+
+async def get_password_expiry(user_id: int) -> datetime | None:
+  """
+  Returns the datetime when the user's current password expires (last change + 90 days).
+  Returns None if the user has never changed their password (no history row).
+  """
+  try:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+      row = await conn.fetchrow(
+        "SELECT MAX(created_at) AS last_changed FROM password_history WHERE user_id=$1",
+        user_id
+      )
+      if not row or row["last_changed"] is None:
+        return None
+      return row["last_changed"] + timedelta(days=PASSWORD_EXPIRY_DAYS)
+  except Exception:
+    logger.exception(f"Error fetching password expiry for user_id: {user_id}")
+    raise
