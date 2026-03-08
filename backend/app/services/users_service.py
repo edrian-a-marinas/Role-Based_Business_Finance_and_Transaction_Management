@@ -1,8 +1,7 @@
 from db.connection import get_pool
 from app.schemas.users import UserBase
-import logging, bcrypt
+import logging
 from datetime import timedelta, datetime
-
 logger = logging.getLogger(__name__)
 
 # Only the Super Admin can demote other admins or perform unrestricted actions
@@ -214,47 +213,68 @@ async def update_self_info(user_id: int, payload: UserBase) -> dict:
     logger.exception(f"Error updating self info for user_id: {user_id}")
     raise
 
+
 PASSWORD_REUSE_DAYS = 7
 
 async def change_password(user_id: int, current_password: str, new_password: str) -> bool | str | None:
+  """
+  All hashing uses pgcrypto's crypt()/gen_salt('bf') to stay consistent with
+  registration (register.py: crypt($2, gen_salt('bf'))) and login
+  (login.py: crypt($1, password_hash) = password_hash).
+  Never use Python bcrypt here — the hash formats are incompatible with pgcrypto.
+  """
   try:
     pool = await get_pool()
     async with pool.acquire() as conn:
       async with conn.transaction():
 
-        # Verify current password
+        # ── 1. Verify current password using pgcrypto (same as login) ────────
         row = await conn.fetchrow("SELECT password_hash FROM users WHERE id=$1", user_id)
         if not row:
           return None
-        if not bcrypt.checkpw(current_password.encode(), row["password_hash"].encode()):
+
+        pw_ok = await conn.fetchval(
+          "SELECT crypt($1, password_hash) = password_hash FROM users WHERE id=$2",
+          current_password, user_id,
+        )
+        if not pw_ok:
           return False
 
-        # Check reuse within last 7 days
+        # ── 2. Check reuse: compare new password against recent history ───────
+        # History hashes were stored by pgcrypto too, so use crypt() to verify.
         cutoff = datetime.utcnow() - timedelta(days=PASSWORD_REUSE_DAYS)
         recent = await conn.fetch(
           "SELECT password_hash FROM password_history WHERE user_id=$1 AND created_at >= $2",
-          user_id, cutoff
+          user_id, cutoff,
         )
         for record in recent:
-          if bcrypt.checkpw(new_password.encode(), record["password_hash"].encode()):
+          reused = await conn.fetchval(
+            "SELECT crypt($1, $2) = $2",
+            new_password, record["password_hash"],
+          )
+          if reused:
             return "reused"
 
-        # Save current password to history before overwriting
+        # ── 3. Save current hash to history before overwriting ────────────────
         await conn.execute(
           "INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)",
-          user_id, row["password_hash"]
+          user_id, row["password_hash"],
         )
 
-        # Hash and update
-        hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+        # ── 4. Hash new password with pgcrypto and update users table ─────────
+        new_hash = await conn.fetchval(
+          "SELECT crypt($1, gen_salt('bf'))",
+          new_password,
+        )
         await conn.execute(
-          "UPDATE users SET password_hash=$1 WHERE id=$2", hashed, user_id
+          "UPDATE users SET password_hash=$1 WHERE id=$2",
+          new_hash, user_id,
         )
 
-        # Save new password to history
+        # ── 5. Save new hash to history ───────────────────────────────────────
         await conn.execute(
           "INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)",
-          user_id, hashed
+          user_id, new_hash,
         )
 
         return True
@@ -276,7 +296,7 @@ async def get_password_expiry(user_id: int) -> datetime | None:
     async with pool.acquire() as conn:
       row = await conn.fetchrow(
         "SELECT MAX(created_at) AS last_changed FROM password_history WHERE user_id=$1",
-        user_id
+        user_id,
       )
       if not row or row["last_changed"] is None:
         return None

@@ -53,6 +53,7 @@ async def insert_user(user: UserCreate, conn):
   RETURNING
       id,
       email,
+      password_hash,
       first_name,
       middle_name,
       last_name,
@@ -82,6 +83,7 @@ async def mark_otp_used(otp_id: int, conn):
   """
   await conn.execute(query, otp_id)
 
+
 # ────────── MAIN CREATE USER FUNCTION ──────────
 async def create_user(user: UserCreate):
   pool = await get_pool()
@@ -89,16 +91,28 @@ async def create_user(user: UserCreate):
   try:
     async with pool.acquire() as conn:
       async with conn.transaction():
-        # 1️⃣ Verify OTP
+        # 1. Verify OTP
         verification = await verify_otp(user.email, user.verification_code, conn)
 
-        # 2️⃣ Insert user
+        # 2. Insert user — RETURNING includes password_hash for history seeding
         user_row = await insert_user(user, conn)
 
-        # 3️⃣ Mark OTP as used
+        if not user_row:
+          raise HTTPException(status_code=500, detail="Failed to create user.")
+
+        # 3. Seed password_history so the 90-day expiry clock starts at signup.
+        #    Without this, get_password_expiry() returns None and the password
+        #    never expires for users who never change it.
+        await conn.execute(
+          "INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)",
+          user_row["id"], user_row["password_hash"],
+        )
+
+        # 4. Mark OTP as used
         await mark_otp_used(verification["id"], conn)
 
-        return user_row
+        # 5. Strip password_hash — not part of UserRead schema, must not be returned
+        return {k: v for k, v in user_row.items() if k != "password_hash"}
 
   except asyncpg.exceptions.UniqueViolationError:
     raise HTTPException(status_code=400, detail="Email already registered.")
