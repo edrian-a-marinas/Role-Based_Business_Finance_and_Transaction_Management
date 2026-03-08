@@ -5,23 +5,28 @@ import type { AuthContextType, User } from "./schemas/userAuth";
 import api, { setLogoutCallback } from "../../services/apiClient";
 
 export const AuthContext = createContext<AuthContextType>({
-  isLoggedIn:  false,
-  user:        null,
-  setLoggedIn: (_val: boolean) => {},
-  setUser:     (_user: User | null) => {},
-  logout:      () => {},
+  isLoggedIn:         false,
+  user:               null,
+  passwordExpired:    false,
+  setLoggedIn:        (_val: boolean) => {},
+  setUser:            (_user: User | null) => {},
+  setPasswordExpired: (_val: boolean) => {},
+  logout:             () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user,       setUser]       = useState<User | null>(null);
-  const [isLoading,  setIsLoading]  = useState(true);
+  const [isLoggedIn,      setIsLoggedIn]      = useState(false);
+  const [user,            setUser]            = useState<User | null>(null);
+  const [passwordExpired, setPasswordExpired] = useState(false);
+  const [isLoading,       setIsLoading]       = useState(true);
 
   const logout = useCallback(() => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("token_type");
+    localStorage.removeItem("password_expired");
     setIsLoggedIn(false);
     setUser(null);
+    setPasswordExpired(false);
   }, []);
 
   useEffect(() => {
@@ -41,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const parsedUser = UserSchema.parse(response.data);
         setUser(parsedUser);
         setIsLoggedIn(true);
+
+        // Restore passwordExpired from localStorage (set at login time)
+        const storedExpired = localStorage.getItem("password_expired");
+        setPasswordExpired(storedExpired === "true");
       } catch {
         logout();
       } finally {
@@ -66,8 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         isLoggedIn,
         user,
+        passwordExpired,
         setLoggedIn: setIsLoggedIn,
         setUser,
+        setPasswordExpired,
         logout,
       }}
     >

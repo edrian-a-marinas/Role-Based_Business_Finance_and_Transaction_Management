@@ -40,7 +40,7 @@ function clearLockout() {
 }
 
 export default function Login() {
-  const { setLoggedIn, setUser } = useContext(AuthContext);
+  const { setLoggedIn, setUser, setPasswordExpired } = useContext(AuthContext);
   const particles = useParticles();
 
   const [form,            setForm]            = useState<LoginForm>({ email: "", password: "" });
@@ -102,13 +102,16 @@ export default function Login() {
     setLoading(true);
     try {
       const response = await api.post("api/auth/login", form);
-      const { access_token, token_type, user } = response.data;
+      const { access_token, token_type, user, password_expired } = response.data;
       const parsedUser = UserSchema.parse(user);
       localStorage.setItem("access_token", access_token);
       localStorage.setItem("token_type", token_type);
+      localStorage.setItem("password_expired", String(password_expired ?? false));
+
       clearLockout();
       setLoggedIn(true);
       setUser(parsedUser);
+      setPasswordExpired(password_expired ?? false);
     } catch (err: any) {
       if (!err.response) { setErrors(["Cannot connect to server."]); return; }
       const status = err.response.status;
