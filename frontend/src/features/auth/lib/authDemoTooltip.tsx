@@ -41,7 +41,7 @@ export default function DemoAccountTooltip() {
           border:          "1px solid hsl(220,20%,24%)",
           borderRadius:    "12px",
           padding:         "14px 16px",
-          width:           "240px",
+          width:           "300px",
           zIndex:          200,
           boxShadow:       "0 12px 40px hsl(220 28% 4% / 0.75), 0 0 0 1px hsl(220 20% 20% / 0.5)",
           pointerEvents:   "none",
@@ -97,8 +97,17 @@ export default function DemoAccountTooltip() {
           <div style={{ height: "1px", background: "hsl(220,20%,22%)", marginBottom: "10px" }} />
 
           {/* Role note */}
+          <p style={{ fontSize: "11.5px", color: "hsl(220,10%,52%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif", marginBottom: "8px" }}>
+            Want to explore without registering? Use these credentials to try the app.
+          </p>
+          <div style={{ height: "1px", background: "hsl(220,20%,22%)", marginBottom: "10px" }} />
           <p style={{ fontSize: "11.5px", color: "hsl(220,10%,52%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif" }}>
             Standard User only — can view, add, and request transaction deletions. Admin features are restricted.
+          </p>
+          <p style={{ fontSize: "11px", color: "hsl(220,10%,40%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif", marginTop: "6px" }}>
+            All data is simulated — no real records. The system isn't limited to gaming cafés; 
+            it's a general-purpose finance & transaction tracker built for any business. 
+            The café is just the example business I used for this demo.
           </p>
         </div>
       )}
