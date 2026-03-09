@@ -231,7 +231,38 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
 
   return (
     <>
-      <style>{`@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }`}</style>
+      <style>{`
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .ts-view-select {
+          background:    hsl(var(--page-surface-sub));
+          border:        1px solid hsl(var(--page-border));
+          border-radius: 0.4rem;
+          color:         hsl(var(--page-fg));
+          font-size:     0.75rem;
+          font-weight:   600;
+          padding:       0.3rem 0.5rem;
+          cursor:        pointer;
+          outline:       none;
+          transition:    border-color 0.15s, box-shadow 0.15s;
+        }
+        .ts-view-select:hover {
+          border-color: hsl(var(--primary));
+          box-shadow:   0 0 0 2px hsl(var(--primary) / 0.15);
+        }
+        .ts-view-select:focus {
+          border-color: hsl(var(--primary));
+          box-shadow:   0 0 0 3px hsl(var(--primary) / 0.2);
+        }
+        .ts-view-select option {
+          background: hsl(var(--page-surface-sub));
+          color:      hsl(var(--page-fg));
+          font-weight: 500;
+        }
+        .ts-view-select option:checked {
+          background: hsl(var(--primary));
+          color:      #fff;
+        }
+      `}</style>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -249,34 +280,26 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {/* Admin: switchable dropdown. Standard: static non-clickable label */}
+            {/* View mode — styled native select */}
             {isAdmin ? (
               <select
                 value={viewMode}
                 onChange={e => setViewMode(e.target.value as "all" | "own")}
-                style={{
-                  background:   "hsl(var(--page-surface-sub))",
-                  border:       "1px solid hsl(var(--page-border))",
-                  borderRadius: "0.4rem",
-                  color:        "hsl(var(--page-fg))",
-                  fontSize:     "0.75rem",
-                  padding:      "0.3rem 0.5rem",
-                  cursor:       "pointer",
-                  outline:      "none",
-                }}
+                className="ts-view-select"
               >
                 <option value="all">All Users</option>
                 <option value="own">My Transactions</option>
               </select>
             ) : (
               <span style={{
-                fontSize:     "0.72rem",
+                fontSize:     "0.75rem",
                 fontWeight:   600,
-                color:        "hsl(var(--page-fg-muted))",
-                padding:      "0.3rem 0.6rem",
+                padding:      "0.25rem 0.65rem",
+                borderRadius: "0.375rem",
                 border:       "1px solid hsl(var(--page-border))",
-                borderRadius: "0.4rem",
+                color:        "hsl(var(--page-fg-muted))",
                 userSelect:   "none",
+                whiteSpace:   "nowrap",
               }}>
                 Viewing own
               </span>
