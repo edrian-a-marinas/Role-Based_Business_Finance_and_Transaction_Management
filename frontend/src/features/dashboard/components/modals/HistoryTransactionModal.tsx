@@ -109,6 +109,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
 
+  const PAGE_SIZE = 15;
+
   const [history,      setHistory]      = useState<ReadTransactionHistory[]>([]);
   const [categories,   setCategories]   = useState<Category[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -116,6 +118,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const [sortField,    setSortField]    = useState<SortField>("action_taken_at");
   const [sortDir,      setSortDir]      = useState<SortDir>("desc");
   const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -138,9 +141,13 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
 
   const getCategoryName = (id: number) => categories.find(c => c.id === id)?.name ?? "Unknown";
 
+  // Reset pagination whenever filters or view change
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [viewMode, actionFilter]);
+
   const handleSort = (field: SortField) => {
     if (sortField === field) { setSortDir(d => d === "asc" ? "desc" : "asc"); }
     else { setSortField(field); setSortDir("desc"); }
+    setVisibleCount(PAGE_SIZE);
   };
 
   const processed = (() => {
@@ -185,6 +192,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     </th>
   );
 
+  const visibleRows = processed.slice(0, visibleCount);
+  const hasMore     = processed.length > visibleCount;
   const updateCount = history.filter(r => (r.action ?? "").toLowerCase() === "updated" || (r.action ?? "").toLowerCase() === "update").length;
   const deleteCount = history.filter(r => (r.action ?? "").toLowerCase() === "deleted" || (r.action ?? "").toLowerCase() === "delete").length;
 
@@ -277,7 +286,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                     {actionFilter !== "all" ? `No ${actionFilter === "UPDATE" ? "update" : "delete"} records found.` : "No history records found."}
                   </td>
                 </tr>
-              ) : processed.map((tx, idx) => {
+              ) : visibleRows.map((tx, idx) => {
                 const isEven        = idx % 2 === 0;
                 const actionLower   = (tx.action ?? "").toLowerCase();
                 const isUpdate      = actionLower === "update" || actionLower === "updated";
@@ -326,9 +335,18 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
 
       {/* Footer */}
       {!loading && processed.length > 0 && (
-        <div style={{ padding: "0.6rem 1.5rem", borderTop: `1px solid ${C.border}`, fontSize: "0.72rem", color: C.fgMuted, flexShrink: 0 }}>
-          Showing {processed.length} record{processed.length !== 1 ? "s" : ""}
-          {processed.length > 15 ? " · scroll to see more" : ""}
+        <div style={{ padding: "0.6rem 1.5rem", borderTop: `1px solid ${C.border}`, fontSize: "0.72rem", color: C.fgMuted, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+          <span>
+            Showing {visibleRows.length} of {processed.length} record{processed.length !== 1 ? "s" : ""}
+          </span>
+          {hasMore && (
+            <button
+              onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.75rem", cursor: "pointer" }}
+            >
+              Load more ({processed.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       )}
     </ShellTable>
