@@ -49,3 +49,17 @@ WHERE name = 'Expenses';
 DELETE FROM categories
 WHERE id = 1;
 */
+
+
+-- ── Account reset password direct (uncomment to run) ──────────────────────────────────────────
+/*
+UPDATE users 
+SET password_hash = crypt('test1234', gen_salt('bf'))
+WHERE id = 1;
+*/
+
+
+-- ── change time password history simulation ──────────────────────────────────────────
+UPDATE password_history 
+SET created_at = '2025-12-07 00:00:00+00'
+WHERE user_id = 1;
