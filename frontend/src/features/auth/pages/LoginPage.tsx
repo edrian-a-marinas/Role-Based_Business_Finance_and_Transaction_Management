@@ -127,7 +127,11 @@ export default function Login() {
         }
         return;
       }
-      setErrors([status === 500 ? "Internal server error. Try again later." : "Login failed. Try again later."]);
+      setErrors([
+        status === 503 ? "Database is currently unavailable. Please try again later." :
+        status === 500 ? "Internal server error. Try again later." :
+        "Login failed. Try again later."
+      ]);
     } finally {
       setLoading(false);
     }
