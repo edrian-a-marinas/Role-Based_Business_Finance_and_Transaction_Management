@@ -161,6 +161,7 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   const [sortDir,      setSortDir]      = useState<SortDir>("desc");
   const [typeFilter,   setTypeFilter]   = useState<TypeFilter>(initialTypeFilter);
   const [monthFilter,  setMonthFilter]  = useState<string>(initialMonthFilter);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,6 +212,15 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     if (viewMode    === "own") txs = txs.filter(t => t.user_id === user?.id);
     if (monthFilter !== "all") txs = txs.filter(t => t.transaction_date?.startsWith(monthFilter));
     if (typeFilter  !== "all") txs = txs.filter(t => t.transaction_type === typeFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      txs = txs.filter(t =>
+        String(t.id).includes(q) ||
+        getCategoryName(t.category_id).toLowerCase().includes(q) ||
+        (t.description ?? "").toLowerCase().includes(q) ||
+        String(t.amount).includes(q)
+      );
+    }
     txs.sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
@@ -250,6 +260,24 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     <ShellTable onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        placeholder="Search…"
+        style={{
+          background: C.surfaceEl,
+          border: `1px solid ${C.border}`,
+          borderRadius: "0.4rem",
+          color: C.fg,
+          fontSize: "0.78rem",
+          padding: "0.3rem 0.65rem",
+          outline: "none",
+          width: "180px",
+        }}
+        onFocus={e => (e.target.style.borderColor = C.primary)}
+        onBlur={e  => (e.target.style.borderColor = C.border)}
+      />
         <div>
           <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>View Transactions</h2>
           <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>
