@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.core.config import configure_middlewares, debug_mode
+from app.core.limiter import configure_limiter
 
 from app.auth import router_auth as authentications
 from app.auth import router_email_verification as email_verification
@@ -8,8 +9,10 @@ from tests import test_health
 
 app = FastAPI(**debug_mode())
 
-# Apply middlewares
+
+# Apply middleware and limiter
 configure_middlewares(app)
+configure_limiter(app)
 
 # Auth
 app.include_router(authentications.router)

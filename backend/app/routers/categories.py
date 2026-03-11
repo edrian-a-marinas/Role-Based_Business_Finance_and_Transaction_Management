@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from app.core.limiter import limiter
+
 from typing import List, Tuple
 from app.auth.format_role import get_user_id_and_role
 from app.services import categories_service
@@ -26,7 +28,8 @@ async def income_categories():
 
 
 @router.post("/", response_model=CategoryRead)
-async def create_category(payload: CategoryCreate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def create_category(request: Request, payload: CategoryCreate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   CURRENT_USER_ID, role = user_data
   if role != "admin":
     raise HTTPException(status_code=403, detail="Admin only")
@@ -37,7 +40,8 @@ async def create_category(payload: CategoryCreate, user_data: Tuple[int, str] = 
 
 
 @router.put("/{category_id}", response_model=CategoryRead)
-async def update_category(category_id: int, payload: CategoryUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def update_category(request: Request, category_id: int, payload: CategoryUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   CURRENT_USER_ID, role = user_data
   row = await categories_service.update_category(category_id, payload, CURRENT_USER_ID, role)
   if not row:
@@ -46,7 +50,8 @@ async def update_category(category_id: int, payload: CategoryUpdate, user_data: 
 
 
 @router.delete("/{category_id}")
-async def delete_category(category_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("10/minute")
+async def delete_category(request: Request, category_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   CURRENT_USER_ID, role = user_data
   deleted = await categories_service.delete_category(category_id, CURRENT_USER_ID, role)
   if not deleted:

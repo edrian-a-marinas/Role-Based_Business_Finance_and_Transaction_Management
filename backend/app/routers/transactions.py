@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from app.core.limiter import limiter
+
 from typing import List, Tuple
 from app.auth.format_role import get_user_id_and_role
 from app.services import transactions_service
@@ -45,7 +47,9 @@ async def get_deletion_requests(user_data: Tuple[int, str] = Depends(get_user_id
 
 
 @router.post("/request-deletion", response_model=TransactionDeletionRequestRead)
+@limiter.limit("10/minute")
 async def request_transaction_deletion(
+  request: Request,
   payload: TransactionDeletionRequestCreate,
   user_data: Tuple[int, str] = Depends(get_user_id_and_role),
 ):
@@ -59,7 +63,9 @@ async def request_transaction_deletion(
 
 
 @router.patch("/deletion-requests/{request_id}")
+@limiter.limit("20/minute")
 async def review_deletion_request(
+  request: Request,
   request_id: int,
   payload: ReviewDeletionRequestPayload,
   user_data: Tuple[int, str] = Depends(get_user_id_and_role),
@@ -110,7 +116,8 @@ async def get_transaction_by_id(transaction_id: int, user_data: Tuple[int, str] 
 
 
 @router.put("/{transaction_id}", response_model=TransactionRead)
-async def update_transaction(transaction_id: int, payload: TransactionUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("30/minute")
+async def update_transaction(request: Request, transaction_id: int, payload: TransactionUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   CURRENT_USER_ID, role = user_data
   row = await transactions_service.update_transaction(transaction_id, payload, CURRENT_USER_ID, role)
   if not row:
@@ -119,7 +126,8 @@ async def update_transaction(transaction_id: int, payload: TransactionUpdate, us
 
 
 @router.delete("/{transaction_id}")
-async def delete_transaction(transaction_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def delete_transaction(request: Request, transaction_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   CURRENT_USER_ID, role = user_data
   deleted = await transactions_service.delete_transaction(transaction_id, CURRENT_USER_ID, role)
   if not deleted:

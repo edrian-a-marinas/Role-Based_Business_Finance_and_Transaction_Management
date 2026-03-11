@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List, Tuple
+from app.core.limiter import limiter
+
 from app.auth.format_role import get_user_id_and_role
 from app.services import users_service
 from app.schemas.users import UserBase, UserRead, UserRoleUpdate, PasswordChange, PasswordExpiryResponse
@@ -25,7 +27,9 @@ async def get_my_password_expiry(
   return PasswordExpiryResponse(expires_at=expires_at)
 
 @router.patch("/me/password")
+@limiter.limit("5/minute")
 async def change_my_password(
+  request: Request,
   payload: PasswordChange,
   user_data: Tuple[int, str] = Depends(get_user_id_and_role),
 ):
@@ -41,13 +45,15 @@ async def change_my_password(
 
 # /me routes must come before /{target_user_id} to avoid route shadowing
 @router.patch("/me", response_model=UserRead)
-async def update_self(payload: UserBase, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def update_self(request: Request, payload: UserBase, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
   return await users_service.update_self_info(user_id, payload)
 
 
 @router.delete("/me")
-async def hard_delete(user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def hard_delete(request: Request, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
   success = await users_service.hard_delete_user(user_id, user_id)
   if not success:
@@ -56,7 +62,8 @@ async def hard_delete(user_data: Tuple[int, str] = Depends(get_user_id_and_role)
 
 
 @router.put("/{target_user_id}/role", response_model=UserRead)
-async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def update_role(request: Request, target_user_id: int, payload: UserRoleUpdate, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
   current_user_role = "admin" if role == "admin" else "standard"
   updated_user = await users_service.update_user_role(target_user_id, payload.role_id, user_id, current_user_role)
@@ -66,7 +73,8 @@ async def update_role(target_user_id: int, payload: UserRoleUpdate, user_data: T
 
 
 @router.put("/{target_user_id}/restore")
-async def restore_user(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("20/minute")
+async def restore_user(request: Request, target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
   if role != "admin" and user_id != SUPER_ADMIN_ID:
     raise HTTPException(status_code=403, detail="Admin only")
@@ -77,7 +85,8 @@ async def restore_user(target_user_id: int, user_data: Tuple[int, str] = Depends
 
 
 @router.delete("/{target_user_id}/soft")
-async def soft_delete(target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
+@limiter.limit("10/minute")
+async def soft_delete(request: Request, target_user_id: int, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
   user_id, role = user_data
   if role != "admin" and user_id != SUPER_ADMIN_ID:
     raise HTTPException(status_code=403, detail="Admin only")
