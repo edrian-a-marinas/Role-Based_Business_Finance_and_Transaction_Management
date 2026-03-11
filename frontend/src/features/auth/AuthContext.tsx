@@ -2,7 +2,8 @@ import { createContext, useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { UserSchema } from "./schemas/userAuth";
 import type { AuthContextType, User } from "./schemas/userAuth";
-import api, { setLogoutCallback } from "../../services/apiClient";
+import api, { setLogoutCallback, setRateLimitCallback } from "../../services/apiClient";
+import { toast } from "sonner";
 
 export const AuthContext = createContext<AuthContextType>({
   isLoggedIn:         false,
@@ -60,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setLogoutCallback(logout);
+    setRateLimitCallback(() => {
+      toast.warning("Slow down! Too many requests — wait a moment and try again.");
+    });
   }, [logout]);
 
   if (isLoading) {

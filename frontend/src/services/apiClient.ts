@@ -2,9 +2,14 @@
 import axios from "axios"
 
 let logoutCallback: () => void = () => {}
+let rateLimitCallback: () => void = () => {}
 
 export const setLogoutCallback = (cb: () => void) => {
   logoutCallback = cb
+}
+
+export const setRateLimitCallback = (cb: () => void) => {
+  rateLimitCallback = cb
 }
 
 const api = axios.create({
@@ -32,6 +37,11 @@ api.interceptors.response.use(
       localStorage.removeItem("token_type");
       logoutCallback();
     }
+
+    if (status === 429) {
+      rateLimitCallback();
+    }
+
 
     return Promise.reject(error);
   }
