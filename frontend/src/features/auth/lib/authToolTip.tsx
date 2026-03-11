@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function PrototypeBadge() {
+export default function LiveDemoBadge() {
   const [show, setShow] = useState(false);
 
   return (
@@ -14,7 +14,7 @@ export default function PrototypeBadge() {
         style={{
           display:       "inline-flex",
           alignItems:    "center",
-          gap:           "5px",
+          gap:           "4px",
           background:    "hsl(45 85% 50% / 0.08)",
           border:        "1px solid hsl(45 85% 50% / 0.30)",
           borderRadius:  "20px",
@@ -30,7 +30,7 @@ export default function PrototypeBadge() {
         }}
       >
         <span style={{ fontSize: "9px" }}>⬡</span>
-        Prototype
+          Live Demo
         <span style={{
           fontSize:   "10px",
           opacity:    0.7,
@@ -82,7 +82,7 @@ export default function PrototypeBadge() {
             alignItems:    "center",
             gap:           "5px",
           }}>
-            <span>⚠</span> Prototype / Demo Build
+            <span>⚠</span> Demonstration Deployment
           </p>
 
           {/* What it is */}
@@ -102,7 +102,7 @@ export default function PrototypeBadge() {
           {/* Divider */}
           <div style={{ margin: "10px 0", height: "1px", background: "hsl(220,20%,22%)" }} />
 
-          {/* Academic note */}
+          {/* Demo note */}
           <p style={{
             fontSize:     "12.5px",
             color:        "hsl(220,14%,72%)",
@@ -112,7 +112,7 @@ export default function PrototypeBadge() {
           }}>
             This deployment is for{" "}
             <strong style={{ color: "hsl(45,85%,70%)", fontWeight: 600 }}>
-              academic and technical demonstration purposes only.
+              technical demonstration purposes only.
             </strong>{" "}
             Data shown is simulated. No real financial records are stored.
           </p>
@@ -146,7 +146,7 @@ export default function PrototypeBadge() {
             lineHeight: "1.7",
             fontFamily: "'DM Sans', sans-serif",
           }}>
-            <strong style={{ color: "hsl(220,10%,68%)", fontWeight: 600 }}>Registration is open in this prototype</strong>{" "}
+            <strong style={{ color: "hsl(220,10%,68%)", fontWeight: 600 }}>Registration is open in this demo</strong>{" "}
             so anyone can explore the system freely (but as Standard User only —
               to avoid trolling of data simulations). In a real deployment, account
             creation is restricted — only the owner's designated machine or IP

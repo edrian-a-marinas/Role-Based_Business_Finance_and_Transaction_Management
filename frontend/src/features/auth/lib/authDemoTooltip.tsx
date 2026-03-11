@@ -28,7 +28,7 @@ export default function DemoAccountTooltip() {
           transition:      "border-color 0.2s, background 0.2s",
         }}
       >
-        🎮 Try a Demo Account
+        🎯 Try a Demo Account
       </button>
 
       {show && (

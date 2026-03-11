@@ -10,7 +10,7 @@ import { AuthContext } from "../AuthContext";
 import { S } from "../lib/authConst";
 import { useParticles } from "../lib/useParticles";
 import { buildAuthStyles } from "../lib/authStyles";
-import PrototypeBadge from "../lib/authToolTip";
+import LiveDemoBadge from "../lib/authToolTip";
 import WatchDemoLink from "../lib/authDemoVid";
 import DemoAccountTooltip from "../lib/authDemoTooltip";
 // ── Frontend rate-limit config (mirrors backend) ──────────────────────────────
@@ -208,7 +208,7 @@ export default function Login() {
         <div className={`login-card${mounted ? " mounted" : ""}`}>
           {/* ── Prototype badge ── */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px" }}>
-            <PrototypeBadge />
+            <LiveDemoBadge />
           </div>
           <div className="logo-row" style={{ justifyContent: "flex-start" }}>
             <img
