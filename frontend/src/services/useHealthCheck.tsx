@@ -54,7 +54,11 @@ export function useServerCheck() {
     }
 
     if (!alreadyWoke) {
-      coldTimerRef.current = setTimeout(() => setShowColdStart(true), 3000);
+      coldTimerRef.current = setTimeout(() => {
+        if (!sessionStorage.getItem("auth_loaded")) {  // ← ADD THIS CHECK
+          setShowColdStart(true);
+        }
+      }, 3000);
     }
 
     checkServerHealth();
