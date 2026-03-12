@@ -14,15 +14,24 @@ function scheduleNextCheck(
 export function useServerCheck() {
   const [serverStatus,  setServerStatus]  = useState('connected');
   const [showTopbar,    setShowTopbar]    = useState(false);
-  const [showColdStart, setShowColdStart] = useState(true);  // ← true from the start
-  const timeoutRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const coldStartRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showColdStart, setShowColdStart] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // If backend already responded this session, never show cold start again
+    const alreadyWoke = sessionStorage.getItem("backend_woke");
+
     async function checkServerHealth() {
       try {
+        //await new Promise(res => setTimeout(res, 6000)) for debug local
         await api.get("health/");
-        setShowColdStart(false);  // ← hide as soon as server responds
+
+        // Backend responded — hide cold start, mark session as woke
+        setShowColdStart(false);
+        sessionStorage.setItem("backend_woke", "true");
+        if (coldTimerRef.current) clearTimeout(coldTimerRef.current);
+
         if (serverStatus !== 'connected') {
           setServerStatus('connected');
           setShowTopbar(true);
@@ -37,15 +46,23 @@ export function useServerCheck() {
         scheduleNextCheck(checkServerHealth, timeoutRef, 3000);
       }
     }
+
+    // Only set cold start timer if backend hasn't woken this session yet
+    if (!alreadyWoke) {
+      coldTimerRef.current = setTimeout(() => setShowColdStart(true), 3000);
+    }
+
     checkServerHealth();
+
     return () => {
-      if (timeoutRef.current)   clearTimeout(timeoutRef.current);
-      if (coldStartRef.current) clearTimeout(coldStartRef.current);
+      if (timeoutRef.current)  clearTimeout(timeoutRef.current);
+      if (coldTimerRef.current) clearTimeout(coldTimerRef.current);
     };
   }, [serverStatus]);
 
   return { serverStatus, showTopbar, showColdStart };
 }
+
 
 type ServerStatusProps = {
   children: ReactNode;
