@@ -1,12 +1,7 @@
 import { C } from "./tokens";
 
-// ── Shell — backdrop + floating card ─────────────────────────────────────────
-// Defined outside modal components so React never remounts it on re-render,
-// which would unmount/remount the DOM and kill input focus after every keystroke.
-
 interface ShellProps {
   children:        React.ReactNode;
-  /** Max width of the card. Defaults to "420px". Use "wide" preset or pass px string. */
   maxWidth?:       "default" | "narrow" | "wide" | "xl" | (string & {});
   onBackdropDown?: React.MouseEventHandler;
   onBackdropUp?:   React.MouseEventHandler;
@@ -29,8 +24,8 @@ export default function Shell({
 
   return (
     <div
-      onMouseDown={onBackdropDown}
-      onMouseUp={onBackdropUp}
+      onMouseDown={e => { if (e.target === e.currentTarget) onBackdropDown?.(e); }}
+      onMouseUp={e =>   { if (e.target === e.currentTarget) onBackdropUp?.(e);   }}
       style={{
         position:        "fixed",
         inset:           0,
@@ -43,9 +38,6 @@ export default function Shell({
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        onMouseUp={e => e.stopPropagation()}
         style={{
           background:    C.surface,
           border:        `1px solid ${C.border}`,
@@ -62,27 +54,18 @@ export default function Shell({
   );
 }
 
-// ── Large Shell variant — flex column with maxHeight for table modals ─────────
-// Use this for modals that contain scrollable tables (Read*, History*, etc.)
-interface ShellTableProps {
-  children:        React.ReactNode;
-  maxWidth?:       "default" | "narrow" | "wide" | "xl" | (string & {});
-  onBackdropDown?: React.MouseEventHandler;
-  onBackdropUp?:   React.MouseEventHandler;
-}
-
 export function ShellTable({
   children,
   maxWidth = "xl",
   onBackdropDown,
   onBackdropUp,
-}: ShellTableProps) {
+}: ShellProps) {
   const resolvedMaxWidth = MAX_WIDTH_MAP[maxWidth] ?? maxWidth;
 
   return (
     <div
-      onMouseDown={onBackdropDown}
-      onMouseUp={onBackdropUp}
+      onMouseDown={e => { if (e.target === e.currentTarget) onBackdropDown?.(e); }}
+      onMouseUp={e =>   { if (e.target === e.currentTarget) onBackdropUp?.(e);   }}
       style={{
         position:        "fixed",
         inset:           0,
@@ -95,9 +78,6 @@ export function ShellTable({
       }}
     >
       <div
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        onMouseUp={e => e.stopPropagation()}
         style={{
           background:    C.surface,
           border:        `1px solid ${C.border}`,

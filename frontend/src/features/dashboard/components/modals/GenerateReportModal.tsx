@@ -41,6 +41,16 @@ function periodLabel(reportType: ReportType): string {
   return "period";
 }
 
+// ── Shared footer — defined outside to prevent remount on every render ───────
+function ModalFooter({ left, right }: { left: React.ReactNode; right: React.ReactNode }) {
+  return (
+    <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
+      {left}
+      {right}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function GenerateReportModal({ reportMode, onClose }: OnCloseProps) {
   const { user }  = useContext(AuthContext);
@@ -178,13 +188,7 @@ export default function GenerateReportModal({ reportMode, onClose }: OnCloseProp
     reportMode === "expense"  ? "-" :
     overallTotal >= 0 ? "+" : "-";
 
-  // ── Shared footer ─────────────────────────────────────────────────────────
-  const ModalFooter = ({ left, right }: { left: React.ReactNode; right: React.ReactNode }) => (
-    <div style={{ padding: "1rem 1.5rem", borderTop: `1px solid ${C.border}`, display: "flex", gap: "0.75rem", flexShrink: 0 }}>
-      {left}
-      {right}
-    </div>
-  );
+
 
   // ── Step 1 — Form ─────────────────────────────────────────────────────────
   if (!showConfirmation && !showSummary) return (
