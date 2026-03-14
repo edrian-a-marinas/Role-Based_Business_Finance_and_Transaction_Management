@@ -16,7 +16,7 @@ class ReportBase(BaseModel):
 
 
 class ReportCreate(ReportBase):
-  pass
+  all_users: bool = False
 
 
 class ReportRead(ReportBase):

@@ -167,8 +167,13 @@ async def generate_report(
       async with conn.transaction():
         daily = report.report_type.lower() == "daily"
         weekly = report.report_type.lower() == "weekly"
+
         # Admins see all users; regular users see only their own
-        user_id_filter = None if role == "admin" else current_user_id
+        if role == "admin" and report.all_users:
+          user_id_filter = None      
+        else:
+          user_id_filter = current_user_id
+          
         summary = await _generate_summary(
           conn,
           report.start_date,
