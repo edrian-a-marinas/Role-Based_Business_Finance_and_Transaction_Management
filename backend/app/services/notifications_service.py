@@ -1,6 +1,7 @@
 import json
 import logging
 from db.connection import get_pool
+from app.routers.notifications import push_to_user
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,9 @@ async def notify_admins_deletion_request(
         """,
         [(row["id"], payload) for row in admin_ids],
       )
+    # Outside the connection block — push SSE to every connected admin
+    for row in admin_ids:
+      await push_to_user(row["id"], {"type": "new_notification", "unread_count": 1})
   except Exception:
     logger.exception(f"Failed to notify admins for deletion request {request_id}")
 
@@ -70,6 +74,8 @@ async def notify_requester_deletion_outcome(
         notif_type,
         payload,
       )
+    # This was missing — push SSE to the standard user immediately
+    await push_to_user(requested_by, {"type": "new_notification", "unread_count": 1})
   except Exception:
     logger.exception(f"Failed to notify requester {requested_by} of deletion outcome for request {request_id}")
 
