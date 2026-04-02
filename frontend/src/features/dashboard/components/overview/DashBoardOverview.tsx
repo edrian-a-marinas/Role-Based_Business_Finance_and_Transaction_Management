@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useContext, lazy, Suspense, useRef } from "react";
+import { useDeferredValue, useMemo, useState, useEffect, useContext, lazy, Suspense, useRef } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -228,6 +228,10 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
     }));
   }, [filteredTransactions]);
 
+  const deferredDailyTrends      = useDeferredValue(dailyTrends);
+  const deferredExpenseBreakdown = useDeferredValue(expenseBreakdown);
+  const deferredIncomeBreakdown  = useDeferredValue(incomeBreakdown);
+
   const profitMargin = summary.totalIncome > 0
     ? (summary.netProfit / summary.totalIncome) * 100
     : 0;
@@ -400,18 +404,18 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
           <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <Suspense fallback={<ChartSkeleton height={340} />}>
-                <IncomeExpenseChart data={dailyTrends} />
+                <IncomeExpenseChart data={deferredDailyTrends} />
               </Suspense>
               <Suspense fallback={<ChartSkeleton height={340} />}>
-                <NetProfitChart data={dailyTrends} />
+                <NetProfitChart data={deferredDailyTrends} />
               </Suspense>
             </div>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
               <Suspense fallback={<ChartSkeleton height={320} />}>
-                <CategoryBreakdownChart title="Expense Breakdown" subtitle="By category" data={expenseBreakdown} />
+                <CategoryBreakdownChart title="Expense Breakdown" subtitle="By category" data={deferredExpenseBreakdown} />
               </Suspense>
               <Suspense fallback={<ChartSkeleton height={320} />}>
-                <CategoryBreakdownChart title="Income Breakdown"  subtitle="By category" data={incomeBreakdown}  />
+                <CategoryBreakdownChart title="Income Breakdown"  subtitle="By category" data={deferredIncomeBreakdown} />
               </Suspense>
               <RecentTransactions
                 transactions={filteredTransactions}
