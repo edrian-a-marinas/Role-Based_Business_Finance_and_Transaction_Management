@@ -64,8 +64,23 @@ export function useServerCheck() {
 
         schedule(HEALTHY_INTERVAL);
 
-      } catch {
+      } catch (error: any) {
         // ── Failure ────────────────────────────────────────────────────────
+        const errorMessage = error?.message || error?.toString() || "";
+
+        // Check for Brave ad blocker blocking
+        if (errorMessage.includes("ERR_BLOCKED_BY_CLIENT") ||
+            errorMessage.includes("Network request failed") && !error?.response) {
+          console.warn(
+            "%c⚠️ Brave Ad Blocker Detected",
+            "background: #ff9500; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold;"
+          );
+          console.warn(
+            "Your browser is blocking the health check request. " +
+            "If you're using Brave, please turn off Shields for this site to allow connections to the backend."
+          );
+        }
+
         if (statusRef.current !== 'disconnected') {
           setStatus('disconnected');
           setShowTopbar(true);
