@@ -204,6 +204,9 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
             color={transaction.transaction_type === "Income" ? C.income : C.expense} />
           <InfoRow label="Description" value={transaction.description || "—"} />
           <InfoRow label="Date"        value={transaction.transaction_date} />
+          {isAdmin && transaction.user_id && (
+            <InfoRow label="Created by" value={`User ID ${transaction.user_id}`} />
+          )}
         </div>
 
         <ErrorBox message={error} />
@@ -264,6 +267,9 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
             color={transaction.transaction_type === "Income" ? C.income : C.expense} />
           <InfoRow label="Description" value={transaction.description || "—"} />
           <InfoRow label="Date"        value={transaction.transaction_date} />
+          {isAdmin && transaction.user_id && (
+            <InfoRow label="Created by" value={`User ID ${transaction.user_id}`} />
+          )}
         </div>
 
         <ErrorBox message={error} />
