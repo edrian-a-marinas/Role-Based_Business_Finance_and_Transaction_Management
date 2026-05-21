@@ -22,3 +22,4 @@ frontend/.env.*.local
 frontend/*.log
 
 CLAUDE.md
+.env
