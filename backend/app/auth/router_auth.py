@@ -31,7 +31,7 @@ router = APIRouter(prefix="/api/auth")
 
 @router.post("/register", response_model=UserRead)
 @limiter.limit("5/minute")
-async def register_user(user: UserCreate):
+async def register_user(request: Request, user: UserCreate):
   return await create_user(user)
 
 
