@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.core.limiter import limiter
+from typing import Literal
 
 from typing import Tuple
 from app.auth.format_role import get_user_id_and_role
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/api/reports")
 async def generate_report(
   request: Request,
   payload: ReportCreate,
-  transaction_type: str = Query("combined", enum=["income", "expense", "combined"]),
+  transaction_type: Literal["income", "expense", "combined"] = Query("combined"),
   user_data: Tuple[int, str] = Depends(get_user_id_and_role)
 ):
   CURRENT_USER_ID, role = user_data
