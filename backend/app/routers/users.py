@@ -44,6 +44,7 @@ async def change_my_password(
   return {"detail": "Password changed successfully."}
 
 # /me routes must come before /{target_user_id} to avoid route shadowing
+# try
 @router.patch("/me", response_model=UserRead)
 @limiter.limit("20/minute")
 async def update_self(request: Request, payload: UserBase, user_data: Tuple[int, str] = Depends(get_user_id_and_role)):
