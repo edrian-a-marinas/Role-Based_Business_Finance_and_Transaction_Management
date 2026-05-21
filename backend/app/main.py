@@ -4,8 +4,7 @@ from app.core.limiter import configure_limiter
 
 from app.auth import router_auth as authentications
 from app.auth import router_email_verification as email_verification
-from app.routers import transactions, categories, reports, users, notifications
-from tests import test_health
+from app.routers import transactions, categories, reports, users, notifications, test_health
 import logging
 
 logging.basicConfig(
