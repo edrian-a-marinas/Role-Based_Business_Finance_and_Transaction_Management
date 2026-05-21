@@ -17,8 +17,8 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: transaction_user
-          POSTGRES_PASSWORD: testpassword
-          POSTGRES_DB: transacscope_test_db
+          POSTGRES_PASSWORD: edrian
+          POSTGRES_DB: edrian
         ports:
           - 5432:5432
         options: >-
