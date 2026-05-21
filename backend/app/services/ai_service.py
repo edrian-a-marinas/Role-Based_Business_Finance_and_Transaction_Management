@@ -47,12 +47,8 @@ def _extract_keywords(message: str) -> list[str]:
 
 def _build_context_string(ctx: dict, keywords: list[str]) -> str:
     all_txns = ctx["transactions"]
-
     if keywords:
-        matched = [
-            t for t in all_txns
-            if any(kw in t["description"].lower() for kw in keywords)
-        ]
+        matched = [t for t in all_txns if any(kw in t["description"].lower() for kw in keywords)]
         filtered = matched if matched else all_txns
         label = ", keyword-filtered" if matched else ""
     else:
@@ -99,6 +95,7 @@ async def _fetch_context_from_db(
     ninety_days_ago = today - timedelta(days=90)
     thirty_days_ago = today - timedelta(days=30)
 
+    # Admins with scope="own" behave exactly like standard users
     use_all = (role == "admin" and scope == "all")
 
     async with pool.acquire() as conn:
@@ -108,64 +105,52 @@ async def _fetch_context_from_db(
             recent_totals = await conn.fetchrow(
                 """
                 SELECT
-                    COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS total_income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS total_income,
                     COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS total_expenses,
                     COUNT(*) AS total_transactions
                 FROM transactions
-                WHERE deleted_at IS NULL
-                  AND transaction_date BETWEEN $1 AND $2
+                WHERE deleted_at IS NULL AND transaction_date BETWEEN $1 AND $2
                 """,
                 thirty_days_ago, today,
             )
-
             recent_rows = await conn.fetch(
                 """
                 SELECT t.transaction_type, c.name AS category_name,
-                       SUM(t.amount) AS total_amount,
-                       COUNT(*) AS entry_count
+                    SUM(t.amount) AS total_amount, COUNT(*) AS entry_count
                 FROM transactions t
                 JOIN categories c ON c.id = t.category_id
-                WHERE t.deleted_at IS NULL
-                  AND t.transaction_date BETWEEN $1 AND $2
-                GROUP BY t.transaction_type, c.name
-                ORDER BY total_amount DESC
+                WHERE t.deleted_at IS NULL AND t.transaction_date BETWEEN $1 AND $2
+                GROUP BY t.transaction_type, c.name ORDER BY total_amount DESC
                 """,
                 thirty_days_ago, today,
             )
-
             alltime_totals = await conn.fetchrow(
                 """
                 SELECT
-                    COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS total_income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS total_income,
                     COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS total_expenses,
                     COUNT(*) AS total_transactions,
                     MIN(transaction_date) AS earliest_date
-                FROM transactions
-                WHERE deleted_at IS NULL
+                FROM transactions WHERE deleted_at IS NULL
                 """,
             )
-
             monthly_rows = await conn.fetch(
                 """
                 SELECT DATE_TRUNC('month', transaction_date)::date AS month,
-                       COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS income,
-                       COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS expenses
-                FROM transactions
-                WHERE deleted_at IS NULL
-                GROUP BY month
-                ORDER BY month ASC
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS expenses
+                FROM transactions WHERE deleted_at IS NULL
+                GROUP BY month ORDER BY month ASC
                 """,
             )
-
             transaction_rows = await conn.fetch(
                 """
                 SELECT t.transaction_type, t.amount, t.description,
-                       t.transaction_date, c.name AS category_name
+                    t.transaction_date, c.name AS category_name
                 FROM transactions t
                 JOIN categories c ON c.id = t.category_id
                 WHERE t.deleted_at IS NULL
-                  AND t.description IS NOT NULL
-                  AND TRIM(t.description) != ''
+                  AND t.description IS NOT NULL AND TRIM(t.description) != ''
                   AND t.transaction_date >= $1
                 ORDER BY t.transaction_date DESC
                 """,
@@ -178,69 +163,56 @@ async def _fetch_context_from_db(
             recent_totals = await conn.fetchrow(
                 """
                 SELECT
-                    COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS total_income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS total_income,
                     COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS total_expenses,
                     COUNT(*) AS total_transactions
                 FROM transactions
-                WHERE deleted_at IS NULL
-                  AND user_id = $1
+                WHERE deleted_at IS NULL AND user_id = $1
                   AND transaction_date BETWEEN $2 AND $3
                 """,
                 user_id, thirty_days_ago, today,
             )
-
             recent_rows = await conn.fetch(
                 """
                 SELECT t.transaction_type, c.name AS category_name,
-                       SUM(t.amount) AS total_amount,
-                       COUNT(*) AS entry_count
+                    SUM(t.amount) AS total_amount, COUNT(*) AS entry_count
                 FROM transactions t
                 JOIN categories c ON c.id = t.category_id
-                WHERE t.deleted_at IS NULL
-                  AND t.user_id = $1
+                WHERE t.deleted_at IS NULL AND t.user_id = $1
                   AND t.transaction_date BETWEEN $2 AND $3
-                GROUP BY t.transaction_type, c.name
-                ORDER BY total_amount DESC
+                GROUP BY t.transaction_type, c.name ORDER BY total_amount DESC
                 """,
                 user_id, thirty_days_ago, today,
             )
-
             alltime_totals = await conn.fetchrow(
                 """
                 SELECT
-                    COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS total_income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS total_income,
                     COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS total_expenses,
                     COUNT(*) AS total_transactions,
                     MIN(transaction_date) AS earliest_date
-                FROM transactions
-                WHERE deleted_at IS NULL AND user_id = $1
+                FROM transactions WHERE deleted_at IS NULL AND user_id = $1
                 """,
                 user_id,
             )
-
             monthly_rows = await conn.fetch(
                 """
                 SELECT DATE_TRUNC('month', transaction_date)::date AS month,
-                       COALESCE(SUM(CASE WHEN transaction_type = 'Income' THEN amount ELSE 0 END), 0) AS income,
-                       COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS expenses
-                FROM transactions
-                WHERE deleted_at IS NULL AND user_id = $1
-                GROUP BY month
-                ORDER BY month ASC
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Income'  THEN amount ELSE 0 END), 0) AS income,
+                    COALESCE(SUM(CASE WHEN transaction_type = 'Expense' THEN amount ELSE 0 END), 0) AS expenses
+                FROM transactions WHERE deleted_at IS NULL AND user_id = $1
+                GROUP BY month ORDER BY month ASC
                 """,
                 user_id,
             )
-
             transaction_rows = await conn.fetch(
                 """
                 SELECT t.transaction_type, t.amount, t.description,
-                       t.transaction_date, c.name AS category_name
+                    t.transaction_date, c.name AS category_name
                 FROM transactions t
                 JOIN categories c ON c.id = t.category_id
-                WHERE t.deleted_at IS NULL
-                  AND t.user_id = $1
-                  AND t.description IS NOT NULL
-                  AND TRIM(t.description) != ''
+                WHERE t.deleted_at IS NULL AND t.user_id = $1
+                  AND t.description IS NOT NULL AND TRIM(t.description) != ''
                   AND t.transaction_date >= $2
                 ORDER BY t.transaction_date DESC
                 """,
@@ -249,19 +221,39 @@ async def _fetch_context_from_db(
 
     def fmt(v): return f"₱{float(v):,.2f}"
 
+    r_income   = float(recent_totals["total_income"])
+    r_expenses = float(recent_totals["total_expenses"])
+    r_net      = r_income - r_expenses
+    r_count    = recent_totals["total_transactions"]
+
+    a_income   = float(alltime_totals["total_income"])
+    a_expenses = float(alltime_totals["total_expenses"])
+    a_net      = a_income - a_expenses
+    a_count    = alltime_totals["total_transactions"]
+    earliest   = alltime_totals["earliest_date"]
+
     return {
         "scope": scope_label,
         "thirty_days_ago": str(thirty_days_ago),
         "today": str(today),
-        "recent_summary": f"Total Income: {fmt(recent_totals['total_income'])}\nTotal Expenses: {fmt(recent_totals['total_expenses'])}\nNet Profit/Loss: {fmt(float(recent_totals['total_income']) - float(recent_totals['total_expenses']))}\nTransactions: {recent_totals['total_transactions']}",
+        "recent_summary": (
+            f"Total Income: {fmt(r_income)}\nTotal Expenses: {fmt(r_expenses)}\n"
+            f"Net Profit/Loss: {fmt(r_net)}\nTransactions: {r_count}"
+        ),
         "recent_breakdown": "\n".join(
-            f"  - {r['category_name']} ({r['transaction_type']}): ₱{float(r['total_amount']):,.2f} across {r['entry_count']} transaction(s)"
+            f"  - {r['category_name']} ({r['transaction_type']}): "
+            f"{fmt(r['total_amount'])} across {r['entry_count']} transaction(s)"
             for r in recent_rows
         ) or "  No transactions found.",
-        "earliest": str(alltime_totals["earliest_date"]),
-        "alltime_summary": f"Total Income: {fmt(alltime_totals['total_income'])}\nTotal Expenses: {fmt(alltime_totals['total_expenses'])}\nNet Profit/Loss: {fmt(float(alltime_totals['total_income']) - float(alltime_totals['total_expenses']))}\nTransactions: {alltime_totals['total_transactions']}",
+        "earliest": str(earliest),
+        "alltime_summary": (
+            f"Total Income: {fmt(a_income)}\nTotal Expenses: {fmt(a_expenses)}\n"
+            f"Net Profit/Loss: {fmt(a_net)}\nTransactions: {a_count}"
+        ),
         "monthly_breakdown": "\n".join(
-            f"  - {r['month'].strftime('%B %Y')}: Income {fmt(r['income'])} | Expenses {fmt(r['expenses'])} | Net {fmt(float(r['income']) - float(r['expenses']))}"
+            f"  - {r['month'].strftime('%B %Y')}: "
+            f"Income {fmt(r['income'])} | Expenses {fmt(r['expenses'])} | "
+            f"Net {fmt(float(r['income']) - float(r['expenses']))}"
             for r in monthly_rows
         ) or "  No monthly data found.",
         "transactions": [
@@ -277,47 +269,88 @@ async def _fetch_context_from_db(
     }
 
 
-async def get_financial_context(user_id: int, role: str, scope: Literal["all", "own"] = "all") -> dict:
+async def get_financial_context(
+    user_id: int,
+    role: str,
+    scope: Literal["all", "own"] = "all",
+) -> dict:
+    """Return cached context or fetch fresh. Cache key includes scope."""
     effective_scope = scope if role == "admin" else "own"
     cache_key = (user_id, effective_scope)
 
     cached = _context_cache.get(cache_key)
-    if cached and time.time() - cached[1] < CACHE_TTL:
-        return cached[0]
+    if cached:
+        ctx, ts = cached
+        if time.time() - ts < CACHE_TTL:
+            logger.info(f"Context cache hit for user_id={user_id} scope={effective_scope}")
+            return ctx
 
+    logger.info(f"Context cache miss — fetching DB for user_id={user_id} scope={effective_scope}")
     ctx = await _fetch_context_from_db(user_id, role, effective_scope)
     _context_cache[cache_key] = (ctx, time.time())
     return ctx
 
 
-async def chat(message: str, history: list[dict], user_id: int, role: str, scope: Literal["all", "own"] = "all") -> str:
-    ctx = await get_financial_context(user_id, role, scope)
-    keywords = _extract_keywords(message)
-    financial_context = _build_context_string(ctx, keywords)
+async def chat(
+    message: str,
+    history: list[dict],
+    user_id: int,
+    role: str,
+    scope: Literal["all", "own"] = "all",
+) -> str:
+    try:
+        ctx = await get_financial_context(user_id, role, scope)
+        keywords = _extract_keywords(message)
+        financial_context = _build_context_string(ctx, keywords)
 
-    system_prompt = f"""You are a financial assistant for TransacScope.
+        scope_note = (
+            "\nYou are currently viewing YOUR OWN transactions only (not all users)."
+            if role == "admin" and scope == "own"
+            else "\nYou are viewing data across ALL users in the business."
+            if role == "admin"
+            else ""
+        )
+
+        system_prompt = f"""You are a financial assistant for TransacScope. Friendly, casual, and direct — like a knowledgeable friend who knows their numbers.
+{scope_note}
+DATA HIERARCHY — always follow this when picking which dataset to answer from:
+- "this month", "recently", or no time specified → use LAST 30 DAYS section (default)
+- specific month or date range → use MONTHLY BREAKDOWN or INDIVIDUAL TRANSACTIONS
+- "all time", "ever", "total", "since I started" → use ALL-TIME section
+- keyword/item questions (e.g. "bombits", "tuition") → use INDIVIDUAL TRANSACTIONS WITH DESCRIPTIONS
+Never mix datasets in a single answer. Pick the right one and commit to it.
+Never announce which dataset you used (no "Based on last 30 days..." preamble). Just answer naturally. Only mention the time period if the user didn't specify one and it adds useful context — e.g. "Transportation leads at ₱2,084 this month."
 
 RULES:
-- Answer directly
-- Use correct dataset
-- Be concise
-- Use ₱ for all amounts
-- Stay within finance scope
+1. Answer what was asked, then one short follow-up thought max — never volunteer unrequested data as the main answer.
+2. For date range questions, give a breakdown (per-month etc.), not just a single number.
+3. Use individual transaction descriptions to answer keyword/item questions.
+4. If you don't have the data, say so briefly and suggest the Reports section.
+5. No "great question!", no lectures, no unsolicited advice.
+6. Use ₱ for all amounts. Short paragraphs or a clean list — not walls of text.
+7. Anything outside finance or this app: politely say it's out of scope and redirect.
+8. Never contradict yourself. Pick one answer and commit — do not revise mid-sentence.
 
 Financial data:
 {financial_context}"""
 
-    messages = [{"role": "system", "content": system_prompt}]
-    for msg in history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
-    messages.append({"role": "user", "content": message})
+        messages = [{"role": "system", "content": system_prompt}]
+        for msg in history:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": message})
 
-    client = get_groq_client()
-    response = await client.chat.completions.create(
-        model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
-        messages=messages,
-        max_tokens=512,
-        temperature=0.5,
-    )
+        client = get_groq_client()
+        response = await client.chat.completions.create(
+            model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            messages=messages,  # type: ignore
+            max_tokens=512,
+            temperature=0.5,
+        )
 
-    return response.choices[0].message.content
+        reply = response.choices[0].message.content
+        logger.info(f"AI response for user_id={user_id} role={role} scope={scope} keywords={keywords}")
+        return reply  # type: ignore
+
+    except Exception:
+        logger.exception("Error getting AI chat response")
+        raise
