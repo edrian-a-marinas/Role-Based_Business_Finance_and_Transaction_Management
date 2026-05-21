@@ -31,9 +31,18 @@ async def chat(
         )
         return ChatResponse(reply=reply)
 
-    except RateLimitError:
+    except RateLimitError as e:
         logger.warning(f"Groq rate limit hit for user_id={user_id}")
-        raise HTTPException(status_code=429, detail="rate_limited")
+        # Try to extract the retry time from Groq's error message
+        import re
+        retry_msg = "Rate limit reached. Please try again later."
+        try:
+            match = re.search(r"Please try again in (.+?)\.", str(e))
+            if match:
+                retry_msg = f"Daily token limit reached. Try again in {match.group(1)}."
+        except Exception:
+            pass
+        raise HTTPException(status_code=429, detail=retry_msg)
     except (APITimeoutError, APIConnectionError):
         logger.warning(f"Groq timeout/connection error for user_id={user_id}")
         raise HTTPException(status_code=504, detail="timeout")
