@@ -16,7 +16,10 @@ async def chat(
     user_data: Tuple[int, str] = Depends(get_user_id_and_role),
 ):
     user_id, role = user_data
-    logger.info(f"AI chat request from user_id={user_id} role={role}")
+
+    # Scope only matters for admins — standard users always see own data only
+    effective_scope = payload.scope if role == "admin" else "own"
+    logger.info(f"AI chat request from user_id={user_id} role={role} scope={effective_scope}")
 
     try:
         reply = await ai_service.chat(
@@ -24,21 +27,16 @@ async def chat(
             history=[msg.model_dump() for msg in payload.history],
             user_id=user_id,
             role=role,
+            scope=effective_scope,      # type: ignore
         )
         return ChatResponse(reply=reply)
 
     except RateLimitError:
         logger.warning(f"Groq rate limit hit for user_id={user_id}")
-        raise HTTPException(
-            status_code=429,
-            detail="rate_limited",
-        )
+        raise HTTPException(status_code=429, detail="rate_limited")
     except (APITimeoutError, APIConnectionError):
         logger.warning(f"Groq timeout/connection error for user_id={user_id}")
-        raise HTTPException(
-            status_code=504,
-            detail="timeout",
-        )
+        raise HTTPException(status_code=504, detail="timeout")
 
 
 @router.get("/context", response_model=dict)
