@@ -48,7 +48,7 @@ jobs:
         run: |
           psql -h localhost -U transaction_user -d transacscope_test_db -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
           psql -h localhost -U transaction_user -d transacscope_test_db -f backend/migrations/001_create_tables.sql
-          psql -h localhost -U transaction_user -d transacscope_test_db -f backend/migrations/002_seed_admin.sql
+          psql -h localhost -U transaction_user -d transacscope_test_db -c "INSERT INTO roles (name, description) VALUES ('admin', 'Full access'), ('standard', 'Limited access') ON CONFLICT DO NOTHING;"
 
       - name: Run tests
         working-directory: backend
