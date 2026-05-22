@@ -13,6 +13,7 @@ import { AuthContext } from "@/features/auth/AuthContext";
 import type { ReadTransaction } from "@/features/dashboard/schemas/transaction";
 import type { CategoryRead } from "@/features/dashboard/schemas/category";
 import ReadTransactions from "../modals/ReadTransactionModal";
+import { useQuery } from "@tanstack/react-query";
 
 const IncomeExpenseChart     = lazy(() => import("../charts/IncomeExpenseChart"));
 const NetProfitChart         = lazy(() => import("../charts/NetProfitChart"));
@@ -36,6 +37,7 @@ type Period = "all" | string;
 interface DashboardOverviewProps {
   userRole: number;
   userId:   number;
+  chartsReadyRef: React.MutableRefObject<boolean>;
 }
 
 function ChartSkeleton({ height = 300 }: { height?: number }) {
@@ -59,7 +61,7 @@ function formatPeriodLabel(ym: string): string {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
-export default function DashboardOverview({ userRole, userId }: DashboardOverviewProps) {
+export default function DashboardOverview({ userRole, userId, chartsReadyRef }: DashboardOverviewProps) {
   const { user } = useContext(AuthContext);
   const userID   = user.id;
   const isAdmin  = userRole === 1;
@@ -68,11 +70,36 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
     : userRole === 1               ? "Admin"
     :                                "Standard User";
 
-  const [transactions,  setTransactions]  = useState<ReadTransaction[]>([]);
-  const [categories,    setCategories]    = useState<CategoryRead[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [chartsReady,   setChartsReady]   = useState(false);
-  const [period,        setPeriod]        = useState<Period>("all");
+
+
+  const { data: transactions = [], isLoading: txLoading } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => api.get<ReadTransaction[]>("api/transactions/").then(r =>
+      r.data.filter(t => !t.deleted_at).map(t => ({ ...t, amount: parseFloat(String(t.amount)) }))
+    ),
+  });
+
+  const { data: categories = [], isLoading: catLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+  });
+
+
+
+  const loading = txLoading || catLoading;
+
+  const [chartsReady, setChartsReady] = useState(chartsReadyRef.current);
+
+  useEffect(() => {
+    if (!loading && !chartsReadyRef.current) {
+      chartsReadyRef.current = true;
+      setChartsReady(true);
+    } else if (!loading) {
+      setChartsReady(true);
+    }
+  }, [loading]);
+
+  const [period, setPeriod] = useState<Period>(() => new Date().toISOString().slice(0, 7));
   const [hoveredPeriod, setHoveredPeriod] = useState<Period | null>(null);
   // Admin defaults to "all"; standard is locked to "own"
   const [viewMode, setViewMode] = useState<"all" | "own">(isAdmin ? "all" : "own");
@@ -88,39 +115,6 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
     setTransactionViewMode(viewMode);
     setOpenTransactionsModal(true);
   };
-
-  const token     = localStorage.getItem("access_token");
-  const tokenType = localStorage.getItem("token_type");
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!token || !tokenType) return;
-      setLoading(true);
-      try {
-        const [txRes, catRes] = await Promise.all([
-          api.get<ReadTransaction[]>("api/transactions/", {
-            headers: { Authorization: `${tokenType} ${token}` },
-          }),
-          api.get<CategoryRead[]>("api/categories/", {
-            headers: { Authorization: `${tokenType} ${token}` },
-          }),
-        ]);
-        const activeTx = txRes.data
-          .filter((t) => !t.deleted_at)
-          .map((t) => ({ ...t, amount: parseFloat(String(t.amount)) }));
-        setTransactions(activeTx);
-        setCategories(catRes.data);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        setLoading(false);
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => setChartsReady(true));
-        });
-      }
-    };
-    fetchData();
-  }, [token, tokenType]);
 
   // Period list derived from transactions visible under current viewMode
   const availablePeriods = useMemo(() => {
@@ -143,9 +137,7 @@ export default function DashboardOverview({ userRole, userId }: DashboardOvervie
 
   useEffect(() => {
     if (availablePeriods.length === 0) return;
-    if (initializedRef.current) return; // ← skip if already initialized
-    initializedRef.current = true;
-
+    if (period !== "all") return; // already on a specific month, don't override
     const currentYM  = new Date().toISOString().slice(0, 7);
     const hasCurrent = availablePeriods.some(p => p.key === currentYM);
     if (hasCurrent) {

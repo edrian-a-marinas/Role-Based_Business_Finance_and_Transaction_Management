@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction, Category } from "@/features/dashboard/schemas/transaction";
@@ -127,9 +128,11 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     if (amountNum !== parseFloat(String(transaction.amount)))        payload.amount           = amountNum;
 
     try {
+      const queryClient = useQueryClient();
       await api.put(`api/transactions/${transactionId}`, payload, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       alert("Updated successfully!");
       onClose();
     } catch {
