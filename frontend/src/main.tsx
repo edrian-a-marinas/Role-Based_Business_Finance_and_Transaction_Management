@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client'
-
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from '@/App.tsx'
 import "@/index.css"
 
@@ -13,11 +13,23 @@ import "@/index.css"
 //       v3 rewrites ResponsiveContainer and fixes this measurement bug.
 //       To upgrade: npm install recharts@3 (verify breaking changes first)
 const _warn = console.warn.bind(console);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+    },
+    
+  },
+});
+
 console.warn = (...args: unknown[]) => {
   if (typeof args[0] === "string" && args[0].includes("width(-1) and height(-1)")) return;
   _warn(...args);
 };
 
 createRoot(document.getElementById('root')!).render(
-  <App />
+  <QueryClientProvider client={queryClient}>
+    <App />
+  </QueryClientProvider>
+  
 )

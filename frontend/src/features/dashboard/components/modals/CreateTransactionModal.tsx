@@ -1,6 +1,7 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useContext } from "react";
 import type { ChangeEvent, KeyboardEvent } from "react";
 import { ChevronRight, ChevronLeft, Info } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import type { Transaction } from "@/features/dashboard/schemas/transaction";
@@ -86,7 +87,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
   const tokenType = localStorage.getItem("token_type");
 
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [categories,       setCategories]       = useState<CategoryRead[]>([]);
   const [errors,           setErrors]           = useState<string[]>([]);
   const [focusedField,     setFocusedField]     = useState<string | null>(null);
   const [amountInput,      setAmountInput]      = useState("");
@@ -98,16 +98,15 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     transaction_date: "",
   });
 
-  useEffect(() => {
-    if (!form.transaction_type) { setCategories([]); return; }
-    const endpoint = form.transaction_type === "Expense"
-      ? "api/categories/expense"
-      : "api/categories/income";
-    api.get<CategoryRead[]>(endpoint).then(res => {
-      setCategories(res.data);
-      setForm(prev => ({ ...prev, category_id: 0 }));
-    });
-  }, [form.transaction_type]);
+
+  const { data: allCategories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+  });
+
+  const categories = allCategories.filter(c =>
+    form.transaction_type ? c.type === form.transaction_type : true
+  );
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -142,9 +141,11 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     try {
       if (!user) return;
       if (!token || !tokenType) return alert("Not authorized");
+      const queryClient = useQueryClient();
       await api.post("api/transactions/", form, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       alert("Successfully created!");
       setForm({ amount: 0, description: "", category_id: 0, transaction_type: "", transaction_date: "" });
       setAmountInput("");

@@ -3,6 +3,7 @@ import type { KeyboardEvent } from "react";
 import { ChevronLeft, ChevronRight, Search, Trash2, CheckCircle } from "lucide-react";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Transaction, Category } from "@/features/dashboard/schemas/transaction";
 import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import { formatCurrency, fetchTransactionAndCategories } from "@/features/dashboard/lib/utility";
@@ -89,10 +90,12 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const handleConfirmDelete = async () => {
     if (!transaction || !token || !tokenType) return;
     try {
+      const queryClient = useQueryClient();
       await api.delete(`api/transactions/${transactionId}`, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
       alert("Transaction deleted.");
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       onClose();
     } catch {
       setError("Failed to delete transaction.");

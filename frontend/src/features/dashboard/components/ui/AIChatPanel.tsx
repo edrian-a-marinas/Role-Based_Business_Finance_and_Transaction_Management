@@ -4,6 +4,7 @@ import {
   Bot, Send, Loader2, Sparkles, RefreshCw, User,
   AlertTriangle, Users, UserRound, Clock,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AuthContext } from "@/features/auth/AuthContext";
 import api from "@/services/apiClient";
 
@@ -12,11 +13,9 @@ export interface ChatMessage {
   content: string;
 }
 
-// ── Typewriter ────────────────────────────────────────────────────────────────
 function useTypewriter(text: string, speed = 18, active = true) {
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
-
   useEffect(() => {
     if (!active) { setDisplayed(text); setDone(true); return; }
     setDisplayed(""); setDone(false);
@@ -29,17 +28,14 @@ function useTypewriter(text: string, speed = 18, active = true) {
     }, speed);
     return () => clearInterval(interval);
   }, [text, speed, active]);
-
   return { displayed, done };
 }
 
-// ── Bubbles ───────────────────────────────────────────────────────────────────
 function AssistantBubble({ content, animate, onDone }: {
   content: string; animate: boolean; onDone?: () => void;
 }) {
   const { displayed, done } = useTypewriter(content, 14, animate);
   useEffect(() => { if (done && onDone) onDone(); }, [done]);
-
   return (
     <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
       <div style={{
@@ -163,7 +159,6 @@ function ScopeToggle({ scope, onChange, disabled }: {
   );
 }
 
-// ── Rate limit notice ─────────────────────────────────────────────────────────
 function RateLimitNotice({ message }: { message: string }) {
   return (
     <div style={{
@@ -187,20 +182,19 @@ const SUGGESTIONS = [
   "Which category has the most spending?",
 ];
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function AIChatPanel() {
   const { user } = useContext(AuthContext);
   const isAdmin  = user?.role_id === 1;
 
-  const [messages,        setMessages]        = useState<ChatMessage[]>([]);
-  const [input,           setInput]           = useState("");
-  const [loading,         setLoading]         = useState(false);
-  const [contextLoading,  setContextLoading]  = useState(true);
-  const [animatingIdx,    setAnimatingIdx]    = useState<number | null>(null);
-  const [error,           setError]           = useState<string | null>(null);
-  const [rateLimitMsg,    setRateLimitMsg]    = useState<string | null>(null); // 429 state
-  const [scope,           setScope]           = useState<"all" | "own">("all");
-  const [slowHint,        setSlowHint]        = useState<"slow" | "very_slow" | null>(null);
+  const [messages,       setMessages]       = useState<ChatMessage[]>([]);
+  const [input,          setInput]          = useState("");
+  const [loading,        setLoading]        = useState(false);
+  const [contextLoading, setContextLoading] = useState(true);
+  const [animatingIdx,   setAnimatingIdx]   = useState<number | null>(null);
+  const [error,          setError]          = useState<string | null>(null);
+  const [rateLimitMsg,   setRateLimitMsg]   = useState<string | null>(null);
+  const [scope,          setScope]          = useState<"all" | "own">("all");
+  const [slowHint,       setSlowHint]       = useState<"slow" | "very_slow" | null>(null);
 
   const bottomRef        = useRef<HTMLDivElement>(null);
   const inputRef         = useRef<HTMLTextAreaElement>(null);
@@ -209,6 +203,14 @@ export default function AIChatPanel() {
   const verySlowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isRateLimited = rateLimitMsg !== null;
+
+  // ── Cached ai/context — never refetches within the session ────────────────
+  const { data: cachedContext } = useQuery({
+    queryKey: ["ai-context"],
+    queryFn: () => api.get<any>("api/ai/context").then(r => r.data),
+    staleTime: Infinity,
+    retry: false,
+    });
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -229,7 +231,8 @@ export default function AIChatPanel() {
     verySlowTimerRef.current = setTimeout(() => setSlowHint("very_slow"), 30_000);
   }
 
-  function buildGreeting(context: string, activeScope: "all" | "own"): string {
+  function buildGreeting(context: any, activeScope: "all" | "own"): string {
+    const summary = typeof context === "string" ? context : (context?.recent_summary ?? "");
     const firstName  = user?.first_name ?? "there";
     const roleSuffix = isAdmin ? " (Admin)" : "";
     const scopeNote  = isAdmin && activeScope === "all"
@@ -237,11 +240,9 @@ export default function AIChatPanel() {
       : isAdmin && activeScope === "own"
       ? " I'm currently looking at **your own data** only."
       : "";
-
-    const incomeMatch  = context.match(/Total Income:\s*₱([\d,]+\.\d{2})/);
-    const expenseMatch = context.match(/Total Expenses:\s*₱([\d,]+\.\d{2})/);
-    const netMatch     = context.match(/Net Profit\/Loss:\s*₱(-?[\d,]+\.\d{2})/);
-
+    const incomeMatch  = summary.match(/Total Income:\s*₱([\d,]+\.\d{2})/);
+    const expenseMatch = summary.match(/Total Expenses:\s*₱([\d,]+\.\d{2})/);
+    const netMatch     = summary.match(/Net Profit\/Loss:\s*₱(-?[\d,]+\.\d{2})/);
     if (incomeMatch && expenseMatch && netMatch) {
       const netRaw = netMatch[1];
       const isNeg  = netRaw.startsWith("-");
@@ -260,21 +261,30 @@ export default function AIChatPanel() {
     );
   }
 
+  // ── Greet using cached context (no extra fetch on remount) ────────────────
+  useEffect(() => {
+    if (hasGreeted.current) return;
+    if (cachedContext === undefined) return;
+    hasGreeted.current = true;
+    setMessages([{ role: "assistant", content: buildGreeting(cachedContext, scope) }]);
+    setAnimatingIdx(0);
+    setContextLoading(false); // ← is this line there?
+}, [cachedContext]);
+
+  // ── Reset button still does a fresh fetch (bypasses cache) ───────────────
   function fetchAndGreet(activeScope: "all" | "own" = scope) {
     setContextLoading(true);
     setRateLimitMsg(null);
     api.get<{ context: string }>("api/ai/context")
       .then(res => {
-        setMessages([{ role: "assistant", content: buildGreeting(res.data.context, activeScope) }]);
+        setMessages([{ role: "assistant", content: buildGreeting(res.data, activeScope) }]);
         setAnimatingIdx(0);
       })
       .catch((err: any) => {
         const status = err?.response?.status;
         const detail = err?.response?.data?.detail ?? "";
         const firstName = user?.first_name ?? "there";
-
         if (status === 429) {
-          // ── Rate limited on load — show greeting but lock input ──
           setMessages([{
             role: "assistant",
             content: `Hi, ${firstName}! 👋\n\nI'm your financial assistant, but you've hit the daily token limit.`,
@@ -292,12 +302,6 @@ export default function AIChatPanel() {
       .finally(() => setContextLoading(false));
   }
 
-  useEffect(() => {
-    if (hasGreeted.current) return;
-    hasGreeted.current = true;
-    fetchAndGreet(scope);
-  }, []);
-
   function handleScopeChange(newScope: "all" | "own") {
     if (newScope === scope || loading || contextLoading) return;
     setScope(newScope);
@@ -308,23 +312,15 @@ export default function AIChatPanel() {
   async function sendMessage(text?: string) {
     const msg = (text ?? input).trim();
     if (!msg || loading || isRateLimited) return;
-
     setInput("");
     setError(null);
-
-    // Reset textarea height
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
-
+    if (inputRef.current) inputRef.current.style.height = "auto";
     const userMsg: ChatMessage = { role: "user", content: msg };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
     setLoading(true);
     startSlowTimers();
-
     const history = nextMessages.filter(m => m.role !== "system").slice(1).slice(-10);
-
     try {
       const res = await api.post<{ reply: string }>("api/ai/chat", {
         message: msg, history,
@@ -379,7 +375,6 @@ export default function AIChatPanel() {
       borderRadius: "0.875rem", overflow: "hidden",
       boxShadow: "0 1px 4px hsl(220 13% 80% / 0.18)",
     }}>
-
       {/* ── Header ── */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -441,7 +436,6 @@ export default function AIChatPanel() {
             </div>
           </div>
         )}
-
         {messages.map((msg, idx) =>
           msg.role === "system" ? (
             <ScopeNoticePill key={idx} content={msg.content} />
@@ -454,7 +448,6 @@ export default function AIChatPanel() {
             <UserBubble key={idx} content={msg.content} />
           )
         )}
-
         {loading && (
           <>
             <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
@@ -483,13 +476,11 @@ export default function AIChatPanel() {
             <SlowReplyHint elapsed={slowHint} />
           </>
         )}
-
         {error && (
           <p style={{ fontSize: "0.74rem", color: "hsl(var(--expense))", textAlign: "center", margin: 0 }}>
             {error}
           </p>
         )}
-
         {!contextLoading && messages.length === 1 && messages[0].role === "assistant" && animatingIdx === null && !isRateLimited && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.25rem" }}>
             {SUGGESTIONS.map(s => (
@@ -508,7 +499,6 @@ export default function AIChatPanel() {
             ))}
           </div>
         )}
-
         <div ref={bottomRef} />
       </div>
 
@@ -517,20 +507,14 @@ export default function AIChatPanel() {
         padding: "0.75rem 1rem", borderTop: "1px solid hsl(var(--page-border))",
         background: "hsl(var(--page-surface-sub))", flexShrink: 0,
       }}>
-        {/* Rate limit notice sits above the input row */}
         {isRateLimited && <RateLimitNotice message={rateLimitMsg!} />}
-
-        {/* Input row: textarea box + send button as siblings */}
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
-
-          {/* Textarea wrapper — no send button inside */}
           <div
             style={{
               flex: 1, display: "flex", alignItems: "center",
               background: isRateLimited ? "hsl(var(--page-surface-sub))" : "hsl(var(--page-surface))",
-              border: `1px solid ${isRateLimited ? "hsl(var(--page-border))" : "hsl(var(--page-border))"}`,
-              borderRadius: "0.65rem",
-              padding: "0.45rem 0.75rem",
+              border: "1px solid hsl(var(--page-border))",
+              borderRadius: "0.65rem", padding: "0.45rem 0.75rem",
               transition: "border-color 0.15s",
               opacity: isRateLimited ? 0.6 : 1,
               cursor: isRateLimited ? "not-allowed" : "auto",
@@ -547,24 +531,11 @@ export default function AIChatPanel() {
               rows={1}
               disabled={inputDisabled}
               style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                resize: "none",
-                fontSize: "0.8rem",
-                color: "hsl(var(--page-fg))",
-                lineHeight: "1.5",
-                fontFamily: "inherit",
-                maxHeight: "6rem",
-                overflowY: "auto",
-                // Fix the "fat" feeling — kill all default textarea padding/margin
-                padding: 0,
-                margin: 0,
-                display: "block",
-                // Kill the browser up/down spinner arrows & appearance quirks
-                appearance: "none",
-                WebkitAppearance: "none",
+                flex: 1, background: "transparent", border: "none", outline: "none",
+                resize: "none", fontSize: "0.8rem", color: "hsl(var(--page-fg))",
+                lineHeight: "1.5", fontFamily: "inherit", maxHeight: "6rem",
+                overflowY: "auto", padding: 0, margin: 0, display: "block",
+                appearance: "none", WebkitAppearance: "none",
                 cursor: isRateLimited ? "not-allowed" : "text",
               }}
               onInput={e => {
@@ -574,21 +545,16 @@ export default function AIChatPanel() {
               }}
             />
           </div>
-
-          {/* Send button — sibling, not inside the textarea box */}
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || inputDisabled}
             style={{
               width: "2.25rem", height: "2.25rem", borderRadius: "0.55rem", border: "none",
-              background: (!input.trim() || inputDisabled)
-                ? "hsl(var(--page-border))" : "hsl(var(--primary))",
-              color: (!input.trim() || inputDisabled)
-                ? "hsl(var(--page-fg-muted))" : "white",
+              background: (!input.trim() || inputDisabled) ? "hsl(var(--page-border))" : "hsl(var(--primary))",
+              color: (!input.trim() || inputDisabled) ? "hsl(var(--page-fg-muted))" : "white",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: (!input.trim() || inputDisabled) ? "not-allowed" : "pointer",
-              transition: "background 0.15s, color 0.15s",
-              flexShrink: 0,
+              transition: "background 0.15s, color 0.15s", flexShrink: 0,
             }}
           >
             {loading
@@ -597,7 +563,6 @@ export default function AIChatPanel() {
             }
           </button>
         </div>
-
         <p style={{ fontSize: "0.65rem", color: "hsl(var(--page-fg-muted))", margin: "0.4rem 0 0", textAlign: "center" }}>
           {isRateLimited ? "Reset the chat to check if your limit has refreshed" : "Enter to send · Shift+Enter for new line"}
         </p>

@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import type { ChangeEvent } from "react";
 import { Plus, Pencil, Trash2, Tag, AlertTriangle, CheckCircle } from "lucide-react";
 import api from "../../../../services/apiClient";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AuthContext } from "../../../auth/AuthContext";
 import type { CategoryCreate, CategoryRead, ModalStep } from "../../schemas/category";
 import { categorySchema } from "../../schemas/category";
@@ -58,12 +59,9 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const [deleteLoading,         setDeleteLoading]         = useState(false);
   const [transactionUsageCount, setTransactionUsageCount] = useState<number | null>(null);
   const [showUsageCheck,        setShowUsageCheck]        = useState(false);
-  const [categories,            setCategories]            = useState<CategoryRead[]>([]);
-  const [loading,               setLoading]               = useState(true);
   const [step,                  setStep]                  = useState<ModalStep>("list");
   const [selectedCategory,      setSelectedCategory]      = useState<CategoryRead | null>(null);
   const [formData,              setFormData]              = useState<CategoryCreate>({ name: "", description: "", type: "" as any });
@@ -72,21 +70,17 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
   const [focusedField,          setFocusedField]          = useState<string | null>(null);
   const [typeFilter,            setTypeFilter]            = useState<"all" | "Income" | "Expense">("all");
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      if (!token || !tokenType) return;
-      try {
-        const res = await api.get("api/categories/", { headers: { Authorization: `${tokenType} ${token}` } });
-        setCategories(res.data);
-      } catch (err) {
-        console.error("Failed to fetch categories", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
-  }, [token, tokenType]);
 
+  const { data: categories = [], isLoading: catLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+  });
+
+  const loading = catLoading
+  
+  const queryClient = useQueryClient();
+
+  
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleOpenAdd = () => {
     setFormData({ name: "", description: "", type: "" as any });
@@ -126,7 +120,7 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
         description: formData.description?.trim() || null,
       };
       const res = await api.post("api/categories/", payload, { headers: { Authorization: `${tokenType} ${token}` } });
-      setCategories([...categories, res.data]);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       alert("Category successfully added!");
       setStep("list");
       setFormData({ name: "", description: "", type: "" as any });
@@ -154,7 +148,7 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
     if (!selectedCategory || !user || userRole !== 1) return;
     try {
       await api.delete(`api/categories/${selectedCategory.id}`, { headers: { Authorization: `${tokenType} ${token}` } });
-      setCategories(categories.filter(c => c.id !== selectedCategory.id));
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       setStep("list");
       setSelectedCategory(null);
       setTransactionUsageCount(null);
@@ -185,9 +179,7 @@ export default function ManageCategories({ onClose }: OnCloseProps) {
         description: formData.description?.trim() || null,
       };
       await api.put(`api/categories/${selectedCategory.id}`, payload, { headers: { Authorization: `${tokenType} ${token}` } });
-      setCategories(categories.map(c =>
-        c.id === selectedCategory.id ? { ...c, ...payload } : c
-      ));
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
       setStep("list");
       setSelectedCategory(null);
       setShowEditConfirmation(false);
