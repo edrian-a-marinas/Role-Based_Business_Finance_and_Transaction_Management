@@ -1,5 +1,6 @@
 # TransacScope
 **Role-Based Business Finance & Transaction Management System**
+
 > A finance management web app built for small businesses on a local network (LAN) — track income and expenses, manage staff access, generate reports, and stay in control of your cash flow.
 
 🔗 **Live:** [transacscope.vercel.app](https://transacscope.vercel.app) &nbsp;·&nbsp; 🎬 **Demo Video:** [Watch here](https://drive.google.com/file/d/1fXCICTBrgaCmMWBpuK1JLUi5SkQ1x5tR/view?usp=sharing)
@@ -37,6 +38,19 @@ TransacScope gives businesses a centralized system to record every income and ex
 - Recent transactions panel
 - Generate reports filtered by date range, type, and user — downloadable as PDF
 - Role-aware: admins see everyone, standard users see only their own
+
+### 🤖 AI Financial Assistant
+- Conversational AI chat panel in the Reports page — powered by Groq (LLaMA 3.3 70B)
+- Reads live financial data directly from the database — last 30 days, all-time, and 90-day transaction history
+- Answers questions about income, expenses, net profit, category breakdowns, and specific transactions by keyword
+- **Role-aware responses:**
+  - Standard users see only their own data
+  - Admins can toggle between **All Users** (business-wide) and **My Data** (own transactions only) without losing chat history
+- Personalized greeting on load with live financial summary (net profit, income, expenses)
+- Slow-reply hints after 10s and 30s — surfaces when Groq is under load
+- Rate limit errors show exact retry time from the backend
+- Financial context is cached for 5 minutes per user to reduce DB load
+- Suggestion chips for quick-start questions
 
 ### 🗂️ Categories
 - Fully customizable income and expense categories
@@ -90,7 +104,7 @@ docker run -p 8000:8000 transacscope
 
 ## API Endpoints
 
-37 endpoints across 6 routers — all JWT-protected except `/health` and auth routes.
+39 endpoints across 7 routers — all JWT-protected except `/health` and auth routes.
 
 ### Auth `/api/auth`
 | Method | Endpoint | Description |
@@ -144,6 +158,12 @@ docker run -p 8000:8000 transacscope
 | POST | `/generate` | Generate a report |
 | GET | `/{id}/download` | Download report as PDF |
 
+### AI `/api/ai`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/chat` | Send a message — returns AI reply with role-scoped context |
+| GET | `/context` | Fetch financial context for the current user (cached 5 min) |
+
 ### Notifications `/api/notifications`
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -164,6 +184,7 @@ docker run -p 8000:8000 transacscope
 |-------|------------|
 | Backend | Python, FastAPI, PostgreSQL, asyncpg, Pydantic, SlowAPI |
 | Frontend | React, TypeScript, Vite, Tailwind CSS, Zod, Axios |
+| AI | Groq API (LLaMA 3.3 70B), role-aware context, 5-min DB cache |
 | Auth | JWT, bcrypt, email verification |
 | Testing | pytest — 42 tests covering auth, transactions, and user management |
 | Deployed | Render · Vercel · Supabase |
