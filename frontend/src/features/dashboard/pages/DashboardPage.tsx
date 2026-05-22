@@ -181,6 +181,8 @@ export default function DashboardPage() {
   const handleToastDismiss    = () => setToastVisible(false);
   const handleGoToSettings    = () => { setSelectedMenu("settings"); setToastVisible(false); };
 
+  const dashboardReadyRef = useRef(false);
+
   if (!user) return <p>Loading...</p>;
 
   const userID   = user.id;
@@ -312,7 +314,13 @@ export default function DashboardPage() {
             <SettingsPage />
           ) : (
             <>
-              {selectedMenu === "dashboard"        && <DashboardOverview userRole={userRole} userId={userID} />}
+              {selectedMenu === "dashboard" && (
+                <DashboardOverview
+                  userRole={userRole}
+                  userId={userID}
+                  chartsReadyRef={dashboardReadyRef}
+                />
+              )}
               {selectedMenu === "transactions"     && <Transactions />}
               {selectedMenu === "reports"          && <Reports />}
               {selectedMenu === "manageCategories" && isAdmin && <ManageCategories onClose={() => setSelectedMenu("dashboard")} />}
