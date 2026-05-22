@@ -14,7 +14,6 @@ import ModalHeader from "./shared/ModalHeader";
 import ErrorBox from "./shared/ErrorBox";
 import InfoRow from "./shared/InfoRow";
 import { C, inputStyle, labelStyle } from "./shared";
-
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 function CategoryTooltip({ description }: { description: string }) {
   const [visible, setVisible] = useState(false);
@@ -78,14 +77,13 @@ function CategoryTooltip({ description }: { description: string }) {
     </div>
   );
 }
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function CreateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
+  const queryClient = useQueryClient(); // ✅ moved to top level
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [errors,           setErrors]           = useState<string[]>([]);
   const [focusedField,     setFocusedField]     = useState<string | null>(null);
@@ -97,22 +95,17 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     transaction_type: "",
     transaction_date: "",
   });
-
-
   const { data: allCategories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
   });
-
   const categories = allCategories.filter(c =>
     form.transaction_type ? c.type === form.transaction_type : true
   );
-
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: name === "category_id" ? Number(value) : value }));
   };
-
   const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (!/^\d*\.?\d*$/.test(value)) return;
@@ -120,11 +113,9 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     if (parts[1]?.length > 2) parts[1] = parts[1].slice(0, 2);
     setAmountInput(parts.join("."));
   };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSubmit();
   };
-
   const handleSubmit = () => {
     const updatedForm = { ...form, amount: Number(amountInput) };
     const result = transactionSchema.safeParse(updatedForm);
@@ -136,16 +127,14 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
     setForm(updatedForm);
     setShowConfirmation(true);
   };
-
   const handleConfirm = async () => {
     try {
       if (!user) return;
       if (!token || !tokenType) return alert("Not authorized");
-      const queryClient = useQueryClient();
       await api.post("api/transactions/", form, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] }); 
       alert("Successfully created!");
       setForm({ amount: 0, description: "", category_id: 0, transaction_type: "", transaction_date: "" });
       setAmountInput("");
@@ -155,10 +144,8 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
       console.error(err?.response?.data);
     }
   };
-
   const selectedCategory = categories.find(c => c.id === form.category_id) ?? null;
   const isIncome = form.transaction_type === "Income";
-
   // ── Form view ─────────────────────────────────────────────────────────────
   if (!showConfirmation) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -168,12 +155,9 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
           subtitle="Fill in the details below"
           onClose={onClose}
         />
-
         <ErrorBox messages={errors} />
-
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}></div>
-
           {/* Type */}
           <div>
             <label style={labelStyle}>Type</label>
@@ -190,7 +174,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               <option value="Expense" style={{ background: C.surface }}>Expense</option>
             </select>
           </div>
-
           {/* Category */}
           <div>
             <div style={{ display: "flex", alignItems: "center", marginBottom: "0.35rem" }}>
@@ -222,7 +205,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               </p>
             )}
           </div>
-
           {/* Date */}
           <div>
             <label style={labelStyle}>Date</label>
@@ -236,7 +218,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               style={{ ...inputStyle, borderColor: focusedField === "transaction_date" ? C.borderFoc : C.border, colorScheme: "dark" }}
             />
           </div>
-
           {/* Amount */}
           <div>
             <label style={labelStyle}>Amount</label>
@@ -257,7 +238,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               />
             </div>
           </div>
-
           {/* Description */}
           <div>
             <label style={labelStyle}>Description</label>
@@ -273,7 +253,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
               style={{ ...inputStyle, borderColor: focusedField === "description" ? C.borderFoc : C.border }}
             />
           </div>
-
           {/* Actions */}
           <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.5rem" }}>
             <button
@@ -302,7 +281,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Confirmation view ─────────────────────────────────────────────────────
   return (
     <Shell>
@@ -312,7 +290,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
           subtitle="Please review before submitting"
           onClose={() => setShowConfirmation(false)}
         />
-
         {/* Type badge */}
         <div style={{ marginBottom: "1rem" }}></div>
         <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
@@ -329,12 +306,10 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
             {form.transaction_type}
           </span>
         </div>
-
         <InfoRow label="Category"    value={selectedCategory?.name ?? "—"} />
         <InfoRow label="Date"        value={form.transaction_date || "—"} />
         <InfoRow label="Amount"      value={`₱${Number(form.amount).toLocaleString()}`} />
         <InfoRow label="Description" value={form.description || "—"} />
-
         {selectedCategory?.description && (
           <p style={{
             marginTop: "0.75rem", fontSize: "0.72rem", color: C.fgMuted,
@@ -345,7 +320,6 @@ export default function CreateTransaction({ onClose }: OnCloseProps) {
             {selectedCategory.description}
           </p>
         )}
-
         {/* Actions */}
         <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>
           <button
