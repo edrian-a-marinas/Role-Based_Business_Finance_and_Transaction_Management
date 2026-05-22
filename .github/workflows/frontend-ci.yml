@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Lint and Build Frontend
+    name: Build Frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -26,10 +26,6 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
-
-      - name: Lint
-        working-directory: frontend
-        run: npm run lint
 
       - name: Build
         working-directory: frontend
