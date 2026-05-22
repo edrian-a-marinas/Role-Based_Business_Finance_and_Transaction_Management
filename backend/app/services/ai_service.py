@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import Literal
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[3] / ".env")
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[3] / ".env", override=False)
 logger = logging.getLogger(__name__)
 
 # ── Context cache: keyed by (user_id, scope) ─────────────────────────────────
