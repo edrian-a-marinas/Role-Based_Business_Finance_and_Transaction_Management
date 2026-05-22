@@ -13,17 +13,14 @@ import ModalHeader from "./shared/ModalHeader";
 import ErrorBox from "./shared/ErrorBox";
 import InfoRow from "./shared/InfoRow";
 import { C, inputStyle, labelStyle } from "./shared";
-
 type Step = "lookup" | "edit" | "confirm";
-
 export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const { user } = useContext(AuthContext);
   const userId   = user!.id;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-
+  const queryClient = useQueryClient(); // ✅ top level
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const [step,          setStep]          = useState<Step>("lookup");
   const [transactionId, setTransactionId] = useState("");
   const [transaction,   setTransaction]   = useState<Transaction | null>(null);
@@ -32,10 +29,8 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState("");
   const [focusedField,  setFocusedField]  = useState<string | null>(null);
-
   const getCategoryName = (id: number) =>
     categories.find(c => c.id === id)?.name ?? "Unknown";
-
   const backBtnStyle: React.CSSProperties = {
     flex: 1, padding: "0.6rem", borderRadius: "0.5rem",
     border: `1px solid ${C.border}`, background: "transparent",
@@ -48,7 +43,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     color: "hsl(0,0%,100%)", fontSize: "0.875rem", fontWeight: 600, cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
   };
-
   const handleFetch = async () => {
     setError("");
     setTransaction(null);
@@ -78,14 +72,11 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
       setLoading(false);
     }
   };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleFetch();
   };
-
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Amount: only allow valid decimal — up to 12 digits, 2 decimal places
     if (name === "amount") {
       if (value === "" || /^\d{0,12}(\.\d{0,2})?$/.test(value)) {
         setForm(prev => ({ ...prev, amount: value }));
@@ -94,52 +85,42 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     }
     setForm(prev => ({ ...prev, [name]: value }));
   };
-
   const handleProceed = () => {
     if (!transaction) return;
-
     const amountNum = parseFloat(form.amount);
     if (!form.amount || isNaN(amountNum) || amountNum <= 0) {
       setError("Amount must be a positive number.");
       return;
     }
-
     const originalAmount  = parseFloat(String(transaction.amount));
     const amountChanged   = amountNum !== originalAmount;
     const descChanged     = form.description      !== (transaction.description ?? "");
     const dateChanged     = form.transaction_date !== transaction.transaction_date;
-
     if (!amountChanged && !descChanged && !dateChanged) {
       setError("Nothing to update.");
       return;
     }
-
     setError("");
     setStep("confirm");
   };
-
   const handleConfirmUpdate = async () => {
     if (!transaction || !token || !tokenType) return;
-
     const payload: Record<string, string | number> = {};
     if (form.description      !== (transaction.description ?? ""))   payload.description      = form.description;
     if (form.transaction_date !== transaction.transaction_date)       payload.transaction_date = form.transaction_date;
     const amountNum = parseFloat(form.amount);
     if (amountNum !== parseFloat(String(transaction.amount)))        payload.amount           = amountNum;
-
     try {
-      const queryClient = useQueryClient();
       await api.put(`api/transactions/${transactionId}`, payload, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] }); // ✅ now works
       alert("Updated successfully!");
       onClose();
     } catch {
       setError("Failed to update transaction.");
     }
   };
-
   // ── Step 1 — ID lookup ────────────────────────────────────────────────────
   if (step === "lookup") return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -189,7 +170,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Step 2 — Edit form ────────────────────────────────────────────────────
   if (step === "edit" && transaction) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -199,15 +179,12 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
           subtitle={`ID #${transactionId}`}
           onClose={onClose}
         />
-        {/* Read-only — category and type only */}
         <div style={{ marginBottom: "1.25rem" }}>
           <InfoRow label="Category" value={getCategoryName(transaction.category_id)} />
           <InfoRow label="Type"     value={transaction.transaction_type}
             color={transaction.transaction_type === "Income" ? C.income : C.expense} />
         </div>
-        {/* Editable fields */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "1rem" }}>
-
           {/* Amount */}
           <div>
             <label style={labelStyle}>Amount</label>
@@ -232,7 +209,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
               />
             </div>
           </div>
-
           {/* Description */}
           <div>
             <label style={labelStyle}>Description</label>
@@ -247,7 +223,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
               style={{ ...inputStyle, borderColor: focusedField === "description" ? C.borderFoc : C.border }}
             />
           </div>
-
           {/* Date */}
           <div>
             <label style={labelStyle}>Date</label>
@@ -261,7 +236,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
               style={{ ...inputStyle, colorScheme: "dark", borderColor: focusedField === "transaction_date" ? C.borderFoc : C.border }}
             />
           </div>
-
         </div>
         <ErrorBox message={error} />
         <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -275,7 +249,6 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Step 3 — Confirm diff ─────────────────────────────────────────────────
   if (step === "confirm" && transaction) {
     const originalAmount = parseFloat(String(transaction.amount)).toFixed(2);
@@ -283,14 +256,11 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
     const amountDiff     = diffHighlight(originalAmount, newAmount);
     const descDiff       = diffHighlight(transaction.description ?? "", form.description);
     const dateDiff       = diffHighlight(transaction.transaction_date, form.transaction_date);
-
-    // Only show rows where something actually changed
     const diffRows = [
       { label: "Amount",      ...amountDiff },
       { label: "Description", ...descDiff   },
       { label: "Date",        ...dateDiff   },
     ].filter(r => r.before !== r.after);
-
     return (
       <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
         <div style={{ padding: "1.75rem" }}>
@@ -332,6 +302,5 @@ export default function UpdateTransaction({ onClose }: OnCloseProps) {
       </Shell>
     );
   }
-
   return null;
 }

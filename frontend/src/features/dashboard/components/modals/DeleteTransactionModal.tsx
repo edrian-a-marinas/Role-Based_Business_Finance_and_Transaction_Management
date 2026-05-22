@@ -13,15 +13,14 @@ import ModalHeader from "./shared/ModalHeader";
 import ErrorBox from "./shared/ErrorBox";
 import InfoRow from "./shared/InfoRow";
 import { C, inputStyle, labelStyle } from "./shared";
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const { user }  = useContext(AuthContext);
   const isAdmin   = user!.role_id === 1;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
+  const queryClient = useQueryClient(); // ✅ top level
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const [transactionId,    setTransactionId]    = useState("");
   const [transaction,      setTransaction]      = useState<Transaction | null>(null);
   const [categories,       setCategories]       = useState<Category[]>([]);
@@ -30,10 +29,8 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [requestSent,      setRequestSent]      = useState(false);
   const [focusedField,     setFocusedField]     = useState<string | null>(null);
-
   const getCategoryName = (id: number) =>
     categories.find(c => c.id === id)?.name ?? "Unknown";
-
   const handleFetch = async () => {
     setError("");
     setTransaction(null);
@@ -53,17 +50,14 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       setLoading(false);
     }
   };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleFetch();
   };
-
   const handleProceed = () => {
     if (!transaction) return;
     setError("");
     isAdmin ? setShowConfirmation(true) : handleRequestDeletion();
   };
-
   const handleRequestDeletion = async () => {
     if (!transaction || !token || !tokenType) return;
     try {
@@ -86,22 +80,19 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       setLoading(false);
     }
   };
-
   const handleConfirmDelete = async () => {
     if (!transaction || !token || !tokenType) return;
     try {
-      const queryClient = useQueryClient();
       await api.delete(`api/transactions/${transactionId}`, {
         headers: { Authorization: `${tokenType} ${token}` },
       });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] }); // ✅ now works
       alert("Transaction deleted.");
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       onClose();
     } catch {
       setError("Failed to delete transaction.");
     }
   };
-
   // ── Step 1 — ID lookup ────────────────────────────────────────────────────
   if (!transaction && !requestSent) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -111,7 +102,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
           subtitle="Enter the transaction ID to load"
           onClose={onClose}
         />
-
         <div style={{ marginBottom: "1rem" }}>
           <div style={{ marginBottom: "1rem" }}></div>
           <label style={labelStyle}>Transaction ID</label>
@@ -135,10 +125,8 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
             }} />
           </div>
         </div>
-
         <ErrorBox message={error} />
         {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Loading…</p>}
-
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             onClick={onClose}
@@ -169,7 +157,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Step 2 — Review transaction ───────────────────────────────────────────
   if (transaction && !showConfirmation && !requestSent) return (
     <Shell onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
@@ -179,8 +166,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
           subtitle={`ID #${transactionId} · review before proceeding`}
           onClose={onClose}
         />
-
-        {/* Warning banner */}
         <div style={{
           backgroundColor: isAdmin ? "hsl(0 72% 51% / 0.08)" : "hsl(30 90% 56% / 0.08)",
           border:          `1px solid ${isAdmin ? C.expense : C.warning}40`,
@@ -198,7 +183,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
               : "This will submit a deletion request for admin approval."}
           </p>
         </div>
-
         <div style={{ marginBottom: "1.25rem" }}>
           <InfoRow label="Amount"      value={formatCurrency(transaction.amount)}
             color={transaction.transaction_type === "Income" ? C.income : C.expense} />
@@ -211,10 +195,8 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
             <InfoRow label="Created by" value={`User ID ${transaction.user_id}`} />
           )}
         </div>
-
         <ErrorBox message={error} />
         {loading && <p style={{ color: C.fgMuted, fontSize: "0.8rem", margin: "0 0 1rem" }}>Processing…</p>}
-
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             onClick={() => { setTransaction(null); setError(""); }}
@@ -244,7 +226,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Step 3 — Admin confirm delete ─────────────────────────────────────────
   if (showConfirmation && transaction) return (
     <Shell>
@@ -254,8 +235,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
           subtitle={`You are about to permanently delete ID #${transactionId}`}
           onClose={() => setShowConfirmation(false)}
         />
-
-        {/* Danger box */}
         <div style={{
           background:   "hsl(0 72% 51% / 0.06)",
           border:       `1px solid ${C.expense}`,
@@ -274,9 +253,7 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
             <InfoRow label="Created by" value={`User ID ${transaction.user_id}`} />
           )}
         </div>
-
         <ErrorBox message={error} />
-
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             onClick={() => { setShowConfirmation(false); setError(""); }}
@@ -304,7 +281,6 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   // ── Request sent success ──────────────────────────────────────────────────
   if (requestSent) return (
     <Shell>
@@ -343,6 +319,5 @@ export default function DeleteTransaction({ onClose }: OnCloseProps) {
       </div>
     </Shell>
   );
-
   return null;
 }
