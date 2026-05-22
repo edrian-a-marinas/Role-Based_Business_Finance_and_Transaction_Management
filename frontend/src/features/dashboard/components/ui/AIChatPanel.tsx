@@ -17,7 +17,7 @@ function useTypewriter(text: string, speed = 18, active = true) {
   const [displayed, setDisplayed] = useState("");
   const [done, setDone] = useState(false);
   useEffect(() => {
-    if (!active) { setDisplayed(text); setDone(true); return; }
+    if (!active || speed === 0) { setDisplayed(text); setDone(true); return; }
     setDisplayed(""); setDone(false);
     if (!text) { setDone(true); return; }
     let i = 0;
@@ -31,10 +31,10 @@ function useTypewriter(text: string, speed = 18, active = true) {
   return { displayed, done };
 }
 
-function AssistantBubble({ content, animate, onDone }: {
-  content: string; animate: boolean; onDone?: () => void;
+function AssistantBubble({ content, animate, onDone, speed = 14 }: {
+  content: string; animate: boolean; onDone?: () => void; speed?: number;
 }) {
-  const { displayed, done } = useTypewriter(content, 14, animate);
+  const { displayed, done } = useTypewriter(content, speed, animate);
   useEffect(() => { if (done && onDone) onDone(); }, [done]);
   return (
     <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
@@ -442,6 +442,7 @@ export default function AIChatPanel() {
           ) : msg.role === "assistant" ? (
             <AssistantBubble
               key={idx} content={msg.content} animate={animatingIdx === idx}
+              speed={idx === 0 ? 0 : 14}
               onDone={() => { if (animatingIdx === idx) setAnimatingIdx(null); }}
             />
           ) : (
