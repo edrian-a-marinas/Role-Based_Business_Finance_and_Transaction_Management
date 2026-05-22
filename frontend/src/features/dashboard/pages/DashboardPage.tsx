@@ -39,7 +39,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { key: "dashboard",        label: "Dashboard",    icon: LayoutDashboard },
   { key: "transactions",     label: "Transactions", icon: ArrowLeftRight },
-  { key: "reports",          label: "Reports",      icon: FileText },
+  { key: "reports",          label: "Reports & AI", icon: FileText },
   { key: "manageCategories", label: "Categories",   icon: FolderOpen, adminOnly: true },
   { key: "manageUsers",      label: "Users",        icon: Users,      adminOnly: true },
 ];
