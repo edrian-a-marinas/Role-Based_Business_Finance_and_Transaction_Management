@@ -35,6 +35,7 @@ api.interceptors.response.use(
     if (status === 401 || status === 420) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("token_type");
+      alert("Session expired. Please log in again.");
       logoutCallback();
     }
 
