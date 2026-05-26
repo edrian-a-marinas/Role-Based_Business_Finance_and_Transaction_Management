@@ -166,6 +166,7 @@ async def create_transaction(tx, current_user_id: int) -> dict | None:
           """,
           inserted["id"],
         )
+        logger.info(f"Transaction created id={inserted['id']} user_id={current_user_id}")
         return dict(row)
   except Exception:
     logger.exception("Error creating transaction")
@@ -222,6 +223,7 @@ async def update_transaction(tx_id: int, tx, current_user_id: int, role: str) ->
           "SELECT name FROM categories WHERE id = $1",
           updated["category_id"],
         )
+        logger.info(f"Transaction updated id={tx_id} user_id={current_user_id}")
         return dict(updated, category_name=category_name)
   except Exception:
     logger.exception(f"Error updating transaction id: {tx_id}")
@@ -261,6 +263,7 @@ async def delete_transaction(tx_id: int, current_user_id: int, role: str) -> boo
           }),
           json.dumps({"description": None, "transaction_date": None}),
         )
+        logger.info(f"Transaction soft deleted id={tx_id} by user_id={current_user_id}")
         return True
   except Exception:
     logger.exception(f"Error deleting transaction id: {tx_id}")
@@ -402,6 +405,7 @@ async def review_deletion_request(request_id: int, admin_id: int, approve: bool)
         amount=float(tx["amount"]),
         approved=approve,
       )
+    logger.info(f"Deletion request id={request_id} {status} by admin_id={admin_id}")  
     return dict(req, status=status, reviewed_by=admin_id, reviewed_at=str(datetime.now()))
   except Exception:
     logger.exception(f"Error reviewing deletion request {request_id}")
