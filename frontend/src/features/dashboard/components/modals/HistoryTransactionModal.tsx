@@ -1,9 +1,11 @@
-import { useEffect, useState, useContext, useRef } from "react";
+import { useEffect, useState, useContext, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
-import type { ReadTransactionHistory, Category } from "@/features/dashboard/schemas/transaction";
+import type { ReadTransactionHistory } from "@/features/dashboard/schemas/transaction";
+import type { CategoryRead } from "@/features/dashboard/schemas/category";
 import { formatDate } from "@/features/dashboard/lib/utility";
 import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
@@ -36,12 +38,12 @@ interface PortalDropdownProps {
   children:  React.ReactNode;
 }
 function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownProps) {
-  const [pos, setPos] = useState({ top: 0, left: 0, minWidth: 0 });
-  useEffect(() => {
-    if (!open || !anchorRef.current) return;
+  const pos = useMemo(() => {
+    if (!open || !anchorRef.current) return { top: 0, left: 0, minWidth: 0 };
     const rect = anchorRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, minWidth: rect.width });
+    return { top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, minWidth: rect.width };
   }, [open, anchorRef]);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -50,6 +52,7 @@ function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownPr
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open, onClose, anchorRef]);
+
   if (!open) return null;
   return createPortal(
     <div style={{ position: "fixed", top: pos.top, left: pos.left, minWidth: Math.max(pos.minWidth, 130), background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", zIndex: 99999, boxShadow: "0 8px 24px rgba(0,0,0,0.5)", overflow: "hidden", maxHeight: "220px", overflowY: "auto" }}>
@@ -59,6 +62,35 @@ function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownPr
   );
 }
 
+// ── CategoryDropdown ──────────────────────────────────────────────────────────
+function CategoryDropdown({ value, onChange, categories }: { value: number | "all"; onChange: (v: number | "all") => void; categories: CategoryRead[] }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const label = value === "all" ? "All Categories" : categories.find(c => c.id === value)?.name ?? "Category";
+  return (
+    <div style={{ position: "relative" }}>
+      <button ref={btnRef} onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+        {label}
+        <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
+      </button>
+      <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
+        <button onMouseDown={e => e.stopPropagation()} onClick={() => { onChange("all"); setOpen(false); }}
+          style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: value === "all" ? C.surfaceHov : "transparent", border: "none", color: C.fg, fontSize: "0.75rem", cursor: "pointer" }}>
+          All Categories
+        </button>
+        {categories.map(c => (
+          <button key={c.id} onMouseDown={e => e.stopPropagation()} onClick={() => { onChange(c.id); setOpen(false); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: value === c.id ? C.surfaceHov : "transparent", border: "none", color: C.primary, fontSize: "0.75rem", cursor: "pointer" }}>
+            {c.name}
+          </button>
+        ))}
+      </PortalDropdown>
+    </div>
+  );
+}
+
+// ── ActionDropdown ────────────────────────────────────────────────────────────
 function ActionDropdown({ value, onChange }: { value: ActionFilter; onChange: (v: ActionFilter) => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -70,22 +102,15 @@ function ActionDropdown({ value, onChange }: { value: ActionFilter; onChange: (v
   const current = options.find(o => o.value === value)!;
   return (
     <div style={{ position: "relative" }}>
-      <button
-        ref={btnRef}
-        onClick={() => setOpen(p => !p)}
-        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : ACTION_COLOR[value] ?? C.fgMuted, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}
-      >
+      <button ref={btnRef} onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : ACTION_COLOR[value] ?? C.fgMuted, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
         {current.label}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
       <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
         {options.map(o => (
-          <button
-            key={o.value}
-            onMouseDown={e => e.stopPropagation()}
-            onClick={() => { onChange(o.value); setOpen(false); }}
-            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.value === value ? C.surfaceHov : "transparent", border: "none", color: o.value === "all" ? C.fg : ACTION_COLOR[o.value] ?? C.fg, fontSize: "0.75rem", cursor: "pointer" }}
-          >
+          <button key={o.value} onMouseDown={e => e.stopPropagation()} onClick={() => { onChange(o.value); setOpen(false); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.value === value ? C.surfaceHov : "transparent", border: "none", color: o.value === "all" ? C.fg : ACTION_COLOR[o.value] ?? C.fg, fontSize: "0.75rem", cursor: "pointer" }}>
             {o.label}
           </button>
         ))}
@@ -105,31 +130,37 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const { user }  = useContext(AuthContext);
   const isAdmin   = user!.role_id === 1;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
-
   const PAGE_SIZE = 15;
 
-  const [history,      setHistory]      = useState<ReadTransactionHistory[]>([]);
-  const [categories,   setCategories]   = useState<Category[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [viewMode,     setViewMode]     = useState<"all" | "own">("all");
-  const [sortField,    setSortField]    = useState<SortField>("action_taken_at");
-  const [sortDir,      setSortDir]      = useState<SortDir>("desc");
-  const [actionFilter, setActionFilter] = useState<ActionFilter>("all");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [history,        setHistory]        = useState<ReadTransactionHistory[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [viewMode,       setViewMode]       = useState<"all" | "own">("all");
+  const [sortField,      setSortField]      = useState<SortField>("action_taken_at");
+  const [sortDir,        setSortDir]        = useState<SortDir>("desc");
+  const [actionFilter,   setActionFilter]   = useState<ActionFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<number | "all">("all");
+  const [visibleCount,   setVisibleCount]   = useState(PAGE_SIZE);
+
+  // ── Read categories from React Query cache ────────────────────────────────
+  const { data: categories = [] } = useQuery<CategoryRead[]>({
+    queryKey: ["categories"],
+    queryFn:  () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+    staleTime: Infinity,
+  });
+
+  const categoryMap = useMemo(() => new Map(categories.map(c => [c.id, c.name])), [categories]);
+  const getCategoryName = (id: number) => categoryMap.get(id) ?? "Unknown";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (!token || !tokenType) return;
-        const [transRes, catRes] = await Promise.all([
-          api.get("api/transactions/history", { headers: { Authorization: `${tokenType} ${token}` } }),
-          api.get("api/categories/"),
-        ]);
+        const transRes = await api.get("api/transactions/history", {
+          headers: { Authorization: `${tokenType} ${token}` },
+        });
         setHistory(transRes.data);
-        setCategories(catRes.data);
       } catch (err) {
         console.error("Error fetching data:", err);
       } finally {
@@ -139,10 +170,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     fetchData();
   }, [token, tokenType]);
 
-  const getCategoryName = (id: number) => categories.find(c => c.id === id)?.name ?? "Unknown";
-
   // Reset pagination whenever filters or view change
-  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [viewMode, actionFilter]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [viewMode, actionFilter, categoryFilter]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) { setSortDir(d => d === "asc" ? "desc" : "asc"); }
@@ -150,9 +179,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
     setVisibleCount(PAGE_SIZE);
   };
 
-  const processed = (() => {
+  const processed = useMemo(() => {
     let rows = [...history];
     if (viewMode === "own") rows = rows.filter(r => r.user_id === user?.id);
+    if (categoryFilter !== "all") rows = rows.filter(r => r.category_id === categoryFilter);
     if (actionFilter !== "all") {
       rows = rows.filter(r => {
         const a = (r.action ?? "").toLowerCase();
@@ -173,7 +203,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
-  })();
+  }, [history, viewMode, categoryFilter, actionFilter, sortField, sortDir, categoryMap, user]);
 
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
@@ -186,6 +216,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       </th>
     );
   };
+
   const ThPlain = ({ children }: { children: React.ReactNode }) => (
     <th style={{ padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.surfaceEl, whiteSpace: "nowrap" }}>
       {children}
@@ -196,8 +227,7 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
   const hasMore     = processed.length > visibleCount;
   const updateCount = history.filter(r => (r.action ?? "").toLowerCase() === "updated" || (r.action ?? "").toLowerCase() === "update").length;
   const deleteCount = history.filter(r => (r.action ?? "").toLowerCase() === "deleted" || (r.action ?? "").toLowerCase() === "delete").length;
-
-  const totalCols = isAdmin ? 12 : 11;
+  const totalCols   = isAdmin ? 12 : 11;
 
   const fmtAmount = (val: string | null | undefined) =>
     val ? `₱${parseFloat(val).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
@@ -215,11 +245,8 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {isAdmin && (
-            <select
-              value={viewMode}
-              onChange={e => setViewMode(e.target.value as "all" | "own")}
-              style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.fg, fontSize: "0.75rem", padding: "0.3rem 0.5rem", cursor: "pointer", outline: "none" }}
-            >
+            <select value={viewMode} onChange={e => setViewMode(e.target.value as "all" | "own")}
+              style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.fg, fontSize: "0.75rem", padding: "0.3rem 0.5rem", cursor: "pointer", outline: "none" }}>
               <option value="all">All Users</option>
               <option value="own">My History</option>
             </select>
@@ -265,7 +292,9 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
               <tr>
                 <Th field="entity_id">Tx ID</Th>
                 {isAdmin && <Th field="user_id">User ID</Th>}
-                <Th field="category">Category</Th>
+                <th style={{ padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.surfaceEl }}>
+                  <CategoryDropdown value={categoryFilter} onChange={setCategoryFilter} categories={categories} />
+                </th>
                 <ThPlain>Type</ThPlain>
                 <th style={{ padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.surfaceEl }}>
                   <ActionDropdown value={actionFilter} onChange={setActionFilter} />
@@ -296,12 +325,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                 const descChanged   = tx.old_description !== tx.new_description;
                 const dateChanged   = tx.old_transaction_date !== tx.new_transaction_date;
                 return (
-                  <tr
-                    key={tx.id}
+                  <tr key={tx.id}
                     style={{ backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s" }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surfaceHov)}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}
-                  >
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}>
                     <td style={td}>{tx.entity_id}</td>
                     {isAdmin && <td style={td}>{tx.user_id}</td>}
                     <td style={td}>{getCategoryName(tx.category_id)}</td>
@@ -316,13 +343,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
                       </span>
                     </td>
                     <td style={{ ...td, color: C.fgMuted }}>{formatDate(tx.action_taken_at)}</td>
-                    {/* Amount */}
                     <td style={{ ...td, color: amountChanged ? C.expense : C.fgMuted }}>{fmtAmount(tx.old_amount)}</td>
                     <td style={{ ...td, color: amountChanged ? C.income  : C.fgMuted }}>{fmtAmount(tx.new_amount)}</td>
-                    {/* Description */}
                     <td style={{ ...td, color: descChanged ? C.expense : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>{tx.old_description || "—"}</td>
                     <td style={{ ...td, color: descChanged ? C.income  : C.fgMuted, whiteSpace: "normal", wordBreak: "break-word" }}>{tx.new_description || "—"}</td>
-                    {/* Date */}
                     <td style={{ ...td, color: dateChanged ? C.expense : C.fgMuted }}>{tx.old_transaction_date || "—"}</td>
                     <td style={{ ...td, color: dateChanged ? C.income  : C.fgMuted }}>{tx.new_transaction_date || "—"}</td>
                   </tr>
@@ -336,14 +360,10 @@ export default function HistoryTransaction({ onClose }: OnCloseProps) {
       {/* Footer */}
       {!loading && processed.length > 0 && (
         <div style={{ padding: "0.6rem 1.5rem", borderTop: `1px solid ${C.border}`, fontSize: "0.72rem", color: C.fgMuted, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-          <span>
-            Showing {visibleRows.length} of {processed.length} record{processed.length !== 1 ? "s" : ""}
-          </span>
+          <span>Showing {visibleRows.length} of {processed.length} record{processed.length !== 1 ? "s" : ""}</span>
           {hasMore && (
-            <button
-              onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.75rem", cursor: "pointer" }}
-            >
+            <button onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.75rem", cursor: "pointer" }}>
               Load more ({processed.length - visibleCount} remaining)
             </button>
           )}
