@@ -7,7 +7,10 @@ import {
 } from "lucide-react";
 import { AuthContext } from "../../auth/AuthContext";
 import { useTheme } from "@/features/dashboard/lib/ThemeContext";
+import { useQuery } from "@tanstack/react-query";
 import api from "@/services/apiClient";
+import type { ReadTransaction } from "@/features/dashboard/schemas/transaction";
+import type { CategoryRead } from "@/features/dashboard/schemas/category";
 import Transactions          from "./TransactionPage";
 import Reports               from "./ReportPage";
 import ManageUsers           from "./ManageUserPage";
@@ -16,7 +19,6 @@ import ManageCategories      from "../components/modals/ManageCategoriesModal";
 import DashboardOverview     from "@/features/dashboard/components/overview/DashBoardOverview";
 import HandleDeletionRequest from "../components/modals/HandleDeletionRequestModal";
 import NotificationPanel     from "../components/ui/NotificationPanel";
-
 const S = {
   bg:         "hsl(220,25%,10%)",
   accent:     "hsl(220,20%,16%)",
@@ -28,7 +30,6 @@ const S = {
   expense:    "hsl(0,72%,51%)",
   warning:    "hsl(45,85%,50%)",
 };
-
 type MenuKey = "dashboard" | "transactions" | "reports" | "manageCategories" | "manageUsers" | "settings";
 interface NavItem {
   key:        MenuKey;
@@ -43,15 +44,12 @@ const navItems: NavItem[] = [
   { key: "manageCategories", label: "Categories",   icon: FolderOpen, adminOnly: true },
   { key: "manageUsers",      label: "Users",        icon: Users,      adminOnly: true },
 ];
-
 const WARN_DAYS   = 7;
 const URGENT_DAYS = 3;
 const AUTO_HIDE   = 15000; // ms
-
 function daysUntil(iso: string): number {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
-
 // ── Inline topbar toast ───────────────────────────────────────────────────────
 function PwExpiryToast({
   expiresAt,
@@ -67,34 +65,27 @@ function PwExpiryToast({
   const color     = isUrgent ? "hsl(0,72%,51%)" : "hsl(45,85%,50%)";
   const bgColor   = isUrgent ? "hsl(0 72% 51% / 0.12)" : "hsl(45 85% 50% / 0.1)";
   const bdColor   = isUrgent ? "hsl(0 72% 51% / 0.35)"  : "hsl(45 85% 50% / 0.4)";
-
-  const [visible,  setVisible]  = useState(false); // start hidden for slide-in
+  const [visible,  setVisible]  = useState(false);
   const timerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoveredRef = useRef(false);
-
   const startTimer = () => {
     timerRef.current = setTimeout(() => {
       if (!hoveredRef.current) { setVisible(false); setTimeout(onDismiss, 300); }
     }, AUTO_HIDE);
   };
-
   useEffect(() => {
-    // tiny delay so CSS transition plays on mount
     const mount = setTimeout(() => setVisible(true), 30);
     startTimer();
     return () => { clearTimeout(mount); if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
-
   const pause  = () => { hoveredRef.current = true;  if (timerRef.current) clearTimeout(timerRef.current); };
   const resume = () => { hoveredRef.current = false; startTimer(); };
   const close  = () => { setVisible(false); setTimeout(onDismiss, 300); };
-
   const label = days <= 0
     ? "Password expired!"
     : days === 1
     ? "Password expires tomorrow!"
     : `Password expires in ${days} day${days !== 1 ? "s" : ""}`;
-
   return (
     <div
       onMouseEnter={pause}
@@ -135,7 +126,6 @@ function PwExpiryToast({
     </div>
   );
 }
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { logout, user }        = useContext(AuthContext);
@@ -149,23 +139,36 @@ export default function DashboardPage() {
   const [deepLinkRequestId,       setDeepLinkRequestId]       = useState<number | undefined>();
   const [showDeletionModalDirect, setShowDeletionModalDirect] = useState(false);
 
+  // ── Prefetch transactions + categories once on login ──────────────────────
+  // staleTime: Infinity = never refetch automatically within the session.
+  // Data stays in React Query cache and is shared by DashboardOverview,
+  useQuery({
+    queryKey: ["transactions"],
+    queryFn: () => api.get<ReadTransaction[]>("api/transactions/").then(r =>
+      r.data.filter(t => !t.deleted_at).map(t => ({ ...t, amount: parseFloat(String(t.amount)) }))
+    ),
+    staleTime: Infinity,
+    enabled: !!user,
+  });
+  useQuery({
+    queryKey: ["categories"],
+    queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+    staleTime: Infinity,
+    enabled: !!user,
+  });
+
   // ── Expiry toast ──────────────────────────────────────────────────────────
   const [expiresAt,     setExpiresAt]     = useState<string | null>(null);
   const [toastVisible,  setToastVisible]  = useState(false);
-
   const isDeactivated = !user?.is_active;
-
   useEffect(() => {
     if (isDeactivated && selectedMenu !== "settings") setSelectedMenu("settings");
   }, [isDeactivated, selectedMenu]);
-
-  // Fetch expiry on every mount (no localStorage persistence — always shows on refresh)
   useEffect(() => {
     if (!user) return;
     const token     = localStorage.getItem("access_token");
     const tokenType = localStorage.getItem("token_type");
     if (!token || !tokenType) return;
-
     api.get("api/users/me/password-expiry", {
       headers: { Authorization: `${tokenType} ${token}` },
     }).then(res => {
@@ -177,14 +180,10 @@ export default function DashboardPage() {
       }
     }).catch(() => {});
   }, [user]);
-
   const handleToastDismiss    = () => setToastVisible(false);
   const handleGoToSettings    = () => { setSelectedMenu("settings"); setToastVisible(false); };
-
   const dashboardReadyRef = useRef(false);
-
   if (!user) return <p>Loading...</p>;
-
   const userID   = user.id;
   const userRole = user.role_id;
   const isAdmin  = userRole === 1;
@@ -192,16 +191,13 @@ export default function DashboardPage() {
     userRole === 1 && userID === 1 ? "Super Admin"
     : userRole === 1               ? "Admin"
     :                                "Standard User";
-
   const token     = localStorage.getItem("access_token");
   const tokenType = localStorage.getItem("token_type");
   const authHeader = token && tokenType ? { Authorization: `${tokenType} ${token}` } : {};
-
   const handleDeepLink = (requestId: number) => {
     setDeepLinkRequestId(requestId);
     setShowDeletionModalDirect(true);
   };
-
   const NavButton = ({ item }: { item: NavItem }) => {
     const active  = selectedMenu === item.key;
     const hovered = hoveredMenu  === item.key;
@@ -226,11 +222,9 @@ export default function DashboardPage() {
       </button>
     );
   };
-
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "hsl(var(--background))", transition: "background-color 0.2s ease" }}>
       <title>TransacScope Overview</title>
-
       {/* ── Sidebar ── */}
       <aside
         style={{ backgroundColor: S.bg, borderRight: `1px solid ${S.border}` }}
@@ -281,14 +275,9 @@ export default function DashboardPage() {
           {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
         </button>
       </aside>
-
       {/* ── Main ── */}
       <main className={cn("flex-1 transition-all duration-300", collapsed ? "ml-[68px]" : "ml-[220px]")}>
-
-        {/* Topbar — left: toast | right: theme + notif */}
         <div style={{ position: "sticky", top: 0, zIndex: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1.5rem", background: "hsl(var(--topbar-bg))", borderBottom: "1px solid hsl(var(--topbar-border))", transition: "background 0.2s ease" }}>
-
-          {/* Left side — expiry toast pill */}
           <div style={{ display: "flex", alignItems: "center", minWidth: 0, overflow: "hidden" }}>
             {toastVisible && expiresAt && (
               <PwExpiryToast
@@ -298,8 +287,6 @@ export default function DashboardPage() {
               />
             )}
           </div>
-
-          {/* Right side — theme toggle + notifications */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
             <button onClick={toggleTheme} className="ts-theme-btn" title={isDark ? "Switch to light mode" : "Switch to dark mode"} aria-label="Toggle theme">
               {isDark ? <Sun style={{ width: "0.9rem", height: "0.9rem" }} /> : <Moon style={{ width: "0.9rem", height: "0.9rem" }} />}
@@ -307,8 +294,6 @@ export default function DashboardPage() {
             <NotificationPanel isAdmin={isAdmin} authHeader={authHeader} onDeepLink={handleDeepLink} />
           </div>
         </div>
-
-        {/* Page content */}
         <div className="p-6 lg:p-8 ts-page-bg" style={{ minHeight: "calc(100vh - 57px)" }}>
           {isDeactivated ? (
             <SettingsPage />
@@ -330,7 +315,6 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
-
       {/* ── Logout confirm modal ── */}
       {showLogoutConfirm && (
         <div onClick={() => setShowLogoutConfirm(false)} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "1rem" }}>
@@ -339,7 +323,7 @@ export default function DashboardPage() {
               <LogOut style={{ width: "1.2rem", height: "1.2rem", color: S.expense }} />
             </div>
             <h2 style={{ color: "hsl(220,14%,90%)", fontSize: "0.95rem", fontWeight: 700, margin: "0 0 0.4rem" }}>Log out?</h2>
-            <p style={{ color: "hsl(220,10%,55%)", fontSize: "0.78rem", margin: "0 0 1.5rem", lineHeight: 1.5 }}>Are you sure you want to log out?</p>
+            <p style={{ color: "hsl(220,10%,55%)", fontSize: "0.78rem", margin: "0 0 1.5rem", lineHeight: 1.5 }}>Are you sure you want to log in again?</p>
             <div style={{ display: "flex", gap: "0.65rem" }}>
               <button onClick={() => setShowLogoutConfirm(false)}
                 style={{ flex: 1, padding: "0.6rem", borderRadius: "0.5rem", fontSize: "0.82rem", fontWeight: 600, border: "1px solid hsl(199 89% 48% / 0.4)", background: "hsl(199 89% 48% / 0.1)", color: S.primary, cursor: "pointer", transition: "opacity 0.15s" }}
@@ -357,7 +341,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-
       {/* ── Deep-link deletion modal ── */}
       {showDeletionModalDirect && (
         <HandleDeletionRequest
