@@ -10,6 +10,8 @@ import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
 import { ShellTable } from "./shared/Shell";
 import { C } from "./shared";
 
+import TransactionDetailModal from "./SpecificTransactionModal";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 type SortField  = "id" | "user_id" | "category" | "amount" | "transaction_date" | "created_at";
 type SortDir    = "asc" | "desc";
@@ -163,6 +165,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   const [typeFilter,   setTypeFilter]   = useState<TypeFilter>(initialTypeFilter);
   const [monthFilter,  setMonthFilter]  = useState<string>(initialMonthFilter);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [selectedTx, setSelectedTx] = useState<ReadTransaction | null>(null);
   
 
   useEffect(() => {
@@ -351,7 +355,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
                 return (
                   <tr
                     key={tx.id}
-                    style={{ backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s" }}
+                    onClick={() => setSelectedTx(tx)}
+                    style={{ backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s", cursor: "pointer" }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surfaceHov)}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}
                   >
@@ -388,6 +393,14 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
           {processed.length > 15 ? " · scroll to see more" : ""}
         </div>
       )}
+      {selectedTx && (
+        <TransactionDetailModal
+          transaction={selectedTx}
+          getCategoryName={(id) => categories.find(c => c.id === id)?.name ?? "Unknown"}
+          onClose={() => setSelectedTx(null)}
+        />
+      )}
     </ShellTable>
+    
   );
 }
