@@ -1,15 +1,17 @@
-import { useEffect, useState, useContext, useMemo, useRef } from "react";
+import { useState, useContext, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useEffect } from "react";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import api from "@/services/apiClient";
 import { AuthContext } from "@/features/auth/AuthContext";
 import { formatDate, formatCurrency } from "@/features/dashboard/lib/utility";
 import type { OnCloseProps } from "@/features/dashboard/lib/utility";
 import type { Category, ReadTransaction } from "@/features/dashboard/schemas/transaction";
+import type { CategoryRead } from "@/features/dashboard/schemas/category";
 import { useOutsideClickStrict } from "@/features/dashboard/lib/utilityHooks";
 import { ShellTable } from "./shared/Shell";
 import { C } from "./shared";
-
 import TransactionDetailModal from "./SpecificTransactionModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -25,7 +27,7 @@ const td: React.CSSProperties = {
   whiteSpace:   "nowrap",
 };
 
-// ── PortalDropdown — stays local, unique to table header dropdowns ────────────
+// ── PortalDropdown ────────────────────────────────────────────────────────────
 interface PortalDropdownProps {
   anchorRef: React.RefObject<HTMLElement | null>;
   open:      boolean;
@@ -68,22 +70,15 @@ function TypeDropdown({ value, onChange }: { value: TypeFilter; onChange: (v: Ty
   const current = options.find(o => o.value === value)!;
   return (
     <div style={{ position: "relative" }}>
-      <button
-        ref={btnRef}
-        onClick={() => setOpen(p => !p)}
-        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "Income" ? C.income : value === "Expense" ? C.expense : C.fgMuted, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}
-      >
+      <button ref={btnRef} onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "Income" ? C.income : value === "Expense" ? C.expense : C.fgMuted, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
         {current.label}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
       <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
         {options.map(o => (
-          <button
-            key={o.value}
-            onMouseDown={e => e.stopPropagation()}
-            onClick={() => { onChange(o.value); setOpen(false); }}
-            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.value === value ? C.surfaceHov : "transparent", border: "none", color: o.value === "Income" ? C.income : o.value === "Expense" ? C.expense : C.fg, fontSize: "0.75rem", cursor: "pointer" }}
-          >
+          <button key={o.value} onMouseDown={e => e.stopPropagation()} onClick={() => { onChange(o.value); setOpen(false); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.value === value ? C.surfaceHov : "transparent", border: "none", color: o.value === "Income" ? C.income : o.value === "Expense" ? C.expense : C.fg, fontSize: "0.75rem", cursor: "pointer" }}>
             {o.label}
           </button>
         ))}
@@ -96,54 +91,33 @@ function TypeDropdown({ value, onChange }: { value: TypeFilter; onChange: (v: Ty
 function MonthDropdown({ value, options, onChange }: { value: string; options: { key: string; label: string }[]; onChange: (v: string) => void }) {
   const [open,   setOpen]   = useState(false);
   const [search, setSearch] = useState("");
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const btnRef   = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const current = options.find(o => o.key === value) ?? options[0];
-
+  const current  = options.find(o => o.key === value) ?? options[0];
   const filtered = search.trim()
-    ? options.filter(o =>
-        o.label.toLowerCase().includes(search.toLowerCase()) ||
-        o.key.includes(search)  // "03" matches "2026-03"
-      )
+    ? options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()) || o.key.includes(search))
     : options;
-
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
     else setSearch("");
   }, [open]);
-
   return (
     <div style={{ position: "relative" }}>
-      <button
-        ref={btnRef}
-        onClick={() => setOpen(p => !p)}
-        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}
-      >
+      <button ref={btnRef} onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
         {current?.label ?? "All Months"}
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
       <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
-        {/* Search input inside dropdown */}
         <div style={{ padding: "0.35rem 0.5rem", borderBottom: `1px solid ${C.border}` }}>
-          <input
-            ref={inputRef}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onMouseDown={e => e.stopPropagation()}
+          <input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)} onMouseDown={e => e.stopPropagation()}
             placeholder="Search month…"
-            style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "0.3rem", color: C.fg, fontSize: "0.72rem", padding: "0.25rem 0.45rem", outline: "none", boxSizing: "border-box" }}
-          />
+            style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "0.3rem", color: C.fg, fontSize: "0.72rem", padding: "0.25rem 0.45rem", outline: "none", boxSizing: "border-box" }} />
         </div>
-        {filtered.length === 0 && (
-          <p style={{ color: C.fgMuted, fontSize: "0.72rem", padding: "0.5rem 0.75rem", margin: 0 }}>No match</p>
-        )}
+        {filtered.length === 0 && <p style={{ color: C.fgMuted, fontSize: "0.72rem", padding: "0.5rem 0.75rem", margin: 0 }}>No match</p>}
         {filtered.map(o => (
-          <button
-            key={o.key}
-            onMouseDown={e => e.stopPropagation()}
-            onClick={() => { onChange(o.key); setOpen(false); }}
-            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.key === value ? C.surfaceHov : "transparent", border: "none", color: o.key === "all" ? C.fg : C.primary, fontSize: "0.75rem", cursor: "pointer" }}
-          >
+          <button key={o.key} onMouseDown={e => e.stopPropagation()} onClick={() => { onChange(o.key); setOpen(false); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: o.key === value ? C.surfaceHov : "transparent", border: "none", color: o.key === "all" ? C.fg : C.primary, fontSize: "0.75rem", cursor: "pointer" }}>
             {o.label}
           </button>
         ))}
@@ -159,7 +133,6 @@ function SortIcon({ field, active, dir }: { field: SortField; active: SortField;
   return dir === "asc" ? <ArrowUp style={{ ...size, color: C.primary }} /> : <ArrowDown style={{ ...size, color: C.primary }} />;
 }
 
-// ── Shared TH header style ────────────────────────────────────────────────────
 const thBase: React.CSSProperties = {
   padding:       "0.6rem 0.75rem",
   fontSize:      "0.7rem",
@@ -177,49 +150,41 @@ interface ReadTransactionsProps extends OnCloseProps {
   initialMonthFilter?: string;
   initialViewMode?:    "all" | "own";
 }
-
 export default function ReadTransactions({ onClose, initialTypeFilter = "all", initialMonthFilter = "all", initialViewMode }: ReadTransactionsProps) {
   const { user }  = useContext(AuthContext);
   const isAdmin   = user!.role_id === 1;
   const { handleMouseDown, handleMouseUp } = useOutsideClickStrict(onClose);
-  const token     = localStorage.getItem("access_token");
-  const tokenType = localStorage.getItem("token_type");
 
-  const [transactions, setTransactions] = useState<ReadTransaction[]>([]);
-  const [categories,   setCategories]   = useState<Category[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [viewMode, setViewMode] = useState<"all" | "own">(initialViewMode ?? (isAdmin ? "all" : "own"));
-  const [sortField, setSortField] = useState<SortField>("transaction_date");
-  const [sortDir,   setSortDir]   = useState<SortDir>("desc");
+  // ── Read from React Query cache (same keys as DashboardPage prefetch) ─────
+  // No new network requests — data is already in cache from DashboardPage.
+  const { data: transactions = [], isLoading: txLoading } = useQuery<ReadTransaction[]>({
+    queryKey: ["transactions"],
+    queryFn:  () => api.get<ReadTransaction[]>("api/transactions/").then(r =>
+      r.data.filter(t => !t.deleted_at).map(t => ({ ...t, amount: parseFloat(String(t.amount)) }))
+    ),
+    staleTime: Infinity,
+  });
+  const { data: categories = [], isLoading: catLoading } = useQuery<CategoryRead[]>({
+    queryKey: ["categories"],
+    queryFn:  () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+    staleTime: Infinity,
+  });
+  const loading = txLoading || catLoading;
+
+  // ── Build a lookup map once — O(1) per lookup instead of O(n) per sort ───
+  const categoryMap = useMemo(
+    () => new Map(categories.map(c => [c.id, c.name])),
+    [categories]
+  );
+  const getCategoryName = (id: number) => categoryMap.get(id) ?? "Unknown";
+
+  const [viewMode,     setViewMode]     = useState<"all" | "own">(initialViewMode ?? (isAdmin ? "all" : "own"));
+  const [sortField,    setSortField]    = useState<SortField>("transaction_date");
+  const [sortDir,      setSortDir]      = useState<SortDir>("desc");
   const [typeFilter,   setTypeFilter]   = useState<TypeFilter>(initialTypeFilter);
   const [monthFilter,  setMonthFilter]  = useState<string>(initialMonthFilter);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const [selectedTx, setSelectedTx] = useState<ReadTransaction | null>(null);
-  
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (!token || !tokenType) return;
-        const [transRes, catRes] = await Promise.all([
-          api.get("api/transactions/", { headers: { Authorization: `${tokenType} ${token}` } }),
-          api.get("api/categories/"),
-        ]);
-        const filtered: ReadTransaction[] = transRes.data
-          .filter((t: ReadTransaction) => !t.deleted_at)
-          .sort((a: ReadTransaction, b: ReadTransaction) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-        setTransactions(filtered);
-        setCategories(catRes.data);
-      } catch { /* silently */ }
-      finally { setLoading(false); }
-    };
-    fetchData();
-  }, [token, tokenType]);
-
-  const getCategoryName = (id: number) => categories.find(c => c.id === id)?.name ?? "Unknown";
+  const [searchQuery,  setSearchQuery]  = useState("");
+  const [selectedTx,   setSelectedTx]  = useState<ReadTransaction | null>(null);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) { setSortDir(d => d === "asc" ? "desc" : "asc"); }
@@ -242,7 +207,9 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     ];
   }, [transactions, viewMode, user]);
 
-  const processed = (() => {
+  // ── categoryNames pre-resolved per transaction — computed once per filter ─
+  // Avoids calling getCategoryName inside the sort comparator on every swap.
+  const processed = useMemo(() => {
     let txs = [...transactions];
     if (viewMode    === "own") txs = txs.filter(t => t.user_id === user?.id);
     if (monthFilter !== "all") txs = txs.filter(t => t.transaction_date?.startsWith(monthFilter));
@@ -256,30 +223,29 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
         String(t.amount).includes(q)
       );
     }
-    txs.sort((a, b) => {
+    // Attach resolved category name once per row so sort never calls getCategoryName
+    const withName = txs.map(t => ({ ...t, _catName: getCategoryName(t.category_id) }));
+    withName.sort((a, b) => {
       let cmp = 0;
       switch (sortField) {
         case "id":               cmp = a.id - b.id; break;
         case "user_id":          cmp = a.user_id - b.user_id; break;
-        case "category":         cmp = getCategoryName(a.category_id).localeCompare(getCategoryName(b.category_id)); break;
+        case "category":         cmp = a._catName.localeCompare(b._catName); break;
         case "amount":           cmp = parseFloat(String(a.amount)) - parseFloat(String(b.amount)); break;
         case "transaction_date": cmp = a.transaction_date.localeCompare(b.transaction_date); break;
         case "created_at":       cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime(); break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-    return txs;
-  })();
+    return withName;
+  }, [transactions, viewMode, monthFilter, typeFilter, searchQuery, sortField, sortDir, categoryMap, user]);
 
-  // Sortable TH
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
     return (
       <th style={{ ...thBase, color: active ? C.primary : C.fgMuted, userSelect: "none", whiteSpace: "nowrap" }}>
-        <button
-          onClick={() => handleSort(field)}
-          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", padding: 0 }}
-        >
+        <button onClick={() => handleSort(field)}
+          style={{ display: "flex", alignItems: "center", gap: "0.25rem", background: "none", border: "none", color: "inherit", fontSize: "inherit", fontWeight: "inherit", cursor: "pointer", padding: 0 }}>
           {children}
           <SortIcon field={field} active={sortField} dir={sortDir} />
         </button>
@@ -295,24 +261,10 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
     <ShellTable onBackdropDown={handleMouseDown} onBackdropUp={handleMouseUp}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-      <input
-        type="text"
-        value={searchQuery}
-        onChange={e => setSearchQuery(e.target.value)}
-        placeholder="Search…"
-        style={{
-          background: C.surfaceEl,
-          border: `1px solid ${C.border}`,
-          borderRadius: "0.4rem",
-          color: C.fg,
-          fontSize: "0.78rem",
-          padding: "0.3rem 0.65rem",
-          outline: "none",
-          width: "180px",
-        }}
-        onFocus={e => (e.target.style.borderColor = C.primary)}
-        onBlur={e  => (e.target.style.borderColor = C.border)}
-      />
+        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search…"
+          style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.fg, fontSize: "0.78rem", padding: "0.3rem 0.65rem", outline: "none", width: "180px" }}
+          onFocus={e => (e.target.style.borderColor = C.primary)}
+          onBlur={e  => (e.target.style.borderColor = C.border)} />
         <div>
           <h2 style={{ color: C.fg, fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>View Transactions</h2>
           <p style={{ color: C.fgMuted, fontSize: "0.75rem", margin: "0.2rem 0 0" }}>
@@ -323,11 +275,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {isAdmin && (
-            <select
-              value={viewMode}
-              onChange={e => setViewMode(e.target.value as "all" | "own")}
-              style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.fg, fontSize: "0.75rem", padding: "0.3rem 0.5rem", cursor: "pointer", outline: "none" }}
-            >
+            <select value={viewMode} onChange={e => setViewMode(e.target.value as "all" | "own")}
+              style={{ background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: C.fg, fontSize: "0.75rem", padding: "0.3rem 0.5rem", cursor: "pointer", outline: "none" }}>
               <option value="all">All Users</option>
               <option value="own">My Transactions</option>
             </select>
@@ -357,9 +306,7 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
       {/* Table */}
       <div style={{ overflowY: "auto", flex: 1 }}>
         {loading && <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>Loading…</p>}
-        {!loading && processed.length === 0 && (
-          <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>No transactions found.</p>
-        )}
+        {!loading && processed.length === 0 && <p style={{ color: C.fgMuted, padding: "2rem", textAlign: "center" }}>No transactions found.</p>}
         {!loading && processed.length > 0 && (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -368,18 +315,12 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
                 {isAdmin && <Th field="user_id">User ID</Th>}
                 <Th field="category">Category</Th>
                 <Th field="amount">Amount</Th>
-                {/* Type — dropdown filter in header */}
                 <th style={thBase}><TypeDropdown value={typeFilter} onChange={setTypeFilter} /></th>
-                {/* Description — plain */}
                 <th style={thBase}>Description</th>
-                {/* Date — month dropdown filter in header */}
                 <th style={thBase}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                     <MonthDropdown value={monthFilter} options={availableMonths} onChange={setMonthFilter} />
-                    <button
-                      onClick={() => handleSort("transaction_date")}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
-                    >
+                    <button onClick={() => handleSort("transaction_date")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
                       <SortIcon field="transaction_date" active={sortField} dir={sortDir} />
                     </button>
                   </div>
@@ -392,29 +333,22 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
                 const isIncome = tx.transaction_type === "Income";
                 const isEven   = idx % 2 === 0;
                 return (
-                  <tr
-                    key={tx.id}
-                    onClick={() => setSelectedTx(tx)}
+                  <tr key={tx.id} onClick={() => setSelectedTx(tx)}
                     style={{ backgroundColor: isEven ? "transparent" : "hsl(220,14%,14%)", transition: "background-color 0.1s", cursor: "pointer" }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = C.surfaceHov)}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}
-                  >
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isEven ? "transparent" : "hsl(220,14%,14%)")}>
                     <td style={td}>{tx.id}</td>
                     {isAdmin && <td style={td}>{tx.user_id}</td>}
-                    <td style={td}>{getCategoryName(tx.category_id)}</td>
+                    <td style={td}>{tx._catName}</td>
                     <td style={{ ...td, fontWeight: 600, color: isIncome ? C.income : C.expense }}>
-                      {isIncome
-                        ? `+₱${formatCurrency(tx.amount).replace("₱ ", "")}`
-                        : `-₱${formatCurrency(tx.amount).replace("₱ ", "")}`}
+                      {isIncome ? `+₱${formatCurrency(tx.amount).replace("₱ ", "")}` : `-₱${formatCurrency(tx.amount).replace("₱ ", "")}`}
                     </td>
                     <td style={td}>
                       <span style={{ display: "inline-block", padding: "0.15rem 0.5rem", borderRadius: "999px", fontSize: "0.68rem", fontWeight: 600, backgroundColor: isIncome ? "hsl(160 60% 45% / 0.12)" : "hsl(0 72% 51% / 0.12)", color: isIncome ? C.income : C.expense, border: `1px solid ${isIncome ? C.income : C.expense}40` }}>
                         {tx.transaction_type}
                       </span>
                     </td>
-                    <td style={{ ...td, color: C.fgMuted, maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {tx.description || "—"}
-                    </td>
+                    <td style={{ ...td, color: C.fgMuted, maxWidth: "180px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tx.description || "—"}</td>
                     <td style={td}>{tx.transaction_date}</td>
                     <td style={{ ...td, color: C.fgMuted }}>{formatDate(tx.created_at)}</td>
                   </tr>
@@ -432,14 +366,14 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
           {processed.length > 15 ? " · scroll to see more" : ""}
         </div>
       )}
+
       {selectedTx && (
         <TransactionDetailModal
           transaction={selectedTx}
-          getCategoryName={(id) => categories.find(c => c.id === id)?.name ?? "Unknown"}
+          getCategoryName={(id) => categoryMap.get(id) ?? "Unknown"}
           onClose={() => setSelectedTx(null)}
         />
       )}
     </ShellTable>
-    
   );
 }
