@@ -13,6 +13,7 @@ import { buildAuthStyles } from "../lib/authStyles";
 import LiveDemoBadge        from "../../../demo/LiveDemoBadge";
 import WatchDemoLink         from "../../../demo/WatchDemoLink";
 import DemoAccountTooltip    from "../../../demo/DemoAccountButton";
+import { useDemoLogin } from "../../../demo/useDemoLogin";
 // ── Frontend rate-limit config (mirrors backend) ──────────────────────────────
 const FE_MAX_ATTEMPTS    = 5;
 const FE_LOCKOUT_MINUTES = 3;
@@ -136,37 +137,13 @@ export default function Login() {
       setLoading(false);
     }
   };
-  const handleDemoLogin = () => {
-    if (loading || isLocked) return;
-    const demoEmail    = "test.standard@gmail.com";
-    const demoPassword = "test1234";
-    setForm({ email: demoEmail, password: demoPassword });
-    // Submit directly with known-good values — avoids closure stale-state issue
-    setErrors([]);
-    setLoading(true);
-    api.post("api/auth/login", { email: demoEmail, password: demoPassword })
-      .then(response => {
-        const { access_token, token_type, user, password_expired } = response.data;
-        const parsedUser = UserSchema.parse(user);
-        localStorage.setItem("access_token", access_token);
-        localStorage.setItem("token_type", token_type);
-        localStorage.setItem("password_expired", String(password_expired ?? false));
-        clearLockout();
-        setLoggedIn(true);
-        setUser(parsedUser);
-        setPasswordExpired(password_expired ?? false);
-      })
-      .catch(err => {
-        setErrors([err?.response ? "Demo login failed. Try again." : "Cannot connect to server."]);
-      })
-      .finally(() => setLoading(false));
-  };
   const formatCountdown = (secs: number) => {
     const m = Math.floor(secs / 60).toString().padStart(2, "0");
     const s = (secs % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   };
   const isLocked = !!lockedUntil && lockedUntil > Date.now();
+  const handleDemoLogin = useDemoLogin(setLoading, setErrors, loading, isLocked);
   return (
     <>
       <title>TransacScope — Sign In</title>
@@ -303,7 +280,7 @@ export default function Login() {
           <div className="card-divider" />
           {/* ── Demo account tooltip ── */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
-            <DemoAccountTooltip onDemoClick={handleDemoLogin} />
+            <DemoAccountTooltip onDemoClick={handleDemoLogin} loading={loading} />
           </div>
           <p style={{ textAlign: "center", fontSize: "11.5px", color: S.muted, letterSpacing: "0.03em" }}>
             Track income, expenses & net profit — all in one place.
