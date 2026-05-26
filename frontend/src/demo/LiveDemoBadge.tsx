@@ -1,8 +1,6 @@
 import { useState } from "react";
-
 export default function LiveDemoBadge() {
   const [show, setShow] = useState(false);
-
   return (
     <div style={{ position: "relative", display: "inline-flex", justifyContent: "center" }}>
       <button
@@ -39,7 +37,6 @@ export default function LiveDemoBadge() {
           fontWeight: 400,
         }}>ⓘ</span>
       </button>
-
       {show && (
         <div
           style={{
@@ -68,7 +65,6 @@ export default function LiveDemoBadge() {
             borderBottom: "6px solid transparent",
             borderRight:  "7px solid hsl(220,20%,24%)",
           }} />
-
           {/* Title */}
           <p style={{
             fontSize:      "11px",
@@ -84,7 +80,6 @@ export default function LiveDemoBadge() {
           }}>
             <span>⚠</span> Demonstration Deployment
           </p>
-
           {/* What it is */}
           <p style={{
             fontSize:     "12.5px",
@@ -98,10 +93,8 @@ export default function LiveDemoBadge() {
             record, track, categorize, and report income and expenses, with
             full user role control and audit trail support.
           </p>
-
           {/* Divider */}
           <div style={{ margin: "10px 0", height: "1px", background: "hsl(220,20%,22%)" }} />
-
           {/* Demo note */}
           <p style={{
             fontSize:     "12.5px",
@@ -116,10 +109,8 @@ export default function LiveDemoBadge() {
             </strong>{" "}
             Data shown is simulated. No real financial records are stored.
           </p>
-
           {/* Divider */}
           <div style={{ margin: "10px 0", height: "1px", background: "hsl(220,20%,22%)" }} />
-
           {/* Real-world deployment note */}
           <p style={{
             fontSize:     "12.5px",
@@ -135,10 +126,8 @@ export default function LiveDemoBadge() {
             — accessible only within the business premises or its own private network —
             to keep all financial data private and protected.
           </p>
-
           {/* Divider */}
           <div style={{ margin: "10px 0", height: "1px", background: "hsl(220,20%,22%)" }} />
-
           {/* Registration note */}
           <p style={{
             fontSize:   "12px",

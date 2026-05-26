@@ -1,5 +1,4 @@
 const DEMO_VIDEO_URL = "https://drive.google.com/drive/folders/1u7WnkaLEA_4eJaf3D4nfk8o-e--OSsNe?usp=sharing";
-
 export default function WatchDemoLink() {
   return (
     <div style={{
@@ -9,7 +8,7 @@ export default function WatchDemoLink() {
       alignItems:     "center",
       gap:            "7px",
     }}>
-      <a
+    <a
         href={DEMO_VIDEO_URL}
         target="_blank"
         rel="noopener noreferrer"

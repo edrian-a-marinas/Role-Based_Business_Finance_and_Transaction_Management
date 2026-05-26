@@ -1,13 +1,10 @@
 import { useState } from "react";
-
 interface Props {
   onDemoClick?: () => void;
 }
-
 export default function DemoAccountTooltip({ onDemoClick }: Props) {
   const [show, setShow] = useState(false);
   const [hovered, setHovered] = useState(false);
-
   return (
     <div style={{ position: "relative", display: "inline-flex", justifyContent: "center" }}>
       <button
@@ -42,7 +39,6 @@ export default function DemoAccountTooltip({ onDemoClick }: Props) {
       >
         🎯 Try a Demo Account
       </button>
-
       {show && (
         <div style={{
           position:        "absolute",
