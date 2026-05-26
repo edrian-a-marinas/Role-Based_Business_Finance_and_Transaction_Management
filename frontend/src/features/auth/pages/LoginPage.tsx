@@ -10,9 +10,9 @@ import { AuthContext } from "../AuthContext";
 import { S } from "../lib/authConst";
 import { useParticles } from "../lib/useParticles";
 import { buildAuthStyles } from "../lib/authStyles";
-import LiveDemoBadge from "../lib/authToolTip";
-import WatchDemoLink from "../lib/authDemoVid";
-import DemoAccountTooltip from "../lib/authDemoTooltip";
+import LiveDemoBadge        from "../../../demo/LiveDemoBadge";
+import WatchDemoLink         from "../../../demo/WatchDemoLink";
+import DemoAccountTooltip    from "../../../demo/DemoAccountButton";
 // ── Frontend rate-limit config (mirrors backend) ──────────────────────────────
 const FE_MAX_ATTEMPTS    = 5;
 const FE_LOCKOUT_MINUTES = 3;
