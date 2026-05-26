@@ -1,8 +1,9 @@
 import { useState } from "react";
 interface Props {
   onDemoClick?: () => void;
+  loading?:     boolean;
 }
-export default function DemoAccountTooltip({ onDemoClick }: Props) {
+export default function DemoAccountTooltip({ onDemoClick, loading }: Props) {
   const [show, setShow] = useState(false);
   const [hovered, setHovered] = useState(false);
   return (
@@ -14,6 +15,7 @@ export default function DemoAccountTooltip({ onDemoClick }: Props) {
         onMouseLeave={() => { setShow(false); setHovered(false); }}
         onFocus={() => setShow(true)}
         onBlur={() => setShow(false)}
+        disabled={loading}
         style={{
           display:         "inline-flex",
           alignItems:      "center",
@@ -22,13 +24,14 @@ export default function DemoAccountTooltip({ onDemoClick }: Props) {
                              ? "hsl(199 89% 48% / 0.18)"
                              : "hsl(199 89% 48% / 0.10)",
           border:          "1px solid hsl(199 89% 48% / 0.55)",
-          borderRadius:    "10px",               // rectangular button, not pill
-          padding:         "8px 16px",           // taller + wider than the badge
-          fontSize:        "13px",               // bigger than the badge's 10.5px
+          borderRadius:    "10px",       
+          padding:         "8px 16px",         
+          fontSize:        "13px",              
           fontWeight:      600,
           color:           "hsl(199,89%,72%)",
           letterSpacing:   "0.01em",
-          cursor:          "pointer",
+          cursor:  loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.6 : 1,
           fontFamily:      "'DM Sans', sans-serif",
           transition:      "background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s",
           transform:       hovered ? "translateY(-1px)" : "translateY(0)",
