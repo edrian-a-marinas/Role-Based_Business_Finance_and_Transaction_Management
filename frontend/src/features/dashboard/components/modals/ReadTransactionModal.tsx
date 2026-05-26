@@ -35,11 +35,10 @@ interface PortalDropdownProps {
   children:  React.ReactNode;
 }
 function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownProps) {
-  const [pos, setPos] = useState({ top: 0, left: 0, minWidth: 0 });
-  useEffect(() => {
-    if (!open || !anchorRef.current) return;
+  const pos = useMemo(() => {
+    if (!open || !anchorRef.current) return { top: 0, left: 0, minWidth: 0 };
     const rect = anchorRef.current.getBoundingClientRect();
-    setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, minWidth: rect.width });
+    return { top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, minWidth: rect.width };
   }, [open, anchorRef]);
   useEffect(() => {
     if (!open) return;
@@ -55,6 +54,33 @@ function PortalDropdown({ anchorRef, open, onClose, children }: PortalDropdownPr
       {children}
     </div>,
     document.body
+  );
+}
+
+function CategoryDropdown({ value, onChange, categories }: { value: number | "all"; onChange: (v: number | "all") => void; categories: CategoryRead[] }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const label = value === "all" ? "All Categories" : categories.find(c => c.id === value)?.name ?? "Category";
+  return (
+    <div style={{ position: "relative" }}>
+      <button ref={btnRef} onClick={() => setOpen(p => !p)}
+        style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: C.surfaceEl, border: `1px solid ${C.border}`, borderRadius: "0.4rem", color: value === "all" ? C.fgMuted : C.primary, fontSize: "0.72rem", fontWeight: 600, padding: "0.25rem 0.5rem", cursor: "pointer", whiteSpace: "nowrap" }}>
+        {label}
+        <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
+      </button>
+      <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
+        <button onMouseDown={e => e.stopPropagation()} onClick={() => { onChange("all"); setOpen(false); }}
+          style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: value === "all" ? C.surfaceHov : "transparent", border: "none", color: C.fg, fontSize: "0.75rem", cursor: "pointer" }}>
+          All Categories
+        </button>
+        {categories.map(c => (
+          <button key={c.id} onMouseDown={e => e.stopPropagation()} onClick={() => { onChange(c.id); setOpen(false); }}
+            style={{ display: "block", width: "100%", textAlign: "left", padding: "0.4rem 0.75rem", background: value === c.id ? C.surfaceHov : "transparent", border: "none", color: C.primary, fontSize: "0.75rem", cursor: "pointer" }}>
+            {c.name}
+          </button>
+        ))}
+      </PortalDropdown>
+    </div>
   );
 }
 
@@ -178,6 +204,7 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   );
   const getCategoryName = (id: number) => categoryMap.get(id) ?? "Unknown";
 
+  const [categoryFilter, setCategoryFilter] = useState<number | "all">("all");
   const [viewMode,     setViewMode]     = useState<"all" | "own">(initialViewMode ?? (isAdmin ? "all" : "own"));
   const [sortField,    setSortField]    = useState<SortField>("transaction_date");
   const [sortDir,      setSortDir]      = useState<SortDir>("desc");
@@ -211,9 +238,10 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   // Avoids calling getCategoryName inside the sort comparator on every swap.
   const processed = useMemo(() => {
     let txs = [...transactions];
-    if (viewMode    === "own") txs = txs.filter(t => t.user_id === user?.id);
-    if (monthFilter !== "all") txs = txs.filter(t => t.transaction_date?.startsWith(monthFilter));
-    if (typeFilter  !== "all") txs = txs.filter(t => t.transaction_type === typeFilter);
+    if (viewMode        === "own") txs = txs.filter(t => t.user_id === user?.id);
+    if (categoryFilter  !== "all") txs = txs.filter(t => t.category_id === categoryFilter);
+    if (monthFilter     !== "all") txs = txs.filter(t => t.transaction_date?.startsWith(monthFilter));
+    if (typeFilter      !== "all") txs = txs.filter(t => t.transaction_type === typeFilter);
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       txs = txs.filter(t =>
@@ -238,7 +266,7 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
       return sortDir === "asc" ? cmp : -cmp;
     });
     return withName;
-  }, [transactions, viewMode, monthFilter, typeFilter, searchQuery, sortField, sortDir, categoryMap, user]);
+  }, [transactions, viewMode, categoryFilter, monthFilter, typeFilter, searchQuery, sortField, sortDir, categoryMap, user]);
 
   const Th = ({ field, children }: { field: SortField; children: React.ReactNode }) => {
     const active = sortField === field;
@@ -313,7 +341,9 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
               <tr>
                 <Th field="id">ID</Th>
                 {isAdmin && <Th field="user_id">User ID</Th>}
-                <Th field="category">Category</Th>
+                <th style={{ padding: "0.6rem 0.75rem", fontSize: "0.7rem", fontWeight: 600, color: C.fgMuted, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`, background: C.surfaceEl }}>
+                  <CategoryDropdown value={categoryFilter} onChange={setCategoryFilter} categories={categories} />
+                </th>
                 <Th field="amount">Amount</Th>
                 <th style={thBase}><TypeDropdown value={typeFilter} onChange={setTypeFilter} /></th>
                 <th style={thBase}>Description</th>
