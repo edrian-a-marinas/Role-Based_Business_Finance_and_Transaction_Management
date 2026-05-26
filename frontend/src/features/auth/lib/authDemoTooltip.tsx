@@ -1,31 +1,43 @@
 import { useState } from "react";
 
-export default function DemoAccountTooltip() {
+interface Props {
+  onDemoClick?: () => void;
+}
+
+export default function DemoAccountTooltip({ onDemoClick }: Props) {
   const [show, setShow] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div style={{ position: "relative", display: "inline-flex", justifyContent: "center" }}>
       <button
         type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
+        onClick={onDemoClick}
+        onMouseEnter={() => { setShow(true); setHovered(true); }}
+        onMouseLeave={() => { setShow(false); setHovered(false); }}
         onFocus={() => setShow(true)}
         onBlur={() => setShow(false)}
         style={{
           display:         "inline-flex",
           alignItems:      "center",
-          gap:             "6px",
-          background:      "hsl(199 89% 48% / 0.08)",
-          border:          "1px solid hsl(199 89% 48% / 0.30)",
-          borderRadius:    "20px",
-          padding:         "4px 12px",
-          fontSize:        "11.5px",
+          gap:             "7px",
+          background:      hovered
+                             ? "hsl(199 89% 48% / 0.18)"
+                             : "hsl(199 89% 48% / 0.10)",
+          border:          "1px solid hsl(199 89% 48% / 0.55)",
+          borderRadius:    "10px",               // rectangular button, not pill
+          padding:         "8px 16px",           // taller + wider than the badge
+          fontSize:        "13px",               // bigger than the badge's 10.5px
           fontWeight:      600,
-          color:           "hsl(199,89%,62%)",
-          letterSpacing:   "0.02em",
-          cursor:          "help",
+          color:           "hsl(199,89%,72%)",
+          letterSpacing:   "0.01em",
+          cursor:          "pointer",
           fontFamily:      "'DM Sans', sans-serif",
-          transition:      "border-color 0.2s, background 0.2s",
+          transition:      "background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s",
+          transform:       hovered ? "translateY(-1px)" : "translateY(0)",
+          boxShadow:       hovered
+                             ? "0 4px 16px hsl(199 89% 48% / 0.20), 0 0 0 1px hsl(199 89% 48% / 0.15)"
+                             : "0 2px 8px hsl(199 89% 48% / 0.08)",
         }}
       >
         🎯 Try a Demo Account
@@ -47,7 +59,6 @@ export default function DemoAccountTooltip() {
           pointerEvents:   "none",
           textAlign:       "left",
         }}>
-          {/* Down arrow */}
           <span style={{
             position:    "absolute",
             top:         "100%",
@@ -59,8 +70,6 @@ export default function DemoAccountTooltip() {
             borderRight: "6px solid transparent",
             borderTop:   "7px solid hsl(220,20%,24%)",
           }} />
-
-          {/* Title */}
           <p style={{
             fontSize:      "10px",
             fontWeight:    700,
@@ -72,41 +81,17 @@ export default function DemoAccountTooltip() {
           }}>
             Demo Account
           </p>
-
-          {/* Email */}
-          <div style={{ marginBottom: "8px" }}>
-            <p style={{ fontSize: "10px", color: "hsl(220,10%,46%)", marginBottom: "3px", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 600 }}>
-              Email
-            </p>
-            <p style={{ fontSize: "12.5px", color: "hsl(220,14%,88%)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
-              test.standard@gmail.com
-            </p>
-          </div>
-
-          {/* Password */}
-          <div style={{ marginBottom: "10px" }}>
-            <p style={{ fontSize: "10px", color: "hsl(220,10%,46%)", marginBottom: "3px", letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 600 }}>
-              Password
-            </p>
-            <p style={{ fontSize: "12.5px", color: "hsl(220,14%,88%)", fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>
-              test1234
-            </p>
-          </div>
-
-          {/* Divider */}
           <div style={{ height: "1px", background: "hsl(220,20%,22%)", marginBottom: "10px" }} />
-
-          {/* Role note */}
-          <p style={{ fontSize: "11.5px", color: "hsl(220,10%,52%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif", marginBottom: "8px" }}>
-            Want to explore without registering? Use these credentials to try the app.
+          <p style={{ fontSize: "11.5px", color: "hsl(199,89%,62%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif", marginBottom: "8px" }}>
+            Click to instantly log in as a demo user — no registration needed.
           </p>
           <div style={{ height: "1px", background: "hsl(220,20%,22%)", marginBottom: "10px" }} />
           <p style={{ fontSize: "11.5px", color: "hsl(220,10%,52%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif" }}>
             Standard User only — can view, add, and request transaction deletions. Admin features are restricted.
           </p>
           <p style={{ fontSize: "11px", color: "hsl(220,10%,40%)", lineHeight: "1.6", fontFamily: "'DM Sans', sans-serif", marginTop: "6px" }}>
-            All data is simulated — no real records. The system isn't limited to gaming cafés; 
-            it's a general-purpose finance & transaction tracker built for any business. 
+            All data is simulated — no real records. The system isn't limited to gaming cafés;
+            it's a general-purpose finance & transaction tracker built for any business.
             The café is just the example business I used for this demo.
           </p>
         </div>
