@@ -31,9 +31,13 @@ export function useDemoLogin(
         setUser(parsedUser);
         setPasswordExpired(password_expired ?? false);
       })
-      .catch(err => {
-        setErrors([err?.response ? "Demo login failed. Try again." : "Cannot connect to server."]);
-      })
-      .finally(() => setLoading(false));
+    .catch(err => {
+        if (err?.response?.status === 429) {
+            setErrors(["Too many attempts — please wait a few minutes before trying the demo again."]);
+        } else {
+            setErrors([err?.response ? "Demo login failed. Try again." : "Cannot connect to server."]);
+        }
+    })
+    .finally(() => setLoading(false));
   };
 }
