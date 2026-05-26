@@ -94,9 +94,24 @@ function TypeDropdown({ value, onChange }: { value: TypeFilter; onChange: (v: Ty
 
 // ── MonthDropdown ─────────────────────────────────────────────────────────────
 function MonthDropdown({ value, options, onChange }: { value: string; options: { key: string; label: string }[]; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
+  const [open,   setOpen]   = useState(false);
+  const [search, setSearch] = useState("");
   const btnRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const current = options.find(o => o.key === value) ?? options[0];
+
+  const filtered = search.trim()
+    ? options.filter(o =>
+        o.label.toLowerCase().includes(search.toLowerCase()) ||
+        o.key.includes(search)  // "03" matches "2026-03"
+      )
+    : options;
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+    else setSearch("");
+  }, [open]);
+
   return (
     <div style={{ position: "relative" }}>
       <button
@@ -108,7 +123,21 @@ function MonthDropdown({ value, options, onChange }: { value: string; options: {
         <ChevronDown style={{ width: "0.7rem", height: "0.7rem" }} />
       </button>
       <PortalDropdown anchorRef={btnRef} open={open} onClose={() => setOpen(false)}>
-        {options.map(o => (
+        {/* Search input inside dropdown */}
+        <div style={{ padding: "0.35rem 0.5rem", borderBottom: `1px solid ${C.border}` }}>
+          <input
+            ref={inputRef}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onMouseDown={e => e.stopPropagation()}
+            placeholder="Search month…"
+            style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "0.3rem", color: C.fg, fontSize: "0.72rem", padding: "0.25rem 0.45rem", outline: "none", boxSizing: "border-box" }}
+          />
+        </div>
+        {filtered.length === 0 && (
+          <p style={{ color: C.fgMuted, fontSize: "0.72rem", padding: "0.5rem 0.75rem", margin: 0 }}>No match</p>
+        )}
+        {filtered.map(o => (
           <button
             key={o.key}
             onMouseDown={e => e.stopPropagation()}
@@ -160,8 +189,8 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
   const [categories,   setCategories]   = useState<Category[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [viewMode, setViewMode] = useState<"all" | "own">(initialViewMode ?? (isAdmin ? "all" : "own"));
-  const [sortField,    setSortField]    = useState<SortField>("id");
-  const [sortDir,      setSortDir]      = useState<SortDir>("desc");
+  const [sortField, setSortField] = useState<SortField>("transaction_date");
+  const [sortDir,   setSortDir]   = useState<SortDir>("desc");
   const [typeFilter,   setTypeFilter]   = useState<TypeFilter>(initialTypeFilter);
   const [monthFilter,  setMonthFilter]  = useState<string>(initialMonthFilter);
   const [searchQuery, setSearchQuery] = useState("");
@@ -344,7 +373,17 @@ export default function ReadTransactions({ onClose, initialTypeFilter = "all", i
                 {/* Description — plain */}
                 <th style={thBase}>Description</th>
                 {/* Date — month dropdown filter in header */}
-                <th style={thBase}><MonthDropdown value={monthFilter} options={availableMonths} onChange={setMonthFilter} /></th>
+                <th style={thBase}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <MonthDropdown value={monthFilter} options={availableMonths} onChange={setMonthFilter} />
+                    <button
+                      onClick={() => handleSort("transaction_date")}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
+                    >
+                      <SortIcon field="transaction_date" active={sortField} dir={sortDir} />
+                    </button>
+                  </div>
+                </th>
                 <Th field="created_at">Created At</Th>
               </tr>
             </thead>
