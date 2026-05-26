@@ -104,7 +104,7 @@ function CancelConfirmDialog({ entry, onBack, onConfirm }: {
   const amtColor = isInc ? C.income : C.expense;
   const fmt = (amount: number, type?: string) => {
     const n = formatCurrency(amount).replace("₱ ", "");
-    return type === "Expense" ? `₱ -${n}` : `₱ +${n}`;
+    return type === "Expense" ? `-₱${n}` : `+₱${n}`;
   };
   return (
     <div onClick={e => e.stopPropagation()} style={{
@@ -219,7 +219,7 @@ function ExpandedRow({ entry, isAdmin, colSpan, onRequestCancel, isCancelling }:
   const amtClr = isInc ? C.income : C.expense;
   const fmt = (amount: number, type?: string) => {
     const n = formatCurrency(amount).replace("₱ ", "");
-    return type === "Expense" ? `₱ -${n}` : `₱ +${n}`;
+    return type === "Expense" ? `-₱${n}` : `+₱${n}`;
   };
   return (
     <tr>
@@ -415,7 +415,7 @@ export default function DeletionRequestHistoryModal({ onClose }: OnCloseProps) {
 
   const fmt = (amount: number, type?: string) => {
     const n = formatCurrency(amount).replace("₱ ", "");
-    return type === "Expense" ? `₱ -${n}` : `₱ +${n}`;
+    return type === "Expense" ? `-₱${n}` : `+₱${n}`;
   };
 
   const toggleExpand = (id: number) => setExpandedId(prev => prev === id ? null : id);
