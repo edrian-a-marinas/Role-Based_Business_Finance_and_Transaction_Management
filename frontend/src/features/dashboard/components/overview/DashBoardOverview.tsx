@@ -88,6 +88,7 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
   }, [loading]);
   const currentYM = new Date().toISOString().slice(0, 7);
   const [period, setPeriod] = useState<Period>(currentYM);
+  const deferredPeriod = useDeferredValue(period);
   const [hoveredPeriod, setHoveredPeriod] = useState<Period | null>(null);
   const [viewMode, setViewMode] = useState<"all" | "own">(isAdmin ? "all" : "own");
   const [openTransactionsModal,  setOpenTransactionsModal]  = useState(false);
@@ -132,12 +133,12 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
     return categories.find((c) => c.id === id)?.name ?? "Unknown";
   };
   const filteredTransactions = useMemo(() => {
-    if (loading) return [];
-    let txs = [...transactions];
-    if (!isAdmin || viewMode === "own") txs = txs.filter((t) => t.user_id === userId);
-    if (period !== "all") txs = txs.filter(t => t.transaction_date.startsWith(period));
-    return txs;
-  }, [transactions, isAdmin, viewMode, userId, period, loading]);
+      if (loading) return [];
+      let txs = [...transactions];
+      if (!isAdmin || viewMode === "own") txs = txs.filter((t) => t.user_id === userId);
+      if (deferredPeriod !== "all") txs = txs.filter(t => t.transaction_date.startsWith(deferredPeriod));
+      return txs;
+    }, [transactions, isAdmin, viewMode, userId, deferredPeriod, loading]);
   const summary = useMemo(() => {
     const incomeTx  = filteredTransactions.filter((t) => t.transaction_type === "Income");
     const expenseTx = filteredTransactions.filter((t) => t.transaction_type === "Expense");
