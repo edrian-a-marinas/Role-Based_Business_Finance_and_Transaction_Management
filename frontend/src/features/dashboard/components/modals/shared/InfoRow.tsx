@@ -40,9 +40,13 @@ export default function InfoRow({
       <span style={labelStyle}>{label}</span>
       <span
         style={{
-          fontSize:   "0.875rem",
-          fontWeight: 500,
-          color:      color ?? C.fg,
+          fontSize:    "0.875rem",
+          fontWeight:  500,
+          color:       color ?? C.fg,
+          wordBreak:   "break-word",
+          textAlign:   "right",
+          paddingLeft: "1rem",
+          maxWidth:    "65%",
         }}
       >
         {value}
