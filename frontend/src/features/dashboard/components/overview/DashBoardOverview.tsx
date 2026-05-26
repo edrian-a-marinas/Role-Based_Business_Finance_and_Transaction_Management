@@ -61,16 +61,21 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
     userRole === 1 && userID === 1 ? "Super Admin"
     : userRole === 1               ? "Admin"
     :                                "Standard User";
+
+  // no new network request. staleTime: Infinity ensures it never auto-refetches.
   const { data: transactions = [], isLoading: txLoading } = useQuery({
     queryKey: ["transactions"],
     queryFn: () => api.get<ReadTransaction[]>("api/transactions/").then(r =>
       r.data.filter(t => !t.deleted_at).map(t => ({ ...t, amount: parseFloat(String(t.amount)) }))
     ),
+    staleTime: Infinity,
   });
   const { data: categories = [], isLoading: catLoading } = useQuery({
     queryKey: ["categories"],
     queryFn: () => api.get<CategoryRead[]>("api/categories/").then(r => r.data),
+    staleTime: Infinity,
   });
+
   const loading = txLoading || catLoading;
   const [chartsReady, setChartsReady] = useState(chartsReadyRef.current);
   useEffect(() => {
@@ -84,7 +89,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
   const currentYM = new Date().toISOString().slice(0, 7);
   const [period, setPeriod] = useState<Period>(currentYM);
   const [hoveredPeriod, setHoveredPeriod] = useState<Period | null>(null);
-  // Admin defaults to "all"; standard is locked to "own"
   const [viewMode, setViewMode] = useState<"all" | "own">(isAdmin ? "all" : "own");
   const [openTransactionsModal,  setOpenTransactionsModal]  = useState(false);
   const [transactionTypeFilter,  setTransactionTypeFilter]  = useState<"all" | "Income" | "Expense">("all");
@@ -96,7 +100,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
     setTransactionViewMode(viewMode);
     setOpenTransactionsModal(true);
   };
-  // Period list derived from transactions visible under current viewMode
   const availablePeriods = useMemo(() => {
     let txs = [...transactions];
     if (!isAdmin || viewMode === "own") txs = txs.filter(t => t.user_id === userId);
@@ -111,26 +114,19 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
       { key: "all", label: "All Time" },
     ];
   }, [transactions, isAdmin, viewMode, userId]);
-
-  // Set the best period once, after data first loads — never overwrite user's manual selection
   const initializedRef = useRef(false);
   useEffect(() => {
-    // Wait until we have real data (more than just "All Time")
     if (availablePeriods.length <= 1) return;
-    // Only run once — don't overwrite user's manual period selection on subsequent changes
     if (initializedRef.current) return;
     initializedRef.current = true;
-
     const hasCurrent = availablePeriods.some(p => p.key === currentYM);
     if (hasCurrent) {
       setPeriod(currentYM);
     } else {
-      // Fall back to the most recent past month
       const past = availablePeriods.filter(p => p.key !== "all" && p.key <= currentYM);
       setPeriod(past.length > 0 ? past[0].key : "all");
     }
   }, [availablePeriods]);
-
   const getCategoryName = (id: number | null) => {
     if (!id) return "Uncategorized";
     return categories.find((c) => c.id === id)?.name ?? "Unknown";
@@ -138,7 +134,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
   const filteredTransactions = useMemo(() => {
     if (loading) return [];
     let txs = [...transactions];
-    // Standard users always see only own; admins respect viewMode
     if (!isAdmin || viewMode === "own") txs = txs.filter((t) => t.user_id === userId);
     if (period !== "all") txs = txs.filter(t => t.transaction_date.startsWith(period));
     return txs;
@@ -241,7 +236,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
         }
       `}</style>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -256,7 +250,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            {/* View mode — styled native select */}
             {isAdmin ? (
               <select
                 value={viewMode}
@@ -280,7 +273,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
                 Viewing own
               </span>
             )}
-            {/* Period toggle */}
             <div
               className="ts-toggle-bar"
               style={{
@@ -326,7 +318,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
             </div>
           </div>
         </div>
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
             title="Total Income"
@@ -361,7 +352,6 @@ export default function DashboardOverview({ userRole, userId, chartsReadyRef }: 
             onClick={() => openModal("all")}
           />
         </div>
-        {/* Charts */}
         {chartsReady ? (
           <>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
